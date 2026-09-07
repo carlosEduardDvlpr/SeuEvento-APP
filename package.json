@@ -6,6 +6,8 @@
   "scripts": {
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
+    "db:migrate": "npm run db:migrate --workspace=@chacara/api",
+    "db:seed": "npm run db:seed --workspace=@chacara/api",
     "dev:web": "npm run dev --workspace=@chacara/web",
     "dev:api": "npm run dev --workspace=@chacara/api",
     "build": "npm run build --workspaces",

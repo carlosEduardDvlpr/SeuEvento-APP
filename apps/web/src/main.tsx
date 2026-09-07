@@ -1,4 +1,4 @@
-import { CalendarDays, CircleDollarSign, Clock3, Users, ArrowUpRight, Plus, Bell, Menu } from 'lucide-react';
+import { CalendarDays, CircleDollarSign, Clock3, Users, ArrowUpRight, Plus, Bell, Menu, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
@@ -15,7 +15,7 @@ function App() {
   const [reservations, setReservations] = useState<Reservation[]>(fallback);
   const [dashboard, setDashboard] = useState({ revenue: 6200, occupancy: 64, pending: 1, upcoming: 2 });
   useEffect(() => { Promise.all([fetch('http://localhost:3333/api/reservations').then(r => r.json()), fetch('http://localhost:3333/api/dashboard').then(r => r.json())]).then(([items, metrics]) => { setReservations(items); setDashboard(metrics); }).catch(() => undefined); }, []);
-  const cards = [
+  const cards: Array<[string, string, LucideIcon, string]> = [
     ['Faturamento previsto', money.format(dashboard.revenue), CircleDollarSign, 'Neste mês'],
     ['Taxa de ocupação', `${dashboard.occupancy}%`, CalendarDays, 'Setembro de 2026'],
     ['Reservas próximas', String(dashboard.upcoming), Users, 'Confirmadas'],

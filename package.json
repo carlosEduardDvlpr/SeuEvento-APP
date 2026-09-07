@@ -1,0 +1,14 @@
+{
+  "name": "chacara-agendamentos",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "dev:web": "npm run dev --workspace=@chacara/web",
+    "dev:api": "npm run dev --workspace=@chacara/api",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
+  }
+}

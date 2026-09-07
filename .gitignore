@@ -6,4 +6,5 @@ dist
 *.tsbuildinfo
 apps/web/vite.config.js
 apps/web/vite.config.d.ts
+apps/api/src/generated
 postgres_data

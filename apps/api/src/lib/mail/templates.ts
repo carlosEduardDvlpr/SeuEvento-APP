@@ -34,3 +34,35 @@ export function verifyEmailTemplate({
     note: 'Se não foi você que criou esta conta, ignore esta mensagem.',
   });
 }
+
+/**
+ * Aviso de que a conta já existe (§10.2).
+ *
+ * É a peça que permite o cadastro responder igual para e-mail novo e existente:
+ * quem tenta se cadastrar recebe sempre a mesma resposta na tela, e só o dono da
+ * caixa de entrada descobre qual dos dois casos aconteceu.
+ */
+export function accountExistsTemplate({
+  signInUrl,
+  resetPasswordUrl,
+  hasGoogle,
+}: {
+  signInUrl: string;
+  resetPasswordUrl: string;
+  hasGoogle: boolean;
+}): Email {
+  return renderEmail('Você já tem conta na chácara', {
+    preheader: 'Alguém tentou criar uma conta com este e-mail.',
+    heading: 'Você já tem conta',
+    paragraphs: [
+      'Recebemos um cadastro com este e-mail, mas ele já tem uma conta. Não criamos nada novo.',
+      hasGoogle
+        ? 'Para entrar, use o botão "Continuar com o Google".'
+        : 'Se você não lembra a senha, pode definir uma nova.',
+    ],
+    action: { label: 'Entrar na minha conta', url: signInUrl },
+    note: hasGoogle
+      ? 'Se não foi você que tentou, ignore esta mensagem.'
+      : `Para trocar a senha: ${resetPasswordUrl}`,
+  });
+}

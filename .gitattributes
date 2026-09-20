@@ -1,0 +1,5 @@
+# O Prettier escreve LF. Sem isto, o Git converteria para CRLF no Windows e o
+# `pnpm format:check` passaria a falhar depois de cada clone.
+* text=auto eol=lf
+
+pnpm-lock.yaml linguist-generated=true

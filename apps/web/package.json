@@ -1,11 +1,30 @@
 {
-  "name": "@chacara/web",
+  "name": "web",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite", "build": "tsc --noEmit && vite build --config vite.config.ts", "typecheck": "tsc --noEmit"
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
-  "dependencies": { "@vitejs/plugin-react": "^4.3.4", "vite": "^6.0.5", "react": "^18.3.1", "react-dom": "^18.3.1", "lucide-react": "^0.468.0" },
-  "devDependencies": { "@types/react": "^18.3.18", "@types/react-dom": "^18.3.5", "typescript": "^5.7.2" }
+  "dependencies": {
+    "@chacara/shared": "workspace:*",
+    "@tanstack/react-query": "5.103.1",
+    "react": "19.3.0",
+    "react-day-picker": "10.0.1",
+    "react-dom": "19.3.0",
+    "react-router": "8.4.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "jsdom": "30.1.0",
+    "vite": "8.3.0"
+  }
 }

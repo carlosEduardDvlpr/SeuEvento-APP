@@ -1,10 +1,22 @@
 node_modules
 dist
+coverage
+.vite
+
+# Segredos: só o .env.example é versionado.
 .env
 .env.local
+.env.*.local
+
 *.log
 *.tsbuildinfo
-apps/web/vite.config.js
-apps/web/vite.config.d.ts
+
+# Client do Prisma é gerado (generator `prisma-client` com output próprio).
 apps/api/src/generated
-postgres_data
+
+# Playwright
+test-results
+playwright-report
+
+# Nota de trabalho local (o guia versionado do projeto é o agents.md).
+PROGRESSO.md

@@ -31,6 +31,16 @@ export const loginBodySchema = z.object({
   password: z.string().min(1, { error: 'Informe sua senha.' }),
 });
 
+export const forgotPasswordBodySchema = z.object({
+  email: emailSchema,
+});
+
+export const resetPasswordBodySchema = z.object({
+  token: z.string().min(1, { error: 'Link inválido.' }),
+  // Aqui a senha é nova, então vale a faixa completa do cadastro.
+  password: passwordSchema,
+});
+
 /** Perfil editável pelo próprio cliente (§11.2). E-mail e papel não entram. */
 export const updateMeBodySchema = z
   .object({

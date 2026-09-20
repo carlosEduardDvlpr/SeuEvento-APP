@@ -4,7 +4,11 @@ import { env } from '../../config/env.js';
 import type { PrismaClient } from '../../generated/prisma/client.js';
 import type { UserModel } from '../../generated/prisma/models.js';
 import { AppError } from '../../lib/errors.js';
-import { accountExistsTemplate, verifyEmailTemplate } from '../../lib/mail/templates.js';
+import {
+  accountExistsTemplate,
+  resetPasswordTemplate,
+  verifyEmailTemplate,
+} from '../../lib/mail/templates.js';
 import { sendMail } from '../../lib/mailer.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { consumeAuthToken, issueAuthToken } from '../../lib/tokens.js';
@@ -23,6 +27,10 @@ export const ACCEPTED_MESSAGE =
 
 function verifyUrl(token: string): string {
   return `${env.APP_URL}/verificar-email?token=${encodeURIComponent(token)}`;
+}
+
+function resetUrl(token: string): string {
+  return `${env.APP_URL}/redefinir-senha?token=${encodeURIComponent(token)}`;
 }
 
 async function sendVerification(prisma: PrismaClient, user: UserModel): Promise<void> {
@@ -151,6 +159,65 @@ export async function resendVerification(prisma: PrismaClient, email: string): P
   if (!user || user.emailVerifiedAt !== null) return;
 
   await sendVerification(prisma, user);
+}
+
+export async function forgotPassword(prisma: PrismaClient, email: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  // Sem conta não há nada a fazer, e a resposta é a mesma de sempre (§10.2).
+  if (!user) return;
+
+  /*
+   * Conta sem senha (só Google, ou criada pelo admin) também pode redefinir.
+   *
+   * Quem clica no link prova ter a caixa de entrada, que é a mesma prova que o
+   * cadastro pede. Bloquear aqui deixaria a pessoa sem caminho de entrada quando
+   * ela não usa mais o Google.
+   */
+  const token = await issueAuthToken(prisma, { userId: user.id, type: 'PASSWORD_RESET' });
+  const template = resetPasswordTemplate({ name: user.name, resetUrl: resetUrl(token) });
+
+  await sendMail({ to: user.email ?? email, ...template });
+}
+
+/**
+ * Troca a senha e encerra as sessões abertas (§10.5).
+ *
+ * Não abre sessão: a §10.2 diz explicitamente que confirmar o e-mail autentica, e
+ * o silêncio da §10.5 é intencional. Depois de trocar, a pessoa entra com a senha
+ * nova, o que confirma que ela anotou a senha que acabou de escolher.
+ */
+export async function resetPassword(
+  prisma: PrismaClient,
+  { token, password }: { token: string; password: string },
+): Promise<void> {
+  const { userId } = await consumeAuthToken(prisma, { token, type: 'PASSWORD_RESET' });
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new AppError('INVALID_TOKEN', 400, 'Este link expirou ou já foi usado. Peça um novo.');
+  }
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: await hashPassword(password),
+        /*
+         * Clicar no link de redefinição prova acesso à caixa de entrada, que é
+         * exatamente o que a confirmação de e-mail verifica. Sem isto, quem se
+         * cadastrou, não confirmou e redefiniu a senha ficaria num beco sem
+         * saída: senha nova em mãos e login barrado por EMAIL_NOT_VERIFIED.
+         */
+        ...(user.emailVerifiedAt === null ? { emailVerifiedAt: new Date() } : {}),
+      },
+    }),
+    // Senha antiga pode ter vazado: toda sessão aberta com ela cai.
+    prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
 }
 
 /**

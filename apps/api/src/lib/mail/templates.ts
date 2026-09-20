@@ -36,6 +36,31 @@ export function verifyEmailTemplate({
 }
 
 /**
+ * Redefinição de senha (§10.5).
+ *
+ * A validade curta é o que limita o dano de um link que fique esquecido numa
+ * caixa de entrada compartilhada.
+ */
+export function resetPasswordTemplate({
+  name,
+  resetUrl,
+}: {
+  name: string;
+  resetUrl: string;
+}): Email {
+  return renderEmail('Redefinir a senha da sua conta', {
+    preheader: 'Um link para você escolher uma senha nova.',
+    heading: 'Escolha uma senha nova',
+    paragraphs: [
+      `Olá, ${name}. Recebemos um pedido para trocar a senha da sua conta.`,
+      'O link vale por 1 hora. Depois de trocar, as sessões abertas em outros aparelhos são encerradas.',
+    ],
+    action: { label: 'Definir nova senha', url: resetUrl },
+    note: 'Se não foi você que pediu, ignore esta mensagem: sua senha continua a mesma.',
+  });
+}
+
+/**
  * Aviso de que a conta já existe (§10.2).
  *
  * É a peça que permite o cadastro responder igual para e-mail novo e existente:

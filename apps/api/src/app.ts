@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import { isProduction, isTest } from './config/env.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { venueRoutes } from './modules/venue/routes.js';
 import { registerAuth } from './plugins/auth.js';
 import { registerErrorHandler } from './plugins/errors.js';
 import { registerPrisma } from './plugins/prisma.js';
@@ -73,6 +74,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   // §11.1: todas as rotas vivem sob /api.
   await app.register(healthRoutes, { prefix: '/api' });
+  await app.register(venueRoutes, { prefix: '/api' });
 
   return app;
 }

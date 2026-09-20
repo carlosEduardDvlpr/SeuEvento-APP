@@ -1,0 +1,30 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.PENDING {
+  background: var(--st-pending-bg);
+  color: var(--st-pending-fg);
+}
+
+.CONFIRMED {
+  background: var(--st-confirmed-bg);
+  color: var(--st-confirmed-fg);
+}
+
+.CANCELLED {
+  background: var(--st-cancelled-bg);
+  color: var(--st-cancelled-fg);
+}
+
+.COMPLETED {
+  background: var(--st-completed-bg);
+  color: var(--st-completed-fg);
+}

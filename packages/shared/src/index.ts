@@ -3,3 +3,4 @@ export * from './errors.js';
 export * from './labels.js';
 export * from './schemas.js';
 export * from './themes.js';
+export * from './venue.js';

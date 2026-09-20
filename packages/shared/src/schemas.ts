@@ -82,6 +82,29 @@ export const phoneSchema = z
     error: 'Informe o WhatsApp com DDD, como (11) 99999-0000.',
   });
 
+/** Cor de paleta de estilo, sempre em `#RRGGBB` (§14.3). */
+export const hexColorSchema = z
+  .string()
+  .regex(/^#[0-9A-Fa-f]{6}$/, { error: 'Use uma cor no formato #RRGGBB.' });
+
+export const paletteColorSchema = z.object({
+  name: z.string().trim().min(1, { error: 'Dê um nome à cor.' }),
+  hex: hexColorSchema,
+});
+
+/**
+ * Paleta de um estilo: exatamente 5 cores (§15.3).
+ *
+ * O número é fixo porque o cartão de estilo mapeia a paleta em `--t1` a `--t5`
+ * (§14.3); uma paleta menor deixaria variável de CSS sem valor.
+ */
+export const paletteSchema = z.array(paletteColorSchema).length(5, {
+  error: 'Um estilo tem exatamente 5 cores.',
+});
+
+export type PaletteColor = z.infer<typeof paletteColorSchema>;
+export type ThemePalette = z.infer<typeof paletteSchema>;
+
 export const roleSchema = z.enum(ROLES);
 export const bookingStatusSchema = z.enum(BOOKING_STATUSES);
 export const discountTypeSchema = z.enum(DISCOUNT_TYPES);

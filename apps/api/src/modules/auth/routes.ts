@@ -1,8 +1,10 @@
 import {
   acceptedResponseSchema,
+  forgotPasswordBodySchema,
   loginBodySchema,
   registerBodySchema,
   resendVerificationBodySchema,
+  resetPasswordBodySchema,
   sessionResponseSchema,
   verifyEmailBodySchema,
 } from '@chacara/shared';
@@ -18,7 +20,15 @@ import {
   revokeSessionFamily,
   rotateRefreshToken,
 } from './session.js';
-import { ACCEPTED_MESSAGE, login, register, resendVerification, verifyEmail } from './service.js';
+import {
+  ACCEPTED_MESSAGE,
+  forgotPassword,
+  login,
+  register,
+  resendVerification,
+  resetPassword,
+  verifyEmail,
+} from './service.js';
 
 /**
  * Rotas de cadastro e confirmação (§10.2 e §11.2).
@@ -151,6 +161,52 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
         clearSessionCookie(reply);
         throw error;
       }
+    },
+  );
+
+  app.post(
+    '/auth/forgot-password',
+    {
+      config: {
+        rateLimit: {
+          max: 3,
+          timeWindow: '1 hour',
+          hook: 'preHandler',
+          keyGenerator: (request) => {
+            const body = request.body as { email?: string } | undefined;
+            return body?.email ?? request.ip;
+          },
+        },
+      },
+      schema: {
+        body: forgotPasswordBodySchema,
+        response: { 202: acceptedResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      await forgotPassword(app.prisma, request.body.email);
+
+      // §10.2: mesma resposta com ou sem conta no endereço informado.
+      return reply.status(202).send({ message: ACCEPTED_MESSAGE });
+    },
+  );
+
+  app.post(
+    '/auth/reset-password',
+    {
+      config: { rateLimit: { max: 10, timeWindow: '1 hour' } },
+      schema: {
+        body: resetPasswordBodySchema,
+        response: { 204: z.null() },
+      },
+    },
+    async (request, reply) => {
+      await resetPassword(app.prisma, request.body);
+
+      // Não abre sessão: a pessoa entra com a senha nova, o que confirma que ela
+      // guardou a senha que acabou de escolher.
+      clearSessionCookie(reply);
+      return reply.status(204).send(null);
     },
   );
 

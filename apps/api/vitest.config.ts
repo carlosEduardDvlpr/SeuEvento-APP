@@ -27,7 +27,7 @@ export default defineConfig({
     // Integração compartilha um Postgres: a limpeza de um arquivo não pode
     // acontecer no meio de outro.
     fileParallelism: false,
-    env: { DATABASE_URL: TEST_URL },
+    env: { DATABASE_URL: TEST_URL, NODE_ENV: 'test' },
     globalSetup: ['./test/global-setup.ts'],
   },
 });

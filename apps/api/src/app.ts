@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import { isProduction, isTest } from './config/env.js';
+import { authRoutes } from './modules/auth/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { venueRoutes } from './modules/venue/routes.js';
 import { registerAuth } from './plugins/auth.js';
@@ -13,6 +14,8 @@ export type LogSink = { write(line: string): void };
 
 export type BuildAppOptions = {
   loggerStream?: LogSink;
+  /** Padrão: ligado fora de teste. Ver `SecurityOptions.rateLimit`. */
+  rateLimit?: boolean;
 };
 
 /**
@@ -69,12 +72,13 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   // O handler de erro entra primeiro para valer também para falha de plugin.
   await registerErrorHandler(app);
   await registerPrisma(app);
-  await registerSecurity(app);
+  await registerSecurity(app, { rateLimit: options.rateLimit ?? !isTest });
   await registerAuth(app);
 
   // §11.1: todas as rotas vivem sob /api.
   await app.register(healthRoutes, { prefix: '/api' });
   await app.register(venueRoutes, { prefix: '/api' });
+  await app.register(authRoutes, { prefix: '/api' });
 
   return app;
 }

@@ -1,3 +1,12 @@
+// Modelo de dados da §8 do agents.md.
+//
+// Regras gerais: dinheiro em Int (centavos), datas de reserva em @db.Date
+// (dia sem fuso), timestamps em timestamptz UTC (§7.3), ids uuid.
+//
+// O bloco `generator` segue o formato do Prisma 7 (provider `prisma-client`,
+// `output` obrigatório) e o `datasource` não declara `url`: a conexão vem do
+// prisma.config.ts. A §8 autoriza esse ajuste conforme a versão instalada.
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -7,42 +16,263 @@ datasource db {
   provider = "postgresql"
 }
 
-enum ReservationStatus {
-  ORCAMENTO
-  AGUARDANDO_SINAL
-  CONFIRMADO
-  CONCLUIDO
-  CANCELADO
-
-  @@map("reservation_status")
+enum Role {
+  CLIENT
+  ADMIN
 }
 
-model Client {
-  id           String        @id @default(uuid()) @db.Uuid
-  name         String        @db.VarChar(160)
-  phone        String        @unique @db.VarChar(30)
-  email        String?       @db.VarChar(255)
-  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  reservations Reservation[]
-
-  @@map("clients")
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
 }
 
-model Reservation {
-  id        String            @id @default(uuid()) @db.Uuid
-  clientId  String            @map("client_id") @db.Uuid
-  checkIn   DateTime          @map("check_in") @db.Date
-  checkOut  DateTime          @map("check_out") @db.Date
-  guests    Int               @db.SmallInt
-  total     Decimal           @db.Decimal(12, 2)
-  deposit   Decimal           @default(0) @db.Decimal(12, 2)
-  status    ReservationStatus @default(ORCAMENTO)
-  notes     String?           @db.Text
-  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-  client    Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+enum DiscountType {
+  PERCENT
+  FIXED_PRICE
+}
 
-  @@index([checkIn, checkOut], map: "reservations_dates_idx")
-  @@index([status], map: "reservations_status_idx")
-  @@map("reservations")
+enum TokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+enum GalleryKind {
+  HERO
+  VENUE
+  EVENTS
+}
+
+enum EventType {
+  BIRTHDAY_KIDS // aniversário infantil
+  BIRTHDAY_ADULT // aniversário adulto
+  BABY_SHOWER // chá de bebê
+  GENDER_REVEAL // chá revelação
+  BRIDAL_SHOWER // chá de panela / lingerie
+  WEDDING // casamento, noivado
+  GRADUATION // formatura
+  GET_TOGETHER // confraternização, churrasco
+  OTHER
+}
+
+model User {
+  id              String    @id @default(uuid())
+  name            String
+  email           String?   @unique // nulo apenas para clientes criados pelo admin sem e-mail
+  phone           String? // WhatsApp, obrigatório para reservar
+  passwordHash    String? // nulo para conta só com Google ou criada pelo admin
+  googleId        String?   @unique
+  emailVerifiedAt DateTime? @db.Timestamptz(6)
+  termsAcceptedAt DateTime? @db.Timestamptz(6)
+  role            Role      @default(CLIENT)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(6)
+
+  bookings      Booking[]
+  authTokens    AuthToken[]
+  refreshTokens RefreshToken[]
+}
+
+/// Confirmação de e-mail e redefinição de senha. Guarda apenas o HASH do token.
+model AuthToken {
+  id        String    @id @default(uuid())
+  userId    String
+  type      TokenType
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(6)
+  usedAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+/// Refresh token com rotação e detecção de reuso (familyId).
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  familyId  String
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+/// Linha única (id = 1). Configurações do negócio editáveis pelo admin.
+model VenueSettings {
+  id                  Int     @id @default(1)
+  name                String
+  baseDailyPriceCents Int // usada quando nenhuma PriceRule se aplica
+  maxGuests           Int
+  minDays             Int     @default(1)
+  maxDays             Int     @default(3)
+  minLeadDays         Int     @default(2) // antecedência mínima para reservar
+  freeCancelUntilDays Int     @default(7) // cancelamento pelo cliente até X dias antes do início
+  holdHours           Int     @default(48) // quanto tempo uma reserva PENDING segura as datas
+  maxPendingPerUser   Int     @default(3)
+  checkInTime         String  @default("08:00")
+  checkOutTime        String  @default("22:00")
+  whatsapp            String?
+  address             String?
+  mapsUrl             String?
+  houseRules          String? // texto simples, mostrado na landing e no resumo
+}
+
+/// Variação da diária: por dia da semana, por período, ou ambos. Vence a de maior priority.
+model PriceRule {
+  id         String    @id @default(uuid())
+  name       String // "Fim de semana", "Réveillon", "Feriado prolongado"
+  dayOfWeek  Int? // 0 (domingo) a 6 (sábado); nulo = qualquer dia
+  startDate  DateTime? @db.Date // nulo = sem início
+  endDate    DateTime? @db.Date // nulo = sem fim
+  priceCents Int
+  priority   Int       @default(0)
+  active     Boolean   @default(true)
+}
+
+model Category {
+  id        String @id @default(uuid())
+  name      String @unique // Painéis, Mesas, Arcos, Iluminação, Lúdicos...
+  sortOrder Int    @default(0)
+  items     Item[]
+}
+
+model Theme {
+  id            String  @id @default(uuid())
+  slug          String  @unique // rustico-boho, nuvens-e-estrelas...
+  name          String
+  tagline       String? // uma frase curta
+  description   String?
+  palette       Json // [{ "name": "Sálvia", "hex": "#A7B8A1" }, ...]
+  coverImageUrl String?
+  sortOrder     Int     @default(0)
+  active        Boolean @default(true)
+
+  items  ItemTheme[]
+  combos Combo[]
+}
+
+model Item {
+  id            String  @id @default(uuid())
+  categoryId    String
+  name          String
+  description   String?
+  imageUrl      String?
+  priceCents    Int
+  stock         Int // unidades disponíveis por dia
+  assemblyNotes String? // dicas de montagem (pegue e monte)
+  active        Boolean @default(true)
+  sortOrder     Int     @default(0)
+
+  category     Category      @relation(fields: [categoryId], references: [id])
+  themes       ItemTheme[]
+  comboItems   ComboItem[]
+  bookingItems BookingItem[]
+
+  @@index([categoryId])
+}
+
+model ItemTheme {
+  itemId  String
+  themeId String
+
+  item  Item  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  theme Theme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, themeId])
+}
+
+model Combo {
+  id            String       @id @default(uuid())
+  name          String
+  description   String?
+  imageUrl      String?
+  themeId       String?
+  discountType  DiscountType
+  discountValue Int // PERCENT: 1..100 | FIXED_PRICE: centavos do combo fechado
+  active        Boolean      @default(true)
+
+  theme Theme?      @relation(fields: [themeId], references: [id])
+  items ComboItem[]
+}
+
+model ComboItem {
+  comboId  String
+  itemId   String
+  quantity Int    @default(1)
+
+  combo Combo @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  item  Item  @relation(fields: [itemId], references: [id])
+
+  @@id([comboId, itemId])
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  userId        String
+  startDate     DateTime      @db.Date
+  endDate       DateTime      @db.Date // inclusivo
+  eventType     EventType
+  guestCount    Int
+  status        BookingStatus @default(PENDING)
+  holdExpiresAt DateTime?     @db.Timestamptz(6) // só enquanto PENDING
+
+  // Snapshot financeiro (centavos). Nunca recalcular depois de criado.
+  dailyBreakdown     Json // [{ date, priceCents, ruleName }]
+  dailyTotalCents    Int
+  itemsTotalCents    Int
+  discountTotalCents Int
+  totalCents         Int
+  appliedCombos      Json // [{ comboId, name, times, discountCents }]
+
+  customerNotes  String?
+  adminNotes     String?
+  createdByAdmin Boolean  @default(false) // reserva manual (WhatsApp)
+  cancelledBy    Role?
+  cancelReason   String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+
+  user  User          @relation(fields: [userId], references: [id])
+  items BookingItem[]
+
+  @@index([status, startDate])
+  @@index([userId])
+}
+
+model BookingItem {
+  id             String @id @default(uuid())
+  bookingId      String
+  itemId         String
+  itemName       String // snapshot
+  quantity       Int
+  unitPriceCents Int // snapshot
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  item    Item    @relation(fields: [itemId], references: [id])
+
+  @@index([bookingId])
+  @@index([itemId])
+}
+
+model BlockedDate {
+  date   DateTime @id @db.Date
+  reason String?
+}
+
+model GalleryImage {
+  id        String      @id @default(uuid())
+  kind      GalleryKind
+  url       String
+  alt       String // obrigatório: acessibilidade e SEO
+  caption   String?
+  sortOrder Int         @default(0)
+  active    Boolean     @default(true)
 }

@@ -1,0 +1,38 @@
+/*
+ * A forma-assinatura do projeto (§14.6): topo em semicírculo, base reta.
+ *
+ * Usar só no hero, nos cartões de estilo, no combo em destaque e na ilustração
+ * de estado vazio. Não usar em botão, campo, tabela nem no admin: a graça é ele
+ * ser raro.
+ */
+.arch {
+  overflow: hidden;
+  border-top-left-radius: 999px;
+  border-top-right-radius: 999px;
+  border-bottom-left-radius: var(--r-md);
+  border-bottom-right-radius: var(--r-md);
+  aspect-ratio: 4 / 5;
+}
+
+.tall {
+  aspect-ratio: 3 / 4;
+}
+
+.arch > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * Sem foto, a §14.9 manda usar bloco de cor chapada, nunca gradiente nem imagem
+ * de banco. A cor vem por `--fill`, que o componente do estilo preenche com a
+ * paleta do tema.
+ */
+.placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  background: var(--fill, var(--bg-alt));
+  color: var(--brand);
+}

@@ -1,0 +1,96 @@
+/*
+ * Tokens de design (§14.2 e §14.5).
+ *
+ * Componente nunca usa hex direto (§2.2): usa os tokens semânticos da segunda
+ * metade deste arquivo. Os tokens de marca (`--forest-700`, `--ipe-400`) existem
+ * para serem referenciados aqui, não espalhados pelo CSS.
+ *
+ * A cor da festa não vive aqui: ela vem do banco, em `Theme.palette`, e é
+ * aplicada como variável local no componente do estilo (§14.3).
+ */
+:root {
+  /* Marca */
+  --forest-900: #12291f; /* Mata profunda: rodapé, superfícies escuras */
+  --forest-700: #1f4a38; /* Mata: cor de marca, títulos de destaque */
+  --sage-300: #a9bfa5; /* Sálvia: bordas de destaque, ilustrações */
+  --sage-100: #e4ecdf; /* Sálvia clara: fundos de seção alternados */
+  --paper: #fcfcf9; /* Papel: fundo padrão */
+  --ipe-400: #f2b71f; /* Ipê: ação principal */
+  --ipe-800: #8a5f00; /* Ipê escuro: texto/ícone amarelo sobre fundo claro */
+  --guava-500: #e0606b; /* Goiaba: selo de desconto, avisos leves */
+  --ink: #1d2a24; /* Tinta: texto principal */
+  --ink-soft: #5f6b63; /* Texto secundário (AA sobre --paper) */
+  --wood-600: #7b5b45; /* Madeira: ícones e detalhes neutros */
+  --line: #dde3da; /* Bordas e divisórias */
+
+  /* Semânticos: use estes nos componentes */
+  --bg: var(--paper);
+  --bg-alt: var(--sage-100);
+  --bg-dark: var(--forest-900);
+  --fg: var(--ink);
+  --fg-soft: var(--ink-soft);
+  --brand: var(--forest-700);
+  --action: var(--ipe-400);
+  --action-fg: var(--ink); /* texto sobre o botão de ação */
+  --danger: #a32e3a;
+  --focus: #1b6fd1; /* anel de foco visível, distinto da marca */
+
+  /* Status de reserva. Sempre acompanhados de texto ou ícone (§14.2) */
+  --st-pending-bg: #fcefc7;
+  --st-pending-fg: #7a5500;
+  --st-confirmed-bg: #dcebdd;
+  --st-confirmed-fg: #1f4a38;
+  --st-cancelled-bg: #f8dddf;
+  --st-cancelled-fg: #8e2b35;
+  --st-completed-bg: #e4e9ee;
+  --st-completed-fg: #3e4b58;
+
+  /* Tipografia (§14.4) */
+  --font-display: 'Young Serif', Georgia, 'Times New Roman', serif;
+  --font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Escala modular 1.25 sobre 16 px */
+  --text-xs: 0.8rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.563rem;
+  --text-2xl: 1.953rem;
+  --text-3xl: 2.441rem;
+  --text-4xl: 3.052rem;
+
+  /* Espaçamento em múltiplos de 4 px (§14.5) */
+  --space-4: 0.25rem;
+  --space-8: 0.5rem;
+  --space-12: 0.75rem;
+  --space-16: 1rem;
+  --space-24: 1.5rem;
+  --space-32: 2rem;
+  --space-48: 3rem;
+  --space-64: 4rem;
+  --space-96: 6rem;
+  --space-128: 8rem;
+
+  /* Raio por hierarquia, não um raio único em tudo (§14.5) */
+  --r-sm: 6px; /* campos, selos, botões */
+  --r-md: 12px; /* cartões de item, diálogos */
+
+  /* Sem sombra por padrão: separação vem de borda e fundo alternado.
+     Elevação só em diálogo, gaveta e barra fixa. */
+  --elevation: 0 8px 24px rgb(29 42 36 / 0.14);
+
+  --container: 1200px;
+  --measure: 65ch; /* largura máxima de texto corrido */
+
+  /* Movimento curto, em resposta à ação (§14.8) */
+  --transition: 160ms ease-out;
+
+  /* Alvo de toque mínimo (§18.1) */
+  --touch-target: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition: 0ms;
+  }
+}

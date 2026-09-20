@@ -1,0 +1,98 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-16);
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--brand);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  text-decoration: none;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-12);
+  border-radius: var(--r-sm);
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.navLink:hover {
+  background: var(--bg-alt);
+}
+
+/* O primeiro link da navegação é a ação principal da página (§14.2). */
+.navLink:first-child {
+  background: var(--action);
+  color: var(--action-fg);
+  padding-inline: var(--space-24);
+}
+
+.navLink:first-child:hover {
+  background: #e0a80f;
+}
+
+.footer {
+  margin-top: var(--space-96);
+  background: var(--bg-dark);
+  color: var(--paper);
+}
+
+.footerInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: var(--space-48) var(--space-16);
+}
+
+.footerBrand {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.footerNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-24);
+}
+
+.footerNav a {
+  color: var(--sage-100);
+}
+
+@media (max-width: 480px) {
+  .logo span {
+    /* No celular o espaço é do botão de reservar. */
+    display: none;
+  }
+}

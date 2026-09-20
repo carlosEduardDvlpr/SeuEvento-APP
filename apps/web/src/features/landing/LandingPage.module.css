@@ -1,0 +1,130 @@
+.state {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: var(--space-96) var(--space-16);
+}
+
+/* §14.7: duas colunas alternando texto e imagem no desktop, coluna única no
+   celular. Alinhamento à esquerda, muito respiro. */
+.hero {
+  display: grid;
+  gap: var(--space-48);
+  align-items: center;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: var(--space-64) var(--space-16);
+}
+
+.heroText {
+  max-width: var(--measure);
+}
+
+.hero h1 {
+  font-size: clamp(var(--text-3xl), 6vw, 3.815rem);
+}
+
+.heroLead {
+  margin-top: var(--space-24);
+  font-size: var(--text-lg);
+  color: var(--fg-soft);
+}
+
+.heroAction {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  margin-top: var(--space-32);
+  padding: 0 var(--space-32);
+  background: var(--action);
+  color: var(--action-fg);
+  border-radius: var(--r-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--transition);
+}
+
+.heroAction:hover {
+  background: #e0a80f;
+}
+
+.heroNote {
+  margin-top: var(--space-16);
+  font-size: var(--text-sm);
+  color: var(--fg-soft);
+}
+
+.heroImage {
+  max-width: 420px;
+  width: 100%;
+}
+
+.facts {
+  background: var(--bg-alt);
+  padding: var(--space-64) var(--space-16);
+}
+
+.facts > * {
+  max-width: var(--container);
+  margin-inline: auto;
+}
+
+.facts h2 {
+  font-size: var(--text-2xl);
+}
+
+/* §14.12: bloco de fatos sem cara de planilha. */
+.factList {
+  display: grid;
+  gap: var(--space-24);
+  margin-top: var(--space-32);
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: var(--space-12);
+  align-items: center;
+  padding-bottom: var(--space-16);
+  border-bottom: 1px solid var(--sage-300);
+  color: var(--brand);
+}
+
+.fact svg {
+  grid-row: span 2;
+}
+
+.fact dt {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.fact dd {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.address,
+.rules {
+  margin-top: var(--space-32);
+  max-width: var(--measure);
+}
+
+.rules h3 {
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-8);
+}
+
+@media (min-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr auto;
+    padding-block: var(--space-96);
+  }
+
+  .factList {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-32);
+  }
+}

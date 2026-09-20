@@ -1,0 +1,141 @@
+@import './tokens.css';
+
+/*
+ * Base do documento (§14.4, §14.5 e §18.1).
+ *
+ * As fontes são self-hosted (§14.4). Os arquivos `woff2` entram junto com os
+ * assets da landing; até lá a cadeia de fallback assume e a interface fica
+ * correta em estrutura, só sem a personalidade tipográfica.
+ */
+@font-face {
+  font-family: 'Young Serif';
+  src: url('/fonts/young-serif-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Figtree';
+  src: url('/fonts/figtree-variable.woff2') format('woff2-variations');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Títulos serifados são linguagem da landing e do wizard; o admin usa só
+   Figtree (§14.4), aplicando `font-family: var(--font-body)` no seu layout. */
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+p,
+ul,
+ol,
+dl {
+  margin: 0;
+}
+
+img,
+picture,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+/* §14.5: ícone herda a cor do texto, sem biblioteca de ícones. */
+svg {
+  fill: none;
+  stroke: currentColor;
+}
+
+a {
+  color: var(--brand);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/*
+ * §18.1: foco visível em tudo que é interativo, e o outline nunca é removido
+ * sem substituto. `:focus-visible` evita o anel no clique de mouse, mantendo-o
+ * na navegação por teclado.
+ */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* Texto visível só para leitor de tela. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Atalho de teclado para pular a navegação (§18.1). */
+.skip-link {
+  position: absolute;
+  left: var(--space-16);
+  top: -100px;
+  z-index: 100;
+  padding: var(--space-12) var(--space-16);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  transition: top var(--transition);
+}
+
+.skip-link:focus {
+  top: var(--space-16);
+}

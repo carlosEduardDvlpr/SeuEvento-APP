@@ -1,13 +1,24 @@
 import {
   acceptedResponseSchema,
+  loginBodySchema,
   registerBodySchema,
   resendVerificationBodySchema,
   sessionResponseSchema,
   verifyEmailBodySchema,
 } from '@chacara/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { issueSession } from './session.js';
-import { ACCEPTED_MESSAGE, register, resendVerification, verifyEmail } from './service.js';
+import { z } from 'zod';
+import { AppError } from '../../lib/errors.js';
+import { hashToken } from '../../lib/tokens.js';
+import { REFRESH_COOKIE_NAME } from '../../plugins/auth.js';
+import {
+  assertTrustedOrigin,
+  clearSessionCookie,
+  issueSession,
+  revokeSessionFamily,
+  rotateRefreshToken,
+} from './session.js';
+import { ACCEPTED_MESSAGE, login, register, resendVerification, verifyEmail } from './service.js';
 
 /**
  * Rotas de cadastro e confirmação (§10.2 e §11.2).
@@ -82,4 +93,86 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
       return issueSession({ app, reply, user });
     },
   );
+
+  app.post(
+    '/auth/login',
+    {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute',
+          // Por IP **e** e-mail (§10.7): limitar só por IP deixaria uma rede
+          // inteira travada por causa de uma pessoa, e limitar só por e-mail
+          // deixaria um atacante varrer vários endereços à vontade.
+          hook: 'preHandler',
+          keyGenerator: (request) => {
+            const body = request.body as { email?: string } | undefined;
+            return `${request.ip}:${body?.email ?? ''}`;
+          },
+        },
+      },
+      schema: {
+        body: loginBodySchema,
+        response: { 200: sessionResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const user = await login(app.prisma, request.body);
+
+      return issueSession({ app, reply, user });
+    },
+  );
+
+  app.post(
+    '/auth/refresh',
+    {
+      schema: { response: { 200: sessionResponseSchema } },
+    },
+    async (request, reply) => {
+      assertTrustedOrigin(request);
+
+      const presented = request.cookies[REFRESH_COOKIE_NAME];
+      if (!presented) {
+        // Sem cookie não há sessão para renovar. É o caminho normal de quem abre
+        // o site pela primeira vez, então não é motivo de log de erro.
+        clearSessionCookie(reply);
+        throw new AppError(
+          'UNAUTHORIZED',
+          401,
+          'Sua sessão expirou. Entre de novo para continuar.',
+        );
+      }
+
+      try {
+        const { user, familyId } = await rotateRefreshToken(app.prisma, presented);
+
+        return await issueSession({ app, reply, user, familyId });
+      } catch (error) {
+        clearSessionCookie(reply);
+        throw error;
+      }
+    },
+  );
+
+  app.post('/auth/logout', { schema: { response: { 204: z.null() } } }, async (request, reply) => {
+    assertTrustedOrigin(request);
+
+    const presented = request.cookies[REFRESH_COOKIE_NAME];
+    if (presented) {
+      const stored = await app.prisma.refreshToken.findUnique({
+        where: { tokenHash: hashToken(presented) },
+        select: { familyId: true },
+      });
+
+      // Revoga a família inteira, não só o token apresentado: sair significa
+      // encerrar a sessão, e ela é a cadeia de rotações.
+      if (stored) await revokeSessionFamily(app.prisma, stored.familyId);
+    }
+
+    clearSessionCookie(reply);
+
+    // Sair é idempotente: sem cookie, ou com cookie já inválido, o resultado
+    // desejado (não estar logado) já é o atual.
+    return reply.status(204).send(null);
+  });
 };

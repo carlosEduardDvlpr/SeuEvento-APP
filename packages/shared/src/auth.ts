@@ -23,6 +23,24 @@ export const verifyEmailBodySchema = z.object({
   token: z.string().min(1, { error: 'Link inválido.' }),
 });
 
+export const loginBodySchema = z.object({
+  email: emailSchema,
+  // Sem as regras de tamanho do cadastro: senha antiga e curta ainda deve poder
+  // entrar, e recusar aqui por tamanho seria dizer que a senha está errada por
+  // um motivo que não é o certo.
+  password: z.string().min(1, { error: 'Informe sua senha.' }),
+});
+
+/** Perfil editável pelo próprio cliente (§11.2). E-mail e papel não entram. */
+export const updateMeBodySchema = z
+  .object({
+    name: nameSchema.optional(),
+    phone: phoneSchema.optional(),
+  })
+  .refine((body) => body.name !== undefined || body.phone !== undefined, {
+    error: 'Informe o que você quer mudar.',
+  });
+
 export const resendVerificationBodySchema = z.object({
   email: emailSchema,
 });

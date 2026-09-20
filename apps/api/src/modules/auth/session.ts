@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { SessionResponse, SessionUser } from '@chacara/shared';
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { env } from '../../config/env.js';
+import { AppError } from '../../lib/errors.js';
 import type { UserModel } from '../../generated/prisma/models.js';
 import type { PrismaClient } from '../../generated/prisma/client.js';
 import { REFRESH_COOKIE_NAME, refreshCookieOptions } from '../../plugins/auth.js';
@@ -65,7 +66,7 @@ export async function issueSession({
   return { accessToken, user: toSessionUser(user) };
 }
 
-/** Revoga a família inteira da sessão e limpa o cookie. */
+/** Revoga todas as rotações de uma sessão. */
 export async function revokeSessionFamily(
   prisma: PrismaClient,
   familyId: string,
@@ -79,4 +80,68 @@ export async function revokeSessionFamily(
 
 export function clearSessionCookie(reply: FastifyReply): void {
   reply.clearCookie(REFRESH_COOKIE_NAME, { path: refreshCookieOptions.path });
+}
+
+function expiredSession(): AppError {
+  return new AppError('UNAUTHORIZED', 401, 'Sua sessão expirou. Entre de novo para continuar.');
+}
+
+/**
+ * Rotação do refresh token, com detecção de reuso (§10.1).
+ *
+ * Cada refresh **gasta** o token apresentado e emite outro na mesma família. Se
+ * um token já gasto reaparecer, ou ele foi copiado por outra pessoa, ou vazou de
+ * algum lugar: nos dois casos a sessão inteira é revogada, e tanto o atacante
+ * quanto o dono precisam entrar de novo. É preferível o incômodo a manter viva
+ * uma sessão possivelmente comprometida.
+ *
+ * O "gastar" é um único `UPDATE` com a guarda no `WHERE`, então duas requisições
+ * simultâneas não conseguem ambas rotacionar o mesmo token.
+ */
+export async function rotateRefreshToken(
+  prisma: PrismaClient,
+  presentedToken: string,
+  now = new Date(),
+): Promise<{ user: UserModel; familyId: string }> {
+  const tokenHash = hashToken(presentedToken);
+
+  const stored = await prisma.refreshToken.findUnique({
+    where: { tokenHash },
+    include: { user: true },
+  });
+
+  // Token que nunca existiu não tem família para revogar.
+  if (!stored) throw expiredSession();
+
+  const claimed = await prisma.refreshToken.updateMany({
+    where: { tokenHash, revokedAt: null, expiresAt: { gt: now } },
+    data: { revokedAt: now },
+  });
+
+  if (claimed.count === 0) {
+    // Já revogado (reuso) ou vencido. A sessão morre inteira nos dois casos.
+    await revokeSessionFamily(prisma, stored.familyId, now);
+    throw expiredSession();
+  }
+
+  return { user: stored.user, familyId: stored.familyId };
+}
+
+const APP_ORIGIN = new URL(env.APP_URL).origin;
+
+/**
+ * Barreira de CSRF nas rotas de sessão (§10.7).
+ *
+ * `SameSite=Strict` no cookie já impede que outro site o envie, então esta é a
+ * segunda camada. Requisição sem `Origin` é aceita de propósito: cliente que não
+ * é navegador não manda o cabeçalho, e exigi-lo quebraria integração legítima sem
+ * fechar um furo que o cookie já fecha.
+ */
+export function assertTrustedOrigin(request: FastifyRequest): void {
+  const origin = request.headers.origin;
+  if (!origin) return;
+
+  if (origin !== APP_ORIGIN) {
+    throw new AppError('FORBIDDEN', 403, 'Origem da requisição não autorizada.');
+  }
 }

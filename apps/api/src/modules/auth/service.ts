@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import type { RegisterBody } from '@chacara/shared';
 import { env } from '../../config/env.js';
 import type { PrismaClient } from '../../generated/prisma/client.js';
@@ -5,7 +6,7 @@ import type { UserModel } from '../../generated/prisma/models.js';
 import { AppError } from '../../lib/errors.js';
 import { accountExistsTemplate, verifyEmailTemplate } from '../../lib/mail/templates.js';
 import { sendMail } from '../../lib/mailer.js';
-import { hashPassword } from '../../lib/password.js';
+import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { consumeAuthToken, issueAuthToken } from '../../lib/tokens.js';
 
 /**
@@ -90,6 +91,57 @@ export async function register(prisma: PrismaClient, body: RegisterBody): Promis
 
   // Conta com senha ou com Google: nada muda, e o dono é avisado da tentativa.
   await sendAccountExists(existing);
+}
+
+/**
+ * Hash descartável, usado quando o e-mail não tem conta.
+ *
+ * Sem ele, uma tentativa com e-mail inexistente responderia bem mais rápido que
+ * uma com senha errada — e o tempo de resposta viraria um oráculo de quais
+ * endereços estão cadastrados, desfazendo o cuidado da §10.2.
+ */
+let decoyHash: string | null = null;
+
+async function getDecoyHash(): Promise<string> {
+  decoyHash ??= await hashPassword(randomBytes(32).toString('hex'));
+  return decoyHash;
+}
+
+export async function login(
+  prisma: PrismaClient,
+  { email, password }: { email: string; password: string },
+): Promise<UserModel> {
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  const hash = user?.passwordHash ?? (await getDecoyHash());
+  const passwordMatches = await verifyPassword(hash, password);
+
+  // Senha errada e e-mail inexistente devolvem a mesma coisa (§10.2). Conta só
+  // com Google cai aqui também: ela não tem senha para conferir.
+  if (!user || !user.passwordHash || !passwordMatches) {
+    throw new AppError(
+      'INVALID_CREDENTIALS',
+      401,
+      'E-mail ou senha incorretos. Confira e tente de novo.',
+    );
+  }
+
+  /*
+   * A confirmação é checada **depois** da senha, e não antes.
+   *
+   * Invertendo a ordem, qualquer pessoa descobriria que um e-mail está cadastrado
+   * só tentando entrar. Aqui, quem recebe esta mensagem já provou saber a senha,
+   * então dizer o endereço não revela nada novo.
+   */
+  if (user.emailVerifiedAt === null) {
+    throw new AppError(
+      'EMAIL_NOT_VERIFIED',
+      403,
+      `Confirme seu e-mail para entrar. Enviamos um link para ${user.email}.`,
+    );
+  }
+
+  return user;
 }
 
 export async function resendVerification(prisma: PrismaClient, email: string): Promise<void> {

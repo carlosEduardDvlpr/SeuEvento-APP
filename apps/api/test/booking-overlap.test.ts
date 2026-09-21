@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { PG_CHECK_VIOLATION, isExclusionViolation, postgresErrorCode } from '../src/lib/errors.js';
 import { prisma, truncateAll } from './helpers/db.js';
 import { createBooking, createUser } from './helpers/factories.js';
@@ -16,10 +16,6 @@ describe('constraint de sobreposição de reservas', () => {
     await truncateAll();
     const user = await createUser();
     userId = user.id;
-  });
-
-  afterAll(async () => {
-    await prisma.$disconnect();
   });
 
   it('recusa duas reservas PENDING com dias em comum', async () => {

@@ -37,10 +37,14 @@
   align-items: center;
   min-height: var(--touch-target);
   padding: 0 var(--space-12);
+  border: none;
+  background: none;
   border-radius: var(--r-sm);
   color: var(--fg);
   font-weight: 600;
+  font-size: var(--text-base);
   text-decoration: none;
+  cursor: pointer;
 }
 
 .navLink:hover {
@@ -88,6 +92,12 @@
 
 .footerNav a {
   color: var(--sage-100);
+}
+
+.footerUser {
+  width: 100%;
+  color: var(--sage-300);
+  font-size: var(--text-sm);
 }
 
 @media (max-width: 480px) {

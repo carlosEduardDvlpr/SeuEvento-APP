@@ -31,6 +31,11 @@ export const loginBodySchema = z.object({
   password: z.string().min(1, { error: 'Informe sua senha.' }),
 });
 
+/** O `credential` que o Google Identity Services devolve no navegador (§10.3). */
+export const googleLoginBodySchema = z.object({
+  idToken: z.string().min(1, { error: 'Não recebemos a credencial do Google.' }),
+});
+
 export const forgotPasswordBodySchema = z.object({
   email: emailSchema,
 });

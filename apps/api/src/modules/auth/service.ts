@@ -12,6 +12,7 @@ import {
 import { sendMail } from '../../lib/mailer.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { consumeAuthToken, issueAuthToken } from '../../lib/tokens.js';
+import type { GoogleIdentity } from './google.js';
 
 /**
  * Cadastro e confirmação de e-mail (§10.2).
@@ -159,6 +160,64 @@ export async function resendVerification(prisma: PrismaClient, email: string): P
   if (!user || user.emailVerifiedAt !== null) return;
 
   await sendVerification(prisma, user);
+}
+
+/**
+ * Entra (ou cria a conta) a partir de uma identidade do Google já validada (§10.3).
+ *
+ * A ordem é: `googleId`, depois e-mail, depois criar. Procurar pelo `googleId`
+ * primeiro é o que faz a conta sobreviver a uma troca de e-mail no Google.
+ */
+export async function loginWithGoogle(
+  prisma: PrismaClient,
+  identity: GoogleIdentity,
+): Promise<UserModel> {
+  const byGoogleId = await prisma.user.findUnique({ where: { googleId: identity.googleId } });
+  if (byGoogleId) return byGoogleId;
+
+  const byEmail = await prisma.user.findUnique({ where: { email: identity.email } });
+
+  if (byEmail) {
+    const now = new Date();
+
+    /*
+     * Vinculação de conta e um sequestro que ela permitiria.
+     *
+     * Cenário: alguém se cadastra com o e-mail de outra pessoa e define uma senha.
+     * A conta nasce não confirmada, e o impostor não consegue entrar. Quando a
+     * dona de verdade entra pelo Google, a conta é confirmada — e a senha do
+     * impostor passaria a funcionar.
+     *
+     * Por isso, ao vincular a uma conta **não confirmada**, a senha é descartada:
+     * ela nunca foi provada como sendo de quem tem o e-mail. A dona define uma
+     * nova por "esqueci minha senha" quando quiser. Conta já confirmada mantém a
+     * senha, porque ali a titularidade está provada.
+     */
+    const wasUnverified = byEmail.emailVerifiedAt === null;
+
+    return prisma.user.update({
+      where: { id: byEmail.id },
+      data: {
+        googleId: identity.googleId,
+        // Entrar pelo Google com e-mail confirmado é a mesma prova de posse da
+        // caixa de entrada que o link de confirmação dá.
+        ...(wasUnverified ? { emailVerifiedAt: now, passwordHash: null } : {}),
+        ...(byEmail.termsAcceptedAt === null ? { termsAcceptedAt: now } : {}),
+      },
+    });
+  }
+
+  const now = new Date();
+  return prisma.user.create({
+    data: {
+      name: identity.name,
+      email: identity.email,
+      googleId: identity.googleId,
+      // Nasce confirmada: o Google já garantiu o e-mail.
+      emailVerifiedAt: now,
+      termsAcceptedAt: now,
+    },
+  });
 }
 
 export async function forgotPassword(prisma: PrismaClient, email: string): Promise<void> {

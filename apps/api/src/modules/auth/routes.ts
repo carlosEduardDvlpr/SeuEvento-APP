@@ -1,6 +1,7 @@
 import {
   acceptedResponseSchema,
   forgotPasswordBodySchema,
+  googleLoginBodySchema,
   loginBodySchema,
   registerBodySchema,
   resendVerificationBodySchema,
@@ -20,10 +21,12 @@ import {
   revokeSessionFamily,
   rotateRefreshToken,
 } from './session.js';
+import { verifyGoogleIdToken } from './google.js';
 import {
   ACCEPTED_MESSAGE,
   forgotPassword,
   login,
+  loginWithGoogle,
   register,
   resendVerification,
   resetPassword,
@@ -161,6 +164,23 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
         clearSessionCookie(reply);
         throw error;
       }
+    },
+  );
+
+  app.post(
+    '/auth/google',
+    {
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+      schema: {
+        body: googleLoginBodySchema,
+        response: { 200: sessionResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const identity = await verifyGoogleIdToken(request.body.idToken);
+      const user = await loginWithGoogle(app.prisma, identity);
+
+      return issueSession({ app, reply, user });
     },
   );
 

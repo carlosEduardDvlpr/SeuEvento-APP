@@ -1,0 +1,98 @@
+.wrapper {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-48) var(--space-16) var(--space-96);
+}
+
+/* §14.5: separação por borda de 1 px, sem sombra. */
+.card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-32);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.card h1 {
+  font-size: var(--text-2xl);
+}
+
+.lead {
+  margin-top: var(--space-8);
+  color: var(--fg-soft);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  margin-top: var(--space-24);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  margin-top: var(--space-8);
+}
+
+/* Resumo do erro do formulário, anunciado por leitor de tela (§18.1). */
+.formError {
+  padding: var(--space-12);
+  background: var(--st-cancelled-bg);
+  color: var(--st-cancelled-fg);
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.notice {
+  padding: var(--space-12);
+  background: var(--st-confirmed-bg);
+  color: var(--st-confirmed-fg);
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-16);
+  margin-top: var(--space-24);
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+
+.checkbox {
+  display: flex;
+  gap: var(--space-8);
+  align-items: flex-start;
+  font-size: var(--text-sm);
+}
+
+.checkbox input {
+  /* Alvo de toque, mesmo sendo caixa de marcação (§18.1). */
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  flex: none;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  margin: var(--space-24) 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}

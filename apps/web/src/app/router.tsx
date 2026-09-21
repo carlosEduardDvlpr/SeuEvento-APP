@@ -1,9 +1,15 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
+import { LoginPage } from '@/features/auth/LoginPage';
+import { RegisterPage } from '@/features/auth/RegisterPage';
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
+import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage';
 import { LandingPage } from '@/features/landing/LandingPage';
+import { RequireAuth, RequireRole } from './guards';
+import { PublicLayout } from './layout/PublicLayout';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { UnderConstructionPage } from './pages/UnderConstructionPage';
-import { PublicLayout } from './layout/PublicLayout';
 
 /**
  * Mapa de rotas da §12.1.
@@ -24,26 +30,20 @@ export function AppRouter() {
 
             <Route path="reservar" element={<UnderConstructionPage title="Reservar" />} />
 
-            <Route path="entrar" element={<UnderConstructionPage title="Entrar" />} />
-            <Route path="cadastro" element={<UnderConstructionPage title="Criar conta" />} />
-            <Route
-              path="verificar-email"
-              element={<UnderConstructionPage title="Confirmar e-mail" />}
-            />
-            <Route
-              path="esqueci-senha"
-              element={<UnderConstructionPage title="Esqueci minha senha" />}
-            />
-            <Route
-              path="redefinir-senha"
-              element={<UnderConstructionPage title="Definir nova senha" />}
-            />
+            <Route path="entrar" element={<LoginPage />} />
+            <Route path="cadastro" element={<RegisterPage />} />
+            <Route path="verificar-email" element={<VerifyEmailPage />} />
+            <Route path="esqueci-senha" element={<ForgotPasswordPage />} />
+            <Route path="redefinir-senha" element={<ResetPasswordPage />} />
 
-            <Route
-              path="minhas-reservas"
-              element={<UnderConstructionPage title="Minhas reservas" />}
-            />
-            <Route path="reservas/:id" element={<UnderConstructionPage title="Reserva" />} />
+            {/* Área do cliente: exige sessão, e volta para cá depois de entrar. */}
+            <Route element={<RequireAuth />}>
+              <Route
+                path="minhas-reservas"
+                element={<UnderConstructionPage title="Minhas reservas" />}
+              />
+              <Route path="reservas/:id" element={<UnderConstructionPage title="Reserva" />} />
+            </Route>
 
             <Route path="termos" element={<UnderConstructionPage title="Termos de uso" />} />
             <Route
@@ -54,7 +54,9 @@ export function AppRouter() {
             <Route path="*" element={<NotFoundPage />} />
           </Route>
 
-          <Route path="/admin/*" element={<AdminRoutes />} />
+          <Route element={<RequireRole role="ADMIN" />}>
+            <Route path="/admin/*" element={<AdminRoutes />} />
+          </Route>
         </Routes>
       </Suspense>
     </BrowserRouter>

@@ -4,8 +4,8 @@ import { type ApiErrorCode, isApiErrorCode } from '@chacara/shared';
  * Cliente HTTP (§12.3).
  *
  * Um wrapper de `fetch` que traduz o envelope de erro da §11.1 numa exceção
- * tipada. Os hooks por módulo só chamam daqui, então o tratamento de erro é
- * igual em toda a aplicação.
+ * tipada e cuida da renovação de sessão. Os hooks por módulo só chamam daqui,
+ * então o tratamento de erro é igual em toda a aplicação.
  */
 
 export class ApiError extends Error {
@@ -21,20 +21,23 @@ export class ApiError extends Error {
 }
 
 /**
- * Ganchos preenchidos pelo contexto de autenticação.
+ * Ganchos preenchidos pelo módulo de sessão.
  *
- * Ficam aqui, e não num import direto, para o cliente HTTP não depender do React:
- * assim ele é testável sem montar componente, e o contexto de auth continua sendo
- * o único dono do access token (que vive só em memória, §10.1).
+ * Ficam aqui, e não num import direto, para o cliente HTTP não depender do React
+ * nem do módulo de auth: assim ele é testável sem montar componente, e o access
+ * token continua tendo um único dono (a memória do módulo de sessão, §10.1).
  */
 type AuthHooks = {
   getAccessToken: () => string | null;
+  /** Tenta renovar a sessão. Deve resolver `false` quando não foi possível. */
+  refreshSession: () => Promise<boolean>;
   /** Chamado quando a sessão não pode mais ser renovada. */
   onSessionExpired: () => void;
 };
 
 const authHooks: AuthHooks = {
   getAccessToken: () => null,
+  refreshSession: async () => false,
   onSessionExpired: () => {},
 };
 
@@ -67,7 +70,7 @@ function toApiError(status: number, payload: unknown): ApiError {
   return new ApiError(code, status, message, error?.details);
 }
 
-export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function send<T>(path: string, options: RequestOptions, canRetry: boolean): Promise<T> {
   const { method = 'GET', body, signal, auth = false } = options;
 
   const headers = new Headers();
@@ -99,11 +102,28 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   const payload = await response.json().catch(() => undefined);
 
-  if (!response.ok) {
-    const apiError = toApiError(response.status, payload);
-    if (apiError.status === 401 && auth) authHooks.onSessionExpired();
-    throw apiError;
+  if (response.ok) return payload as T;
+
+  const apiError = toApiError(response.status, payload);
+
+  /*
+   * Access token vencido (§10.4): renova uma vez e repete a requisição.
+   *
+   * `canRetry` impede laço infinito, e a renovação é compartilhada pelo módulo
+   * de sessão — várias requisições que expiram juntas esperam a **mesma**
+   * chamada de refresh. Sem isso, cada uma rotacionaria o token, e a segunda
+   * pareceria reuso para o servidor, que então revogaria a sessão inteira.
+   */
+  if (apiError.status === 401 && auth && canRetry) {
+    const renewed = await authHooks.refreshSession();
+    if (renewed) return send<T>(path, options, false);
   }
 
-  return payload as T;
+  if (apiError.status === 401 && auth) authHooks.onSessionExpired();
+
+  throw apiError;
+}
+
+export function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return send<T>(path, options, true);
 }

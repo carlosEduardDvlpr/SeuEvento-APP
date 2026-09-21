@@ -1,8 +1,12 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import { isProduction, isTest } from './config/env.js';
+import { adminRoutes } from './modules/admin/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
+import { galleryRoutes } from './modules/gallery/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { itemRoutes } from './modules/items/routes.js';
+import { themeRoutes } from './modules/themes/routes.js';
 import { userRoutes } from './modules/users/routes.js';
 import { venueRoutes } from './modules/venue/routes.js';
 import { registerAuth } from './plugins/auth.js';
@@ -81,6 +85,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(venueRoutes, { prefix: '/api' });
   await app.register(authRoutes, { prefix: '/api' });
   await app.register(userRoutes, { prefix: '/api' });
+  await app.register(themeRoutes, { prefix: '/api' });
+  await app.register(itemRoutes, { prefix: '/api' });
+  await app.register(galleryRoutes, { prefix: '/api' });
+  await app.register(adminRoutes, { prefix: '/api/admin' });
 
   return app;
 }

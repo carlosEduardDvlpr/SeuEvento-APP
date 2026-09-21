@@ -16,6 +16,20 @@ export class AppError extends Error {
   }
 }
 
+/**
+ * `VALIDATION_ERROR` apontando um campo específico.
+ *
+ * Usa o mesmo formato de `details` que o handler produz para erro do Zod (§11.1),
+ * então o formulário do SPA marca o campo sem precisar saber se a recusa veio do
+ * schema ou de uma regra do banco (nome duplicado, por exemplo).
+ */
+export function fieldError(field: string, message: string): AppError {
+  return new AppError('VALIDATION_ERROR', 400, message, {
+    context: 'body',
+    fields: [{ field, message }],
+  });
+}
+
 /** SQLSTATE dos erros do Postgres que o domínio precisa distinguir. */
 export const PG_UNIQUE_VIOLATION = '23505';
 export const PG_CHECK_VIOLATION = '23514';
@@ -45,4 +59,20 @@ export function postgresErrorCode(error: unknown): string | undefined {
 /** A reserva colidiu com outra reserva ativa nos mesmos dias (§8.1). */
 export function isExclusionViolation(error: unknown): boolean {
   return postgresErrorCode(error) === PG_EXCLUSION_VIOLATION;
+}
+
+/** Código próprio do Prisma para violação de unicidade. */
+const PRISMA_UNIQUE_VIOLATION = 'P2002';
+
+/**
+ * Valor duplicado em coluna única.
+ *
+ * Aqui o Prisma **traduz** o erro e entrega o código próprio `P2002`, ao contrário
+ * do que faz com a exclusion constraint da §8.1, que chega como `P2039` com o
+ * SQLSTATE escondido. Conferir os dois caminhos evita que a detecção dependa de
+ * qual deles o driver tomou.
+ */
+export function isUniqueViolation(error: unknown): boolean {
+  const code = asRecord(error)?.['code'];
+  return code === PRISMA_UNIQUE_VIOLATION || postgresErrorCode(error) === PG_UNIQUE_VIOLATION;
 }

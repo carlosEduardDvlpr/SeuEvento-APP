@@ -118,6 +118,16 @@ export const paginationSchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+/** Envelope das listas paginadas do admin (§11.1). */
+export function paginatedSchema<T extends z.ZodType>(item: T) {
+  return z.object({
+    items: z.array(item),
+    total: z.number().int(),
+    page: z.number().int(),
+    pageSize: z.number().int(),
+  });
+}
+
 /**
  * Intervalo de dias da reserva. Inclusivo nas duas pontas, então
  * `startDate === endDate` é uma reserva de um dia (§7.3).

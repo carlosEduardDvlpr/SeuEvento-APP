@@ -1,6 +1,8 @@
 import type {
   AdminCombo,
   Combo,
+  ComboPreview,
+  ComboPreviewBody,
   CombosQuery,
   CreateComboBody,
   DeleteResult,
@@ -139,6 +141,35 @@ async function assertReferencesExist(
       throw fieldError('items', 'Um dos itens escolhidos não existe.');
     }
   }
+}
+
+/**
+ * Prévia da economia, sem salvar (§13).
+ *
+ * Existe para o formulário do painel mostrar "soma dos itens R$ X, o cliente paga
+ * R$ Y" **antes** de o combo existir. É o mesmo `comboValue` do orçamento, então
+ * não há uma segunda implementação da regra da §9.6 para divergir: calcular isso
+ * no front duplicaria o arredondamento do percentual e o piso do preço fechado.
+ */
+export async function previewCombo(
+  prisma: PrismaClient,
+  body: ComboPreviewBody,
+): Promise<ComboPreview> {
+  const rows = await prisma.item.findMany({
+    where: { id: { in: body.items.map((item) => item.itemId) } },
+    select: { id: true, priceCents: true },
+  });
+
+  const prices = new Map(rows.map((row) => [row.id, row.priceCents]));
+
+  // Item que não existe entra valendo zero: a prévia não é lugar de recusar o
+  // formulário, e o POST de verdade já aponta o campo.
+  const { baseCents, discountCents, priceCents } = comboValue(
+    { id: 'preview', name: 'preview', ...body },
+    (itemId) => prices.get(itemId) ?? 0,
+  );
+
+  return { itemsTotalCents: baseCents, discountCents, priceCents };
 }
 
 export async function createCombo(

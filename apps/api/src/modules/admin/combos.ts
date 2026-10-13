@@ -1,5 +1,7 @@
 import {
   adminComboSchema,
+  comboPreviewBodySchema,
+  comboPreviewSchema,
   createComboBodySchema,
   deleteResultSchema,
   idParamsSchema,
@@ -12,6 +14,7 @@ import {
   deleteCombo,
   getAdminCombo,
   listAdminCombos,
+  previewCombo,
   updateCombo,
 } from '../combos/service.js';
 
@@ -31,6 +34,18 @@ export const adminComboRoutes: FastifyPluginAsyncZod = async (app) => {
     '/combos/:id',
     { schema: { params: idParamsSchema, response: { 200: adminComboSchema } } },
     async (request) => getAdminCombo(app.prisma, request.params.id),
+  );
+
+  /*
+   * Prévia da economia (§13), sem salvar. Declarada antes de `/combos/:id` para
+   * deixar explícito que "preview" não é um id.
+   *
+   * É POST porque o corpo carrega a composição do combo, não porque muda estado.
+   */
+  app.post(
+    '/combos/preview',
+    { schema: { body: comboPreviewBodySchema, response: { 200: comboPreviewSchema } } },
+    async (request) => previewCombo(app.prisma, request.body),
   );
 
   app.post(

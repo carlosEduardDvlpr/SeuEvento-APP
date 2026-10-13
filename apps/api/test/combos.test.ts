@@ -252,6 +252,78 @@ describe('combos', () => {
     });
   });
 
+  /*
+   * A prévia existe para o formulário do painel mostrar a economia **antes** de o
+   * combo existir (§13). Calcular isso no front duplicaria a regra da §9.6, então
+   * a rota reaproveita o mesmo `comboValue` do orçamento.
+   */
+  describe('prévia sem salvar', () => {
+    it('devolve os mesmos três números, sem criar nada', async () => {
+      const painel = await createItem({ categoryId, priceCents: 20000 });
+      const mesa = await createItem({ categoryId, priceCents: 12000 });
+
+      const response = await asAdmin('POST', '/api/admin/combos/preview', {
+        discountType: 'PERCENT',
+        discountValue: 10,
+        items: [
+          { itemId: painel.id, quantity: 1 },
+          { itemId: mesa.id, quantity: 2 },
+        ],
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        itemsTotalCents: 44000,
+        discountCents: 4400,
+        priceCents: 39600,
+      });
+      expect(await prisma.combo.count()).toBe(0);
+    });
+
+    /* Mesmo arredondamento do orçamento: o desconto, nunca o total. */
+    it('arredonda igual ao cálculo do orçamento', async () => {
+      const item = await createItem({ categoryId, priceCents: 3333 });
+
+      const response = await asAdmin('POST', '/api/admin/combos/preview', {
+        discountType: 'PERCENT',
+        discountValue: 15,
+        items: [{ itemId: item.id, quantity: 1 }],
+      });
+
+      expect(response.json()).toEqual({
+        itemsTotalCents: 3333,
+        discountCents: 500,
+        priceCents: 2833,
+      });
+    });
+
+    /* Item que não existe vale zero: a prévia não é lugar de recusar formulário. */
+    it('não derruba a requisição por item inexistente', async () => {
+      const response = await asAdmin('POST', '/api/admin/combos/preview', {
+        discountType: 'PERCENT',
+        discountValue: 10,
+        items: [{ itemId: '00000000-0000-4000-8000-000000000000', quantity: 1 }],
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        itemsTotalCents: 0,
+        discountCents: 0,
+        priceCents: 0,
+      });
+    });
+
+    it('recusa quem não é admin', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/admin/combos/preview',
+        payload: { discountType: 'PERCENT', discountValue: 10, items: [] },
+      });
+
+      expect(response.statusCode).toBe(401);
+    });
+  });
+
   describe('vitrine', () => {
     it('devolve combo ativo com os itens e a economia', async () => {
       const item = await createItem({ categoryId, name: 'Painel ripado', priceCents: 10000 });

@@ -1,0 +1,61 @@
+.tagline {
+  display: block;
+  margin-top: var(--space-4);
+  max-width: 44ch;
+  color: var(--fg-soft);
+  font-size: var(--text-xs);
+}
+
+.slug {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: var(--text-xs);
+  color: var(--fg-soft);
+}
+
+.swatches {
+  display: inline-flex;
+  gap: var(--space-4);
+}
+
+.swatch {
+  display: inline-block;
+  line-height: 0;
+}
+
+.swatchFill {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  /* Borda garante que cor clara continue visível sobre fundo claro. */
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+
+.paletteList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paletteRow {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--space-12);
+  align-items: start;
+}
+
+.colorInput {
+  /* `type=color` ignora padding e fica minúsculo sem altura explícita. */
+  padding: var(--space-4);
+  min-height: var(--touch-target);
+  cursor: pointer;
+}
+
+.paletteError {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--danger);
+}

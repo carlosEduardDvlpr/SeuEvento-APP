@@ -18,9 +18,14 @@ import { centsSchema, galleryKindSchema, paletteSchema } from './schemas.js';
 // Blocos reaproveitados
 // ---------------------------------------------------------------------------
 
-/** Ordem de exibição, definida pelo admin. */
+/**
+ * Ordem de exibição, definida pelo admin.
+ *
+ * A mensagem de tipo é customizada porque campo numérico vazio no formulário
+ * chega como `NaN`, e a mensagem padrão do Zod é em inglês.
+ */
 export const sortOrderSchema = z
-  .number()
+  .number({ error: 'Informe a ordem como número.' })
   .int({ error: 'A ordem deve ser um número inteiro.' })
   .min(0, { error: 'A ordem não pode ser negativa.' })
   .max(9999, { error: 'A ordem máxima é 9999.' });

@@ -1,0 +1,36 @@
+.region {
+  position: fixed;
+  /* No celular fica em cima do polegar, por isso embaixo e centralizado. */
+  bottom: var(--space-16);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: min(420px, calc(100vw - 2 * var(--space-16)));
+  /* Região vazia não deve capturar clique. */
+  pointer-events: none;
+}
+
+.toast {
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  box-shadow: var(--elevation);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.success {
+  background: var(--st-confirmed-bg);
+  border-color: var(--st-confirmed-fg);
+  color: var(--st-confirmed-fg);
+}
+
+.error {
+  background: var(--st-cancelled-bg);
+  border-color: var(--st-cancelled-fg);
+  color: var(--st-cancelled-fg);
+}

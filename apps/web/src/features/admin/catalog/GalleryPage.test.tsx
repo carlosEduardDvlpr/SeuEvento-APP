@@ -77,9 +77,9 @@ describe('GalleryPage', () => {
     stubFetch({ 'GET /api/admin/gallery': () => jsonResponse([CAPA, FESTA_A, FESTA_B]) });
     renderPage();
 
-    expect(await screen.findByRole('heading', { name: 'Capa', level: 2 })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Destaque', level: 2 })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'A chácara', level: 2 })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Festas realizadas', level: 2 })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Eventos', level: 2 })).toBeVisible();
 
     expect(screen.getByText('2 fotos, na ordem em que aparecem.')).toBeVisible();
     expect(screen.getAllByText('Nenhuma foto nesta seção.')).toHaveLength(1);

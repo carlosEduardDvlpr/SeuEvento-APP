@@ -76,3 +76,21 @@ export function isUniqueViolation(error: unknown): boolean {
   const code = asRecord(error)?.['code'];
   return code === PRISMA_UNIQUE_VIOLATION || postgresErrorCode(error) === PG_UNIQUE_VIOLATION;
 }
+
+/** Conflito de escrita ou deadlock: o Postgres abortou a transação. */
+const PRISMA_WRITE_CONFLICT = 'P2034';
+
+/**
+ * A transação perdeu uma disputa de escrita e foi desfeita.
+ *
+ * Acontece sob contenção real: várias transações tentando gravar a mesma faixa do
+ * índice GiST da §8.1 ao mesmo tempo. Nem sempre a perdedora recebe o
+ * `exclusion_violation` limpo — às vezes o Postgres aborta antes, como conflito
+ * de serialização.
+ *
+ * Repetir é **seguro**: conflito implica rollback, então nada foi gravado. É a
+ * recomendação do próprio Prisma para este código.
+ */
+export function isWriteConflict(error: unknown): boolean {
+  return asRecord(error)?.['code'] === PRISMA_WRITE_CONFLICT;
+}

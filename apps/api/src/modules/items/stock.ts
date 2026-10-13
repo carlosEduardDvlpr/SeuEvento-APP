@@ -1,4 +1,4 @@
-import type { PrismaClient } from '../../generated/prisma/client.js';
+import type { Db } from '../../lib/db.js';
 import { type ISODate, eachDay, toISODate } from '../../lib/dates.js';
 import { activeBookingsFilter, overlappingRangeFilter } from '../availability/service.js';
 
@@ -38,7 +38,7 @@ export type StockCheckInput = {
  * à mão, e o intervalo aqui tem no máximo `maxDays` dias.
  */
 async function loadReservedPerDay(
-  prisma: PrismaClient,
+  db: Db,
   {
     from,
     to,
@@ -53,7 +53,7 @@ async function loadReservedPerDay(
     now: Date;
   },
 ): Promise<Map<string, Map<ISODate, number>>> {
-  const rows = await prisma.bookingItem.findMany({
+  const rows = await db.bookingItem.findMany({
     where: {
       itemId: { in: itemIds },
       booking: {
@@ -91,7 +91,7 @@ async function loadReservedPerDay(
  * (um item fora do catálogo é requisição inválida, não indisponibilidade).
  */
 export async function findStockShortages(
-  prisma: PrismaClient,
+  db: Db,
   { from, to, lines, ignoreBookingId, now = new Date() }: StockCheckInput,
 ): Promise<StockShortage[]> {
   if (lines.length === 0) return [];
@@ -99,8 +99,8 @@ export async function findStockShortages(
   const itemIds = lines.map((line) => line.itemId);
 
   const [items, reserved] = await Promise.all([
-    prisma.item.findMany({ where: { id: { in: itemIds } }, select: { id: true, stock: true } }),
-    loadReservedPerDay(prisma, { from, to, itemIds, ignoreBookingId, now }),
+    db.item.findMany({ where: { id: { in: itemIds } }, select: { id: true, stock: true } }),
+    loadReservedPerDay(db, { from, to, itemIds, ignoreBookingId, now }),
   ]);
 
   const stockOf = new Map(items.map((item) => [item.id, item.stock]));

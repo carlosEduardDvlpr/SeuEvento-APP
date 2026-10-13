@@ -8,7 +8,6 @@ import type {
   CreateItemBody,
   CreateThemeBody,
   DeleteResult,
-  GalleryKind,
   ReorderGalleryBody,
   UpdateCategoryBody,
   UpdateGalleryImageBody,
@@ -251,10 +250,3 @@ export function useReorderGallery() {
     onSuccess: (images) => client.setQueryData(adminKeys.gallery, images),
   });
 }
-
-/** Rótulos pt-BR das seções da galeria (§13). */
-export const GALLERY_KIND_LABELS: Record<GalleryKind, string> = {
-  HERO: 'Capa',
-  VENUE: 'A chácara',
-  EVENTS: 'Festas realizadas',
-};

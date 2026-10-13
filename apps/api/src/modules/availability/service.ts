@@ -1,7 +1,23 @@
-import type { DayStatus } from '@chacara/shared';
+import {
+  AVAILABILITY_MAX_DAYS,
+  type Availability,
+  type AvailabilityQuery,
+  type BlockedDate,
+  type BlockedDatesQuery,
+  type CreateBlockedDateBody,
+  type DayStatus,
+} from '@chacara/shared';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
-import { type ISODate, addDays, eachDay, parseISODate, toISODate } from '../../lib/dates.js';
-import { todayInSaoPaulo } from '../../lib/dates.js';
+import {
+  type ISODate,
+  addDays,
+  daysBetweenInclusive,
+  eachDay,
+  parseISODate,
+  toISODate,
+  todayInSaoPaulo,
+} from '../../lib/dates.js';
+import { AppError } from '../../lib/errors.js';
 
 /**
  * Disponibilidade de datas (§9.1).
@@ -138,4 +154,96 @@ export async function findUnavailableDates(
   const days = await getDayStatuses(prisma, { from, to, now });
 
   return days.filter((day) => day.status !== 'free').map((day) => day.date);
+}
+
+/**
+ * Rota pública de disponibilidade (§11.3).
+ *
+ * Limita o período aqui, e não no `getDayStatuses`: o orçamento também chama
+ * aquela função, mas com intervalo que a própria regra de `maxDays` já contém.
+ * Quem precisa de teto é o pedido que vem de fora.
+ */
+export async function getAvailability(
+  prisma: PrismaClient,
+  { from, to }: AvailabilityQuery,
+  now: Date = new Date(),
+): Promise<Availability> {
+  const span = daysBetweenInclusive(from, to);
+
+  if (span > AVAILABILITY_MAX_DAYS) {
+    throw new AppError(
+      'VALIDATION_ERROR',
+      400,
+      `Consulte no máximo ${AVAILABILITY_MAX_DAYS} dias por vez.`,
+      { maxDays: AVAILABILITY_MAX_DAYS, requestedDays: span },
+    );
+  }
+
+  return { days: await getDayStatuses(prisma, { from, to, now }) };
+}
+
+// ---------------------------------------------------------------------------
+// Bloqueios do admin (§11.2)
+// ---------------------------------------------------------------------------
+
+function toBlockedDate(row: { date: Date; reason: string | null }): BlockedDate {
+  return { date: toISODate(row.date), reason: row.reason };
+}
+
+export async function listBlockedDates(
+  prisma: PrismaClient,
+  { from, to }: BlockedDatesQuery,
+): Promise<BlockedDate[]> {
+  /*
+   * As duas pontas entram no **mesmo** objeto. Espalhar `{ date: { gte } }` e
+   * `{ date: { lte } }` lado a lado faria o segundo sobrescrever o primeiro, e o
+   * filtro ficaria aberto num dos lados sem nenhum erro aparecer.
+   */
+  const date = {
+    ...(from ? { gte: parseISODate(from) } : {}),
+    ...(to ? { lte: parseISODate(to) } : {}),
+  };
+
+  const rows = await prisma.blockedDate.findMany({
+    where: Object.keys(date).length > 0 ? { date } : {},
+    orderBy: { date: 'asc' },
+  });
+
+  return rows.map(toBlockedDate);
+}
+
+/**
+ * Bloqueia um dia, ou atualiza o motivo se ele já estava bloqueado.
+ *
+ * `upsert` em vez de erro de duplicidade: bloquear um dia já bloqueado é o que o
+ * dono faz quando quer **corrigir o motivo**, e recusar com "já existe" o
+ * obrigaria a desbloquear e bloquear de novo.
+ *
+ * Bloquear um dia que tem reserva ativa é permitido de propósito: é exatamente o
+ * que se faz quando a chácara fica indisponível de verdade e as reservas ainda
+ * precisam ser canceladas uma a uma. O calendário do painel mostra os dois.
+ */
+export async function blockDate(
+  prisma: PrismaClient,
+  { date, reason }: CreateBlockedDateBody,
+): Promise<BlockedDate> {
+  const day = parseISODate(date);
+
+  const row = await prisma.blockedDate.upsert({
+    where: { date: day },
+    create: { date: day, reason },
+    update: { reason },
+  });
+
+  return toBlockedDate(row);
+}
+
+export async function unblockDate(prisma: PrismaClient, date: ISODate): Promise<void> {
+  const day = parseISODate(date);
+
+  const existing = await prisma.blockedDate.findUnique({ where: { date: day } });
+
+  if (!existing) throw new AppError('NOT_FOUND', 404, 'Este dia não está bloqueado.');
+
+  await prisma.blockedDate.delete({ where: { date: day } });
 }

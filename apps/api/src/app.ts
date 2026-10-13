@@ -7,6 +7,7 @@ import { comboRoutes } from './modules/combos/routes.js';
 import { galleryRoutes } from './modules/gallery/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { itemRoutes } from './modules/items/routes.js';
+import { pricingRoutes } from './modules/pricing/routes.js';
 import { themeRoutes } from './modules/themes/routes.js';
 import { userRoutes } from './modules/users/routes.js';
 import { venueRoutes } from './modules/venue/routes.js';
@@ -90,6 +91,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(itemRoutes, { prefix: '/api' });
   await app.register(comboRoutes, { prefix: '/api' });
   await app.register(galleryRoutes, { prefix: '/api' });
+  await app.register(pricingRoutes, { prefix: '/api' });
   await app.register(adminRoutes, { prefix: '/api/admin' });
 
   return app;

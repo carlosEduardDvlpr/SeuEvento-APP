@@ -3,6 +3,7 @@ import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod
 import { isProduction, isTest } from './config/env.js';
 import { adminRoutes } from './modules/admin/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
+import { comboRoutes } from './modules/combos/routes.js';
 import { galleryRoutes } from './modules/gallery/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { itemRoutes } from './modules/items/routes.js';
@@ -87,6 +88,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(userRoutes, { prefix: '/api' });
   await app.register(themeRoutes, { prefix: '/api' });
   await app.register(itemRoutes, { prefix: '/api' });
+  await app.register(comboRoutes, { prefix: '/api' });
   await app.register(galleryRoutes, { prefix: '/api' });
   await app.register(adminRoutes, { prefix: '/api/admin' });
 

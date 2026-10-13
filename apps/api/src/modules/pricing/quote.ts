@@ -111,6 +111,37 @@ export type ComboResult = {
   discountTotalCents: number;
 };
 
+/** Quanto vale uma aplicação do combo, dado o preço unitário de cada item. */
+export type ComboValue = {
+  /** Soma dos itens do combo pelo preço de tabela. */
+  baseCents: number;
+  /** Economia do cliente. Nunca negativa. */
+  discountCents: number;
+  /** O que o cliente paga levando o combo. */
+  priceCents: number;
+};
+
+/**
+ * Valor de **uma** aplicação do combo.
+ *
+ * Mora aqui, e não dentro do `applyCombos`, porque a prévia da economia no painel
+ * (§13) e a vitrine mostram esse número antes de existir pedido. Se cada ponta
+ * calculasse por conta, o cliente poderia ver uma economia e pagar outra.
+ */
+export function comboValue(combo: ComboDef, unitPriceOf: (itemId: string) => number): ComboValue {
+  const baseCents = sumCents(combo.items.map((item) => item.quantity * unitPriceOf(item.itemId)));
+
+  const raw =
+    combo.discountType === 'PERCENT'
+      ? percentOfCents(baseCents, combo.discountValue)
+      : baseCents - combo.discountValue;
+
+  // Preço fechado acima da soma dos itens não vira crédito (§9.6).
+  const discountCents = clampToZero(raw);
+
+  return { baseCents, discountCents, priceCents: baseCents - discountCents };
+}
+
 /**
  * Escolhe e aplica os combos.
  *
@@ -134,19 +165,8 @@ export function applyCombos(lines: readonly CartLine[], combos: readonly ComboDe
     combo.items.length > 0 &&
     combo.items.every((item) => (remaining.get(item.itemId) ?? 0) >= item.quantity);
 
-  const savingOf = (combo: ComboDef) => {
-    const base = sumCents(
-      combo.items.map((item) => item.quantity * (unitPrice.get(item.itemId) ?? 0)),
-    );
-
-    const discount =
-      combo.discountType === 'PERCENT'
-        ? percentOfCents(base, combo.discountValue)
-        : base - combo.discountValue;
-
-    // Preço fechado acima da soma dos itens não vira crédito (§9.6).
-    return clampToZero(discount);
-  };
+  const savingOf = (combo: ComboDef) =>
+    comboValue(combo, (itemId) => unitPrice.get(itemId) ?? 0).discountCents;
 
   // Ordem estável por id: é o que torna o desempate previsível mais abaixo.
   const candidates = [...combos].sort((a, b) => a.id.localeCompare(b.id));

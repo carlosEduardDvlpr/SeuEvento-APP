@@ -3,6 +3,7 @@ export * from './catalog.js';
 export * from './enums.js';
 export * from './errors.js';
 export * from './labels.js';
+export * from './pricing.js';
 export * from './schemas.js';
 export * from './themes.js';
 export * from './venue.js';

@@ -1,7 +1,9 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { adminCategoryRoutes } from './categories.js';
+import { adminComboRoutes } from './combos.js';
 import { adminGalleryRoutes } from './gallery.js';
 import { adminItemRoutes } from './items.js';
+import { adminPriceRuleRoutes } from './price-rules.js';
 import { adminThemeRoutes } from './themes.js';
 
 /**
@@ -21,5 +23,7 @@ export const adminRoutes: FastifyPluginAsyncZod = async (app) => {
   await app.register(adminCategoryRoutes);
   await app.register(adminThemeRoutes);
   await app.register(adminItemRoutes);
+  await app.register(adminComboRoutes);
+  await app.register(adminPriceRuleRoutes);
   await app.register(adminGalleryRoutes);
 };

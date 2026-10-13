@@ -50,7 +50,7 @@ export const imageUrlSchema = z
  * `null` o banco acumularia string vazia, e a interface teria que tratar os dois
  * casos em todo lugar que mostra o texto.
  */
-function optionalText(max: number) {
+export function optionalText(max: number) {
   return z
     .string()
     .trim()
@@ -59,7 +59,7 @@ function optionalText(max: number) {
     .nullable();
 }
 
-const optionalImageUrl = z
+export const optionalImageUrlSchema = z
   .string()
   .trim()
   .max(600, { error: 'O endereço pode ter no máximo 600 caracteres.' })
@@ -148,7 +148,7 @@ export const createThemeBodySchema = z.object({
   tagline: optionalText(120).default(null),
   description: optionalText(600).default(null),
   palette: paletteSchema,
-  coverImageUrl: optionalImageUrl.default(null),
+  coverImageUrl: optionalImageUrlSchema.default(null),
   sortOrder: sortOrderSchema.default(0),
   active: z.boolean().default(true),
 });
@@ -158,7 +158,7 @@ export const updateThemeBodySchema = z.object({
   tagline: optionalText(120).optional(),
   description: optionalText(600).optional(),
   palette: paletteSchema.optional(),
-  coverImageUrl: optionalImageUrl.optional(),
+  coverImageUrl: optionalImageUrlSchema.optional(),
   sortOrder: sortOrderSchema.optional(),
   active: z.boolean().optional(),
 });
@@ -205,7 +205,7 @@ export const createItemBodySchema = z.object({
   categoryId: idSchema,
   name: itemNameSchema,
   description: optionalText(600).default(null),
-  imageUrl: optionalImageUrl.default(null),
+  imageUrl: optionalImageUrlSchema.default(null),
   priceCents: centsSchema,
   stock: stockSchema,
   assemblyNotes: optionalText(600).default(null),
@@ -218,7 +218,7 @@ export const updateItemBodySchema = z.object({
   categoryId: idSchema.optional(),
   name: itemNameSchema.optional(),
   description: optionalText(600).optional(),
-  imageUrl: optionalImageUrl.optional(),
+  imageUrl: optionalImageUrlSchema.optional(),
   priceCents: centsSchema.optional(),
   stock: stockSchema.optional(),
   assemblyNotes: optionalText(600).optional(),

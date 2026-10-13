@@ -1,0 +1,31 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-48) var(--space-16);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  text-align: center;
+}
+
+.frame {
+  width: 120px;
+}
+
+.title {
+  margin: var(--space-8) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.description {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--fg-soft);
+}
+
+.action {
+  margin-top: var(--space-8);
+}

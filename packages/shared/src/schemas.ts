@@ -39,9 +39,14 @@ export const isoDateSchema = z
   .regex(ISO_DATE, { error: 'Use o formato AAAA-MM-DD.' })
   .refine(isRealCalendarDay, { error: 'Esta data não existe no calendário.' });
 
-/** Dinheiro: inteiro em centavos, nunca negativo (§7.2). */
+/**
+ * Dinheiro: inteiro em centavos, nunca negativo (§7.2).
+ *
+ * A mensagem de tipo é customizada porque campo numérico vazio no formulário
+ * chega como `NaN`, e a mensagem padrão do Zod é em inglês.
+ */
 export const centsSchema = z
-  .number()
+  .number({ error: 'Informe um valor.' })
   .int({ error: 'O valor deve ser um número inteiro de centavos.' })
   .min(0, { error: 'O valor não pode ser negativo.' });
 
@@ -98,8 +103,10 @@ export const paletteColorSchema = z.object({
  * O número é fixo porque o cartão de estilo mapeia a paleta em `--t1` a `--t5`
  * (§14.3); uma paleta menor deixaria variável de CSS sem valor.
  */
-export const paletteSchema = z.array(paletteColorSchema).length(5, {
-  error: 'Um estilo tem exatamente 5 cores.',
+export const PALETTE_SIZE = 5;
+
+export const paletteSchema = z.array(paletteColorSchema).length(PALETTE_SIZE, {
+  error: `Um estilo tem exatamente ${PALETTE_SIZE} cores.`,
 });
 
 export type PaletteColor = z.infer<typeof paletteColorSchema>;

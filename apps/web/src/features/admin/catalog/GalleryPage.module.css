@@ -1,0 +1,60 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--line);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+
+.cardText {
+  min-width: 0;
+  flex: 1;
+}
+
+.alt {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.caption {
+  margin: var(--space-4) 0 0;
+  color: var(--fg-soft);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 560px) {
+  .card {
+    /* No celular as ações vão para baixo, senão a miniatura some. */
+    flex-wrap: wrap;
+  }
+
+  .cardText {
+    flex-basis: calc(100% - 56px - var(--space-12));
+  }
+}

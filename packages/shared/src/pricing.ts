@@ -82,7 +82,7 @@ const comboItemInputSchema = z.object({
  * Combo vazio caberia em qualquer pedido e distribuiria desconto para sempre; o
  * `applyCombos` o ignora, e recusar na entrada evita o registro inútil.
  */
-const comboItemsSchema = z
+export const comboItemsSchema = z
   .array(comboItemInputSchema)
   .min(1, { error: 'Escolha ao menos um item para o combo.' })
   .max(30, { error: 'Um combo pode ter no máximo 30 itens.' })
@@ -136,6 +136,28 @@ export const updateComboBodySchema = withDiscountRule(
 );
 
 export const combosQuerySchema = z.object({ themeId: idSchema.optional() });
+
+/**
+ * Prévia da economia antes de salvar o combo (§13).
+ *
+ * A §13 pede que o formulário mostre "soma dos itens R$ X, o cliente paga R$ Y"
+ * enquanto o dono monta o combo. Calcular isso no front duplicaria a regra da
+ * §9.6 — o arredondamento do percentual e o piso do preço fechado — e abriria a
+ * porta para a prévia prometer uma economia diferente da que o cliente receberia.
+ * Por isso a conta continua no servidor, numa rota sem efeito.
+ */
+export const comboPreviewBodySchema = withDiscountRule(
+  z.object({
+    discountType: discountTypeSchema,
+    discountValue: centsSchema,
+    items: comboItemsSchema,
+  }),
+);
+
+export const comboPreviewSchema = z.object({ ...comboTotals });
+
+export type ComboPreviewBody = z.infer<typeof comboPreviewBodySchema>;
+export type ComboPreview = z.infer<typeof comboPreviewSchema>;
 
 export type ComboLine = z.infer<typeof comboLineSchema>;
 export type Combo = z.infer<typeof comboSchema>;

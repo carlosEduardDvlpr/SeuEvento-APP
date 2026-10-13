@@ -1,0 +1,81 @@
+.simulator {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-24);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-alt);
+}
+
+.simulatorTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.simulatorForm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) auto;
+  align-items: end;
+  gap: var(--space-16);
+}
+
+.dayList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.day {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  font-size: var(--text-sm);
+}
+
+.dayDate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-8);
+}
+
+/* Qual regra venceu é a informação central do simulador (§13). */
+.ruleName {
+  color: var(--st-confirmed-fg);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.baseName {
+  color: var(--fg-soft);
+  font-size: var(--text-xs);
+}
+
+.dayPrice {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--line);
+  margin: 0;
+  font-weight: 700;
+}
+
+.period {
+  color: var(--fg-soft);
+  font-size: var(--text-xs);
+}

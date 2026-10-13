@@ -10,7 +10,15 @@ import { ApiError } from '@/api/client';
  */
 export type FieldErrors = Record<string, string>;
 
-/** Primeiro erro de cada campo: mostrar vários na mesma linha só confunde. */
+/**
+ * Primeiro erro de cada campo: mostrar vários na mesma linha só confunde.
+ *
+ * O erro é creditado ao **campo raiz** do caminho: `items.0.itemId` vira `items`.
+ * Os formulários mostram erro por nome de campo de primeiro nível, então sem esse
+ * colapso um problema dentro de uma lista não apareceria em lugar algum — e o
+ * botão de salvar ficaria sem reação, que é o pior resultado possível para quem
+ * está preenchendo.
+ */
 export function validateForm<T>(
   schema: ZodType<T>,
   values: unknown,
@@ -20,7 +28,7 @@ export function validateForm<T>(
 
   const errors: FieldErrors = {};
   for (const issue of result.error.issues) {
-    const field = issue.path.join('.');
+    const field = String(issue.path[0] ?? '');
     if (field && !errors[field]) errors[field] = issue.message;
   }
 

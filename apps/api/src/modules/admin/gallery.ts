@@ -24,9 +24,9 @@ export const adminGalleryRoutes: FastifyPluginAsyncZod = async (app) => {
   );
 
   /*
-   * Declarada antes de `/gallery/:id` para o `:id` não capturar "order". O Fastify
-   * usa árvore de rotas e daria precedência à estática de qualquer forma, mas a
-   * ordem explícita evita a dúvida de quem lê.
+   * Declarada antes de `/gallery/:id` para deixar explícito que "order" não é um
+   * id. A árvore de rotas do Fastify já daria precedência à estática, mas quem lê
+   * o arquivo não deveria precisar saber disso.
    */
   app.patch(
     '/gallery/order',

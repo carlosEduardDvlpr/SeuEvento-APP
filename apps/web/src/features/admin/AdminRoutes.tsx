@@ -4,8 +4,11 @@ import { UnderConstructionPage } from '@/app/pages/UnderConstructionPage';
 import { AdminLayout } from './AdminLayout';
 import { DashboardPage } from './DashboardPage';
 import { CategoriesPage } from './catalog/CategoriesPage';
+import { CombosPage } from './catalog/CombosPage';
 import { GalleryPage } from './catalog/GalleryPage';
+import { ItemsPage } from './catalog/ItemsPage';
 import { ThemesPage } from './catalog/ThemesPage';
+import { PricesPage } from './pricing/PricesPage';
 
 /**
  * Raiz do ambiente administrativo, carregada com `React.lazy` (§12.1): o cliente
@@ -23,11 +26,11 @@ export default function AdminRoutes() {
         <Route element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
 
-          <Route path="itens" element={<UnderConstructionPage title="Itens" />} />
+          <Route path="itens" element={<ItemsPage />} />
           <Route path="categorias" element={<CategoriesPage />} />
-          <Route path="combos" element={<UnderConstructionPage title="Combos" />} />
+          <Route path="combos" element={<CombosPage />} />
           <Route path="temas" element={<ThemesPage />} />
-          <Route path="precos" element={<UnderConstructionPage title="Preços" />} />
+          <Route path="precos" element={<PricesPage />} />
           <Route path="galeria" element={<GalleryPage />} />
 
           <Route path="calendario" element={<UnderConstructionPage title="Calendário" />} />

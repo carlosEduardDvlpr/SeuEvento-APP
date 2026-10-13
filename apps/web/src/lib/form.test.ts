@@ -1,4 +1,4 @@
-import { loginBodySchema, registerBodySchema } from '@chacara/shared';
+import { createComboBodySchema, loginBodySchema, registerBodySchema } from '@chacara/shared';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '@/api/client';
 import { apiFieldErrors, formErrorMessage, validateForm } from './form';
@@ -22,6 +22,25 @@ describe('validateForm', () => {
       email: expect.stringContaining('válido'),
       password: expect.any(String),
     });
+  });
+
+  /*
+   * Erro dentro de lista é creditado ao campo raiz. Os formulários mostram erro
+   * por nome de campo de primeiro nível, então sem esse colapso um problema em
+   * `items.0.itemId` não apareceria em lugar algum: o botão de salvar ficaria sem
+   * reação, que é o pior resultado possível para quem está preenchendo.
+   */
+  it('credita erro de item de lista ao campo raiz', () => {
+    const result = validateForm(createComboBodySchema, {
+      name: 'Kit boho',
+      discountType: 'PERCENT',
+      discountValue: 10,
+      items: [{ itemId: 'nao-e-uuid', quantity: 1 }],
+    });
+
+    expect(result.data).toBeNull();
+    expect(Object.keys(result.errors ?? {})).toEqual(['items']);
+    expect(result.errors?.items).toContain('Identificador');
   });
 
   // Mostrar duas mensagens no mesmo campo só confunde.

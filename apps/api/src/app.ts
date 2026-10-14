@@ -4,6 +4,7 @@ import { isProduction, isTest } from './config/env.js';
 import { adminRoutes } from './modules/admin/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { availabilityRoutes } from './modules/availability/routes.js';
+import { bookingRoutes } from './modules/bookings/routes.js';
 import { comboRoutes } from './modules/combos/routes.js';
 import { galleryRoutes } from './modules/gallery/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
@@ -94,6 +95,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(galleryRoutes, { prefix: '/api' });
   await app.register(availabilityRoutes, { prefix: '/api' });
   await app.register(pricingRoutes, { prefix: '/api' });
+  await app.register(bookingRoutes, { prefix: '/api' });
   await app.register(adminRoutes, { prefix: '/api/admin' });
 
   return app;

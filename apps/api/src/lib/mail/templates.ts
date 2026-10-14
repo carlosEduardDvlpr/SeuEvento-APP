@@ -91,3 +91,69 @@ export function accountExistsTemplate({
       : `Para trocar a senha: ${resetPasswordUrl}`,
   });
 }
+
+/**
+ * Pedido de reserva recebido (§17).
+ *
+ * O prazo do bloqueio é a informação mais importante aqui, e por isso aparece no
+ * assunto e no primeiro parágrafo: é o que define quanto tempo a pessoa tem até
+ * a data voltar a ficar disponível para outra.
+ *
+ * Chamamos de "pedido", não de "reserva": enquanto está `PENDING` nada está
+ * confirmado, e a §1.4 pede exatamente essa palavra na interface.
+ */
+export function bookingReceivedTemplate({
+  name,
+  dates,
+  totalFormatted,
+  holdHours,
+  bookingUrl,
+}: {
+  name: string;
+  /** Período em linguagem natural, ex.: "5 a 6 de dezembro de 2026". */
+  dates: string;
+  totalFormatted: string;
+  holdHours: number;
+  bookingUrl: string;
+}): Email {
+  return renderEmail('Recebemos seu pedido de reserva', {
+    preheader: `Seguramos as datas por ${holdHours} horas enquanto confirmamos.`,
+    heading: 'Recebemos seu pedido',
+    paragraphs: [
+      `Olá, ${name}. Seu pedido para ${dates} chegou, e as datas estão seguras por ${holdHours} horas enquanto a gente confirma.`,
+      `Total do pedido: ${totalFormatted}.`,
+      'Você recebe um e-mail assim que a reserva for confirmada. Se preferir, pode acompanhar pelo site.',
+    ],
+    action: { label: 'Ver meu pedido', url: bookingUrl },
+    note: 'Nada foi cobrado ainda. O pagamento é combinado direto com a chácara.',
+  });
+}
+
+/**
+ * Prazo do pedido vencido (§9.2, §9.9).
+ *
+ * Avisa **o que fazer agora**, porque a pessoa não fez nada de errado: o pedido
+ * simplesmente não foi confirmado no prazo, e as datas voltaram para o calendário.
+ */
+export function holdExpiredTemplate({
+  name,
+  dates,
+  holdHours,
+  bookingUrl,
+}: {
+  name: string;
+  dates: string;
+  holdHours: number;
+  bookingUrl: string;
+}): Email {
+  return renderEmail('Seu pedido de reserva expirou', {
+    preheader: 'As datas voltaram a ficar disponíveis.',
+    heading: 'O prazo do seu pedido terminou',
+    paragraphs: [
+      `Olá, ${name}. Seu pedido para ${dates} ficou ${holdHours} horas sem confirmação, então as datas voltaram para o calendário.`,
+      'Se ainda quer essas datas, dá para enviar um pedido novo: elas podem estar livres.',
+    ],
+    action: { label: 'Ver datas livres', url: bookingUrl },
+    note: 'Se você já desistiu, não precisa fazer nada.',
+  });
+}

@@ -24,9 +24,11 @@ export default defineConfig({
     name: 'api',
     environment: 'node',
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
-    // Integração compartilha um Postgres: a limpeza de um arquivo não pode
-    // acontecer no meio de outro.
-    fileParallelism: false,
+    /*
+     * A serialização dos arquivos fica no `vitest.config.ts` da **raiz**: o
+     * agendamento é global e a opção por projeto não tem efeito quando se roda
+     * pela raiz. Está documentada lá, junto com o motivo.
+     */
     env: { DATABASE_URL: TEST_URL, NODE_ENV: 'test' },
     globalSetup: ['./test/global-setup.ts'],
     setupFiles: ['./test/setup.ts'],

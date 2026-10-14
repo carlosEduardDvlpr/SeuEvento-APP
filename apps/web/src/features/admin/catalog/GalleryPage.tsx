@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   type AdminGalleryImage,
+  GALLERY_KIND_LABELS,
   GALLERY_KINDS,
   type GalleryKind,
   createGalleryImageBodySchema,
@@ -21,7 +22,6 @@ import {
   TrashIcon,
 } from '@/components/icons';
 import {
-  GALLERY_KIND_LABELS,
   useAdminGallery,
   useCreateGalleryImage,
   useDeleteGalleryImage,

@@ -1,0 +1,73 @@
+import { z } from 'zod';
+import { optionalText } from './catalog.js';
+import { dailyPriceSchema } from './pricing.js';
+import { appliedComboSchema, quoteItemsSchema, quoteLineSchema } from './quote.js';
+import { bookingStatusSchema, centsSchema, eventTypeSchema, isoDateSchema } from './schemas.js';
+
+/**
+ * Contrato da reserva (§11.3).
+ *
+ * A reserva guarda o **snapshot** do que foi contratado (§2.1): preço de cada
+ * dia, preço de cada item e os combos aplicados. Mudar o catálogo depois nunca
+ * altera uma reserva existente, então a resposta repete esses números em vez de
+ * apontar para o catálogo.
+ *
+ * `adminNotes` não aparece aqui de propósito: é nota interna (§13) e não sai para
+ * o cliente.
+ */
+
+export const createBookingBodySchema = z
+  .object({
+    startDate: isoDateSchema,
+    endDate: isoDateSchema,
+    eventType: eventTypeSchema,
+    guestCount: z
+      .number({ error: 'Informe quantas pessoas são esperadas.' })
+      .int({ error: 'Informe um número inteiro de convidados.' })
+      .min(1, { error: 'Informe pelo menos um convidado.' })
+      .max(2000, { error: 'Confira o número de convidados.' }),
+    items: quoteItemsSchema.default([]),
+    customerNotes: optionalText(600).default(null),
+    /**
+     * Total que o cliente viu na tela (§9.7).
+     *
+     * Obrigatório: é o que permite a API recusar com `PRICE_CHANGED` quando o
+     * valor mudou entre o orçamento e o envio, em vez de cobrar em silêncio um
+     * número que a pessoa nunca aprovou.
+     */
+    expectedTotalCents: centsSchema,
+  })
+  .refine(({ startDate, endDate }) => startDate <= endDate, {
+    error: 'A data de saída não pode ser anterior à de entrada.',
+    path: ['endDate'],
+  });
+
+export const bookingSchema = z.object({
+  id: z.string(),
+  startDate: isoDateSchema,
+  /** Inclusivo: `startDate === endDate` é uma reserva de um dia (§7.3). */
+  endDate: isoDateSchema,
+  eventType: eventTypeSchema,
+  guestCount: z.number().int(),
+  status: bookingStatusSchema,
+  /** Até quando o pedido segura as datas. Nulo fora de `PENDING` (§9.2). */
+  holdExpiresAt: z.string().nullable(),
+
+  days: z.array(dailyPriceSchema),
+  dailyTotalCents: centsSchema,
+  items: z.array(quoteLineSchema),
+  itemsTotalCents: centsSchema,
+  combos: z.array(appliedComboSchema),
+  discountTotalCents: centsSchema,
+  totalCents: centsSchema,
+
+  customerNotes: z.string().nullable(),
+  cancelReason: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export type CreateBookingBody = z.infer<typeof createBookingBodySchema>;
+export type Booking = z.infer<typeof bookingSchema>;
+
+/** Motivo gravado quando o prazo do pedido vence (§9.2, §9.9). */
+export const HOLD_EXPIRED_REASON = 'HOLD_EXPIRED';

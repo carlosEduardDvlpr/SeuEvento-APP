@@ -17,6 +17,7 @@ import {
   toISODate,
   todayInSaoPaulo,
 } from '../../lib/dates.js';
+import type { Db } from '../../lib/db.js';
 import { AppError } from '../../lib/errors.js';
 
 /**
@@ -236,6 +237,23 @@ export async function blockDate(
   });
 
   return toBlockedDate(row);
+}
+
+/**
+ * Dias bloqueados dentro de um intervalo.
+ *
+ * Aceita o cliente de transação porque a criação da reserva confere bloqueio
+ * **dentro** da transação: a constraint da §8.1 protege contra reserva
+ * concorrente, mas não sabe nada de `BlockedDate`.
+ */
+export async function findBlockedDaysIn(db: Db, from: ISODate, to: ISODate): Promise<ISODate[]> {
+  const rows = await db.blockedDate.findMany({
+    where: { date: { gte: parseISODate(from), lte: parseISODate(to) } },
+    select: { date: true },
+    orderBy: { date: 'asc' },
+  });
+
+  return rows.map((row) => toISODate(row.date));
 }
 
 export async function unblockDate(prisma: PrismaClient, date: ISODate): Promise<void> {

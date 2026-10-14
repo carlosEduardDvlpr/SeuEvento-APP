@@ -9,7 +9,9 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "prisma": "prisma",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "job:expire-holds": "node --import tsx src/jobs/run.ts expire-holds",
+    "job:complete-bookings": "node --import tsx src/jobs/run.ts complete-bookings"
   },
   "dependencies": {
     "@chacara/shared": "workspace:*",

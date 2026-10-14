@@ -20,6 +20,18 @@ import { UnderConstructionPage } from './pages/UnderConstructionPage';
  */
 const AdminRoutes = lazy(() => import('@/features/admin/AdminRoutes'));
 
+/*
+ * O wizard também é separado, por causa do calendário: `react-day-picker` e as
+ * funções de data que ele traz pesam mais que a landing inteira, e a §18.2 cobra
+ * primeiro carregamento leve no celular. A landing é a porta de entrada e não
+ * precisa do calendário até alguém clicar em reservar.
+ */
+const BookingWizard = lazy(() =>
+  import('@/features/booking/BookingWizard').then((module) => ({
+    default: module.BookingWizard,
+  })),
+);
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -28,7 +40,7 @@ export function AppRouter() {
           <Route element={<PublicLayout />}>
             <Route index element={<LandingPage />} />
 
-            <Route path="reservar" element={<UnderConstructionPage title="Reservar" />} />
+            <Route path="reservar" element={<BookingWizard />} />
 
             <Route path="entrar" element={<LoginPage />} />
             <Route path="cadastro" element={<RegisterPage />} />

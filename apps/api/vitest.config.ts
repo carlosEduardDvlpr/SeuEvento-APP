@@ -29,6 +29,19 @@ export default defineConfig({
      * agendamento é global e a opção por projeto não tem efeito quando se roda
      * pela raiz. Está documentada lá, junto com o motivo.
      */
+
+    /*
+     * Prazos folgados porque **todo** teste daqui fala com o Postgres: o
+     * `beforeEach` faz `TRUNCATE` em todas as tabelas e ainda insere as
+     * configurações da chácara antes de o caso começar.
+     *
+     * Com os 5 s padrão, caso de validação pura falhava de vez em quando em
+     * máquina carregada — e falha por prazo acusa o teste errado, porque quem
+     * estourou foi a preparação. Teste de verdade pendurado continua falhando,
+     * só demora mais a ser reportado.
+     */
+    testTimeout: 20_000,
+    hookTimeout: 30_000,
     env: { DATABASE_URL: TEST_URL, NODE_ENV: 'test' },
     globalSetup: ['./test/global-setup.ts'],
     setupFiles: ['./test/setup.ts'],

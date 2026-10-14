@@ -8,9 +8,20 @@ import {
 } from '@chacara/shared';
 import { env } from '../../config/env.js';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
-import { type ISODate, parseISODate, toISODate } from '../../lib/dates.js';
+import {
+  type ISODate,
+  addDays,
+  parseISODate,
+  toISODate,
+  todayInSaoPaulo,
+} from '../../lib/dates.js';
 import { AppError, fieldError, isExclusionViolation, isWriteConflict } from '../../lib/errors.js';
-import { bookingReceivedTemplate, holdExpiredTemplate } from '../../lib/mail/templates.js';
+import {
+  bookingCancelledTemplate,
+  bookingReceivedTemplate,
+  holdExpiredTemplate,
+  newBookingForAdminTemplate,
+} from '../../lib/mail/templates.js';
 import { sendMail } from '../../lib/mailer.js';
 import {
   findBlockedDaysIn,
@@ -217,7 +228,7 @@ export async function createBooking({
    * pode falhar, e a §17 manda a falha não desfazer nada. O `sendMail` já engole
    * o próprio erro.
    */
-  await notify({ row, user, rules, expiredHolds });
+  await notify({ prisma, row, user, rules, expiredHolds });
 
   return toBooking(row);
 
@@ -455,26 +466,66 @@ export async function createBooking({
   }
 }
 
+/**
+ * Para quem vai o aviso de pedido novo (§17).
+ *
+ * Os endereços vêm dos usuários com papel `ADMIN`, e não de uma variável de
+ * ambiente: `ADMIN_EMAIL` só existe para o seed criar a primeira conta, e ficaria
+ * desatualizada no dia em que o dono trocar de e-mail pelo painel. `VenueSettings`
+ * também não tem campo de notificação (§8).
+ */
+async function adminRecipients(prisma: PrismaClient): Promise<string[]> {
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN', email: { not: null } },
+    select: { email: true },
+  });
+
+  return admins.flatMap((admin) => (admin.email ? [admin.email] : []));
+}
+
 async function notify({
+  prisma,
   row,
   user,
   rules,
   expiredHolds,
 }: {
+  prisma: PrismaClient;
   row: BookingRow;
-  user: { name: string; email: string | null };
+  user: { name: string; email: string | null; phone: string | null };
   rules: VenueRules;
   expiredHolds: ExpiredHold[];
 }): Promise<void> {
+  const dates = formatDateRange(toISODate(row.startDate), toISODate(row.endDate));
+
   if (user.email) {
     await sendMail({
       to: user.email,
       ...bookingReceivedTemplate({
         name: user.name,
-        dates: formatDateRange(toISODate(row.startDate), toISODate(row.endDate)),
+        dates,
         totalFormatted: formatBRL(row.totalCents),
         holdHours: rules.holdHours,
         bookingUrl: `${env.APP_URL}/reservas/${row.id}`,
+      }),
+    });
+  }
+
+  /*
+   * O dono precisa saber na hora: o e-mail do cliente diz "aguarde", e o prazo
+   * de bloqueio começa a correr agora. Sem este aviso a espera dependeria de
+   * alguém abrir o painel por conta própria.
+   */
+  for (const email of await adminRecipients(prisma)) {
+    await sendMail({
+      to: email,
+      ...newBookingForAdminTemplate({
+        customerName: user.name,
+        customerPhone: user.phone,
+        dates,
+        guestCount: row.guestCount,
+        totalFormatted: formatBRL(row.totalCents),
+        adminUrl: `${env.APP_URL}/admin/reservas/${row.id}`,
       }),
     });
   }
@@ -497,5 +548,165 @@ async function notify({
   }
 }
 
-/** Reaproveitado pela T20 (`GET /bookings/:id`) e pelo painel da T24. */
+/** Reaproveitado pelo painel da T24. */
 export { toBooking };
+
+// ---------------------------------------------------------------------------
+// Leitura e cancelamento pelo cliente (§9.2, §11.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Minhas reservas (§11.2).
+ *
+ * Sem paginação: um cliente tem poucas reservas, e paginar criaria estado de
+ * página numa tela que a §13.3 descreve como lista agrupada por status.
+ *
+ * Ordem decrescente por data de início, com o id como desempate para a lista não
+ * dançar entre cargas. O agrupamento em "próximas / passadas / canceladas" é da
+ * tela (§13.3), que já tem as datas para decidir.
+ */
+export async function listMyBookings(prisma: PrismaClient, userId: string): Promise<Booking[]> {
+  const rows = await prisma.booking.findMany({
+    where: { userId },
+    include: { items: true },
+    orderBy: [{ startDate: 'desc' }, { id: 'asc' }],
+  });
+
+  return rows.map(toBooking);
+}
+
+/**
+ * Detalhe de uma reserva do próprio cliente.
+ *
+ * Reserva de outra pessoa responde **404, não 403** (§10.6): 403 confirmaria que
+ * aquele id existe, e dá para varrer ids. O filtro por `userId` vai na consulta,
+ * então não existe o caminho "carregar e depois conferir o dono".
+ */
+export async function getMyBooking(
+  prisma: PrismaClient,
+  userId: string,
+  id: string,
+): Promise<Booking> {
+  const row = await prisma.booking.findFirst({ where: { id, userId }, include: { items: true } });
+
+  if (!row) throw new AppError('NOT_FOUND', 404, 'Não encontramos esta reserva.');
+
+  return toBooking(row);
+}
+
+export type CancelBookingInput = {
+  prisma: PrismaClient;
+  userId: string;
+  id: string;
+  reason: string | null;
+  now?: Date;
+};
+
+/**
+ * Cancelamento pelo cliente (§9.2).
+ *
+ * Duas transições são permitidas, e a diferença entre elas é o prazo:
+ *
+ * - `PENDING` → `CANCELLED`: **sem restrição**. Nada foi confirmado ainda, e
+ *   desistir de um pedido é o mesmo que deixá-lo vencer.
+ * - `CONFIRMED` → `CANCELLED`: só até `freeCancelUntilDays` antes do início.
+ *   Depois disso a chácara já organizou o dia em volta da reserva, e quem decide
+ *   é o dono — a recusa manda falar pelo WhatsApp em vez de fechar a porta.
+ *
+ * Qualquer outra responde `INVALID_TRANSITION` (§9.2). Cancelar o que já está
+ * cancelado também: parece inofensivo, mas trocar `cancelledBy` e `cancelReason`
+ * de uma reserva que o **dono** cancelou apagaria o registro de quem cancelou e
+ * por quê.
+ */
+export async function cancelMyBooking({
+  prisma,
+  userId,
+  id,
+  reason,
+  now = new Date(),
+}: CancelBookingInput): Promise<Booking> {
+  const current = await prisma.booking.findFirst({ where: { id, userId } });
+
+  if (!current) throw new AppError('NOT_FOUND', 404, 'Não encontramos esta reserva.');
+
+  if (current.status === 'CANCELLED') {
+    throw new AppError('INVALID_TRANSITION', 422, 'Esta reserva já está cancelada.');
+  }
+
+  if (current.status === 'COMPLETED') {
+    throw new AppError('INVALID_TRANSITION', 422, 'Esta reserva já aconteceu e não pode mudar.');
+  }
+
+  const settings = await prisma.venueSettings.findUnique({
+    where: { id: 1 },
+    select: { freeCancelUntilDays: true, whatsapp: true },
+  });
+
+  if (!settings) {
+    throw new AppError('INTERNAL', 500, 'Configuração da chácara não encontrada.');
+  }
+
+  if (current.status === 'CONFIRMED') {
+    const startDate = toISODate(current.startDate);
+    // Último dia em que ainda dá para cancelar pelo site.
+    const deadline = addDays(todayInSaoPaulo(now), settings.freeCancelUntilDays);
+
+    if (startDate < deadline) {
+      throw new AppError(
+        'CANCEL_WINDOW_CLOSED',
+        422,
+        settings.whatsapp
+          ? `O prazo para cancelar pelo site terminou (até ${settings.freeCancelUntilDays} dias antes). Fale com a chácara pelo WhatsApp ${settings.whatsapp}.`
+          : `O prazo para cancelar pelo site terminou (até ${settings.freeCancelUntilDays} dias antes). Fale com a chácara pelo WhatsApp.`,
+        { freeCancelUntilDays: settings.freeCancelUntilDays, startDate },
+      );
+    }
+  }
+
+  /*
+   * A escrita carrega o status esperado no `WHERE`. Conferir antes e gravar
+   * depois deixaria uma janela em que o dono confirma no painel e o cliente
+   * cancela como se ainda fosse um pedido — e `updateMany` é o único jeito de
+   * pôr status na condição, porque `update` exige chave única.
+   */
+  const changed = await prisma.booking.updateMany({
+    where: { id, userId, status: current.status },
+    data: {
+      status: 'CANCELLED',
+      cancelledBy: 'CLIENT',
+      cancelReason: reason,
+      // Reserva cancelada não segura mais data nenhuma (§9.2).
+      holdExpiresAt: null,
+    },
+  });
+
+  if (changed.count === 0) {
+    throw new AppError(
+      'INVALID_TRANSITION',
+      422,
+      'Esta reserva mudou enquanto você olhava. Recarregue a página.',
+    );
+  }
+
+  const row = await prisma.booking.findUniqueOrThrow({ where: { id }, include: { items: true } });
+
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { name: true, email: true },
+  });
+
+  // Depois da escrita, nunca dentro dela: falha de envio não desfaz nada (§17).
+  if (user.email) {
+    await sendMail({
+      to: user.email,
+      ...bookingCancelledTemplate({
+        name: user.name,
+        dates: formatDateRange(toISODate(row.startDate), toISODate(row.endDate)),
+        reason,
+        whatsapp: settings.whatsapp,
+      }),
+    });
+  }
+
+  return toBooking(row);
+}

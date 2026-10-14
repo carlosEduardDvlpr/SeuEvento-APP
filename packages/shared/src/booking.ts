@@ -66,7 +66,19 @@ export const bookingSchema = z.object({
   createdAt: z.string(),
 });
 
+/**
+ * Cancelamento pelo cliente (§11.2).
+ *
+ * O motivo é opcional: obrigar a justificar atrapalha quem só quer desistir, e o
+ * dono costuma descobrir o porquê pelo WhatsApp de qualquer forma. Quando vem, é
+ * repassado no e-mail de cancelamento (§17).
+ */
+export const cancelBookingBodySchema = z.object({
+  reason: optionalText(300).default(null),
+});
+
 export type CreateBookingBody = z.infer<typeof createBookingBodySchema>;
+export type CancelBookingBody = z.infer<typeof cancelBookingBodySchema>;
 export type Booking = z.infer<typeof bookingSchema>;
 
 /** Motivo gravado quando o prazo do pedido vence (§9.2, §9.9). */

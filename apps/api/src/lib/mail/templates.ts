@@ -157,3 +157,80 @@ export function holdExpiredTemplate({
     note: 'Se você já desistiu, não precisa fazer nada.',
   });
 }
+
+/**
+ * Novo pedido para o dono (§17).
+ *
+ * O e-mail do cliente diz "aguarde"; este é o que faz a espera terminar. Sem ele
+ * o dono só descobriria o pedido abrindo o painel por conta própria, e o prazo de
+ * bloqueio correria sozinho.
+ *
+ * Vai direto para o detalhe no painel, onde estão os botões de confirmar e
+ * recusar: o dono normalmente lê isso no celular e não deveria ter de navegar.
+ */
+export function newBookingForAdminTemplate({
+  customerName,
+  customerPhone,
+  dates,
+  guestCount,
+  totalFormatted,
+  adminUrl,
+}: {
+  customerName: string;
+  customerPhone: string | null;
+  dates: string;
+  guestCount: number;
+  totalFormatted: string;
+  adminUrl: string;
+}): Email {
+  return renderEmail(`Novo pedido de reserva: ${dates}`, {
+    preheader: `${customerName} pediu ${dates}. Confirme ou recuse pelo painel.`,
+    heading: 'Chegou um pedido de reserva',
+    paragraphs: [
+      `${customerName} pediu a chácara para ${dates}, para ${guestCount} ${guestCount === 1 ? 'pessoa' : 'pessoas'}.`,
+      `Total do pedido: ${totalFormatted}.`,
+      customerPhone
+        ? `WhatsApp do cliente: ${customerPhone}.`
+        : 'O cliente não deixou telefone no perfil.',
+    ],
+    action: { label: 'Ver o pedido no painel', url: adminUrl },
+    note: 'As datas ficam seguras até você responder ou o prazo terminar.',
+  });
+}
+
+/**
+ * Reserva cancelada (§17).
+ *
+ * Serve para os dois lados do cancelamento — o que o cliente faz e o que o dono
+ * faz — então o motivo só aparece quando existe, e o caminho para conversar vem
+ * sempre. Cancelamento é quando a pessoa mais precisa saber como falar com
+ * alguém.
+ */
+export function bookingCancelledTemplate({
+  name,
+  dates,
+  reason,
+  whatsapp,
+}: {
+  name: string;
+  dates: string;
+  reason: string | null;
+  whatsapp: string | null;
+}): Email {
+  const paragraphs = [`Olá, ${name}. A reserva de ${dates} foi cancelada.`];
+
+  if (reason) paragraphs.push(`Motivo: ${reason}`);
+
+  paragraphs.push(
+    whatsapp
+      ? `Se ficou alguma dúvida, fale com a chácara pelo WhatsApp ${whatsapp}.`
+      : 'Se ficou alguma dúvida, responda este e-mail que a gente ajuda.',
+  );
+
+  return renderEmail('Sua reserva foi cancelada', {
+    preheader: 'As datas voltaram a ficar disponíveis.',
+    heading: 'Reserva cancelada',
+    paragraphs,
+    note: 'As datas voltaram para o calendário. Se quiser tentar de novo, elas podem estar livres.',
+  });
+}

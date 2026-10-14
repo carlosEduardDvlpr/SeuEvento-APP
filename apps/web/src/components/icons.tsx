@@ -214,3 +214,84 @@ export function GearIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function MinusIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12h14" />
+    </Icon>
+  );
+}
+
+export function ArrowLeftIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M19 12H5M11 6l-6 6 6 6" />
+    </Icon>
+  );
+}
+
+export function ArrowRightIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </Icon>
+  );
+}
+
+/** Aniversário, chá de bebê: tipos de evento no passo 1 (§13.2). */
+export function CakeIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20.5h16M5 20.5v-6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6" />
+      <path d="M12 12.5v-3M12 6.5v.01" />
+      <path d="M5 16.5c1.6 0 1.6-1.2 3.5-1.2s1.9 1.2 3.5 1.2 1.6-1.2 3.5-1.2 1.9 1.2 3.5 1.2" />
+    </Icon>
+  );
+}
+
+export function HeartIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 20s-7-4.4-7-9.2A4 4 0 0 1 12 8a4 4 0 0 1 7 2.8C19 15.6 12 20 12 20Z" />
+    </Icon>
+  );
+}
+
+export function StrollerIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 5h2l2.5 7.5M6.5 12.5h11a6 6 0 0 0-11 0Z" />
+      <path d="M17.5 12.5V18M6.5 12.5V18" />
+      <circle cx="8" cy="20" r="1.5" />
+      <circle cx="16" cy="20" r="1.5" />
+    </Icon>
+  );
+}
+
+export function GlassIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 4h8l-1 6a3 3 0 0 1-6 0Z" />
+      <path d="M12 13v6M9 20h6" />
+    </Icon>
+  );
+}
+
+export function GraduationIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 5 3 9l9 4 9-4-9-4Z" />
+      <path d="M7 11v4c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-4" />
+    </Icon>
+  );
+}
+
+export function SparkIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3.5 13.6 9l5.5 1.6-5.5 1.6L12 17.7l-1.6-5.5L4.9 10.6 10.4 9Z" />
+      <path d="M18.5 16.5l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6Z" />
+    </Icon>
+  );
+}

@@ -1,0 +1,147 @@
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-32);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.hint {
+  max-width: var(--measure);
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+.calendarWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+
+/*
+ * Estilos do react-day-picker. A biblioteca é a única exceção de UI do projeto
+ * (§3), e expõe os nomes das classes como variáveis CSS e seletores próprios;
+ * aqui só traduzimos para os tokens.
+ */
+.calendar {
+  --rdp-accent-color: var(--brand);
+  --rdp-accent-background-color: var(--bg-alt);
+  --rdp-day-height: var(--touch-target);
+  --rdp-day-width: var(--touch-target);
+  --rdp-day_button-height: var(--touch-target);
+  --rdp-day_button-width: var(--touch-target);
+  --rdp-day_button-border-radius: var(--r-sm);
+  --rdp-range_start-color: var(--paper);
+  --rdp-range_end-color: var(--paper);
+  --rdp-today-color: var(--ipe-800);
+  --rdp-outside-opacity: 0.35;
+  --rdp-disabled-opacity: 1;
+  --rdp-font-family: inherit;
+  margin: 0;
+}
+
+/*
+ * Dia indisponível: riscado **e** esmaecido, nunca só cor (§14.2). Sem o risco,
+ * quem não distingue as cores não teria como saber que o dia não serve.
+ */
+.calendar :global(.rdp-disabled) {
+  color: var(--fg-soft);
+  text-decoration: line-through;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.calendar :global(.rdp-day_button) {
+  font-variant-numeric: tabular-nums;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-16);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--fg-soft);
+}
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.swatchFree {
+  background: var(--paper);
+}
+
+.swatchSelected {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.swatchTaken {
+  background: var(--bg-alt);
+  /* Faixa diagonal: a mesma ideia do risco, para não depender de cor. */
+  background-image: linear-gradient(
+    135deg,
+    transparent 45%,
+    var(--fg-soft) 45%,
+    var(--fg-soft) 55%,
+    transparent 55%
+  );
+}
+
+.selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-8);
+  margin: 0;
+  font-weight: 600;
+}
+
+.nights {
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.problem {
+  margin: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--danger);
+  border-radius: var(--r-sm);
+  background: var(--st-cancelled-bg);
+  color: var(--st-cancelled-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.guests {
+  max-width: 220px;
+}

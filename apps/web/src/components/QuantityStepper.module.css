@@ -1,0 +1,52 @@
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--sage-300);
+  background: var(--bg-alt);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.value {
+  width: 56px;
+  min-height: var(--touch-target);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Esconde as setas nativas: os botões de 44 px já fazem esse papel. */
+.value::-webkit-outer-spin-button,
+.value::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.value[type='number'] {
+  appearance: textfield;
+}

@@ -53,6 +53,24 @@ export const bookingSchema = z.object({
   /** Até quando o pedido segura as datas. Nulo fora de `PENDING` (§9.2). */
   holdExpiresAt: z.string().nullable(),
 
+  /**
+   * O cliente pode cancelar agora, pelo site (§9.2).
+   *
+   * Vem do servidor em vez de ser deduzido na tela por um motivo concreto: o
+   * prazo depende de "hoje" no fuso do negócio, e o relógio do navegador pode
+   * estar em outro fuso ou simplesmente errado. Quem decide é a mesma função que
+   * recusa o cancelamento, então o botão e a recusa nunca discordam.
+   */
+  canCancel: z.boolean(),
+  /**
+   * Último dia em que ainda dá para cancelar pelo site.
+   *
+   * Nulo quando não se aplica: pedido `PENDING` pode ser cancelado a qualquer
+   * momento, e reserva cancelada ou concluída não tem mais prazo. A §13.3 pede
+   * que a tela explique o prazo quando o botão não aparece.
+   */
+  cancelUntil: isoDateSchema.nullable(),
+
   days: z.array(dailyPriceSchema),
   dailyTotalCents: centsSchema,
   items: z.array(quoteLineSchema),

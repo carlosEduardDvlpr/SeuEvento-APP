@@ -5,6 +5,7 @@ import {
   formatDateRange,
   formatDateShort,
   formatDeadline,
+  formatTimeUntil,
   formatWeekdayAndDay,
 } from './format';
 
@@ -89,5 +90,51 @@ describe('formatDeadline', () => {
 
   it('nomeia o dia da semana, para a pessoa não precisar do calendário', () => {
     expect(formatDeadline('2026-10-16T18:30:00.000Z')).toMatch(/^sexta-feira/);
+  });
+});
+
+describe('formatTimeUntil', () => {
+  const AGORA = new Date('2026-10-14T12:00:00.000Z');
+
+  it('usa dias quando falta mais de um dia', () => {
+    expect(formatTimeUntil('2026-10-16T15:00:00.000Z', AGORA)).toBe('em 2 dias');
+  });
+
+  it('usa horas abaixo de um dia', () => {
+    expect(formatTimeUntil('2026-10-14T17:00:00.000Z', AGORA)).toBe('em 5 horas');
+  });
+
+  it('usa minutos abaixo de uma hora', () => {
+    expect(formatTimeUntil('2026-10-14T12:40:00.000Z', AGORA)).toBe('em 40 minutos');
+  });
+
+  /*
+   * Arredonda para baixo porque é prazo: dizer "em 2 horas" quando falta 1 h 50
+   * daria à pessoa um tempo que ela não tem.
+   */
+  it('arredonda para baixo', () => {
+    expect(formatTimeUntil('2026-10-14T13:50:00.000Z', AGORA)).toBe('em 1 hora');
+    expect(formatTimeUntil('2026-10-16T11:00:00.000Z', AGORA)).toBe('em 1 dia');
+  });
+
+  /*
+   * `numeric: 'always'`: com 'auto' o Intl diria "depois de amanhã", que não
+   * responde se restam 25 ou 47 horas.
+   */
+  it('mantém a forma numérica em vez de "amanhã"', () => {
+    expect(formatTimeUntil('2026-10-15T13:00:00.000Z', AGORA)).toBe('em 1 dia');
+  });
+
+  it('devolve a forma no passado quando o prazo já venceu', () => {
+    expect(formatTimeUntil('2026-10-14T09:00:00.000Z', AGORA)).toBe('há 3 horas');
+  });
+
+  /*
+   * O pt-BR usa singular para zero, e a janela em que isso aparece é de um
+   * minuto. Não vale um caso especial: um prazo nesse estado já está vencendo, e
+   * "em 0 minuto" diz exatamente isso.
+   */
+  it('trata o instante exato como zero minuto', () => {
+    expect(formatTimeUntil('2026-10-14T12:00:00.000Z', AGORA)).toBe('em 0 minuto');
   });
 });

@@ -2,6 +2,7 @@ export * from './auth.js';
 export * from './availability.js';
 export * from './booking.js';
 export * from './catalog.js';
+export * from './dates.js';
 export * from './enums.js';
 export * from './format.js';
 export * from './errors.js';

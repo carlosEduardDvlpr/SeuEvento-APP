@@ -11,7 +11,11 @@ import styles from './Button.module.css';
  * Só há um `variant="primary"` visível por tela (§14.2).
  */
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'ghost';
+  /**
+   * `danger` é para ação destrutiva, e vem acompanhada de confirmação em diálogo
+   * (§13.4): a cor avisa, mas não é ela que impede o clique por engano.
+   */
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   loading?: boolean;
   /** Rótulo durante o carregamento, ex.: "Enviando pedido…". */
   loadingLabel?: string;

@@ -220,6 +220,172 @@ describe('reservas do cliente', () => {
     });
   });
 
+  /**
+   * Permissão de cancelar, decidida pelo servidor (§9.2, §13.3).
+   *
+   * A tela não recalcula o prazo: ele depende de "hoje" na chácara, e o relógio
+   * de quem olha pode estar em outro fuso. É a **mesma** função que recusa o
+   * cancelamento, então o botão e a recusa não podem discordar — e é isso que
+   * estes casos cobrem.
+   */
+  describe('canCancel e cancelUntil', () => {
+    it('pedido aguardando confirmação pode ser cancelado, sem prazo a explicar', async () => {
+      const { user, token } = await createClient();
+      const tomorrow = addDays(todayInSaoPaulo(), 1);
+      const booking = await createBooking({
+        userId: user.id,
+        startDate: tomorrow,
+        endDate: tomorrow,
+      });
+
+      const response = await get(token, `/api/bookings/${booking.id}`);
+
+      expect(response.json()).toMatchObject({ canCancel: true, cancelUntil: null });
+    });
+
+    it('confirmada longe da data pode ser cancelada e informa o prazo', async () => {
+      const { user, token } = await createClient();
+      const booking = await createBooking({
+        userId: user.id,
+        startDate: '2027-04-10',
+        endDate: '2027-04-10',
+        status: 'CONFIRMED',
+      });
+
+      const response = await get(token, `/api/bookings/${booking.id}`);
+
+      expect(response.json()).toMatchObject({
+        canCancel: true,
+        cancelUntil: addDays(todayInSaoPaulo(), FREE_CANCEL_DAYS),
+      });
+    });
+
+    it('confirmada dentro do prazo não pode mais ser cancelada pelo site', async () => {
+      const { user, token } = await createClient();
+      // Depois de amanhã: dentro da janela de 7 dias.
+      const soon = addDays(todayInSaoPaulo(), 2);
+      const booking = await createBooking({
+        userId: user.id,
+        startDate: soon,
+        endDate: soon,
+        status: 'CONFIRMED',
+      });
+
+      const response = await get(token, `/api/bookings/${booking.id}`);
+
+      expect(response.json().canCancel).toBe(false);
+      // O prazo volta mesmo tendo passado: é ele que a tela explica (§13.3).
+      expect(response.json().cancelUntil).toBe(addDays(todayInSaoPaulo(), FREE_CANCEL_DAYS));
+    });
+
+    /* A borda: começar exatamente no último dia permitido ainda vale. */
+    it('o último dia do prazo ainda permite cancelar', async () => {
+      const { user, token } = await createClient();
+      const deadline = addDays(todayInSaoPaulo(), FREE_CANCEL_DAYS);
+      const booking = await createBooking({
+        userId: user.id,
+        startDate: deadline,
+        endDate: deadline,
+        status: 'CONFIRMED',
+      });
+
+      const response = await get(token, `/api/bookings/${booking.id}`);
+
+      expect(response.json().canCancel).toBe(true);
+    });
+
+    it('um dia antes do limite já está fora do prazo', async () => {
+      const { user, token } = await createClient();
+      const inside = addDays(todayInSaoPaulo(), FREE_CANCEL_DAYS - 1);
+      const booking = await createBooking({
+        userId: user.id,
+        startDate: inside,
+        endDate: inside,
+        status: 'CONFIRMED',
+      });
+
+      const response = await get(token, `/api/bookings/${booking.id}`);
+
+      expect(response.json().canCancel).toBe(false);
+    });
+
+    it('cancelada e concluída não têm o que cancelar, nem prazo', async () => {
+      const { user, token } = await createClient();
+
+      for (const status of ['CANCELLED', 'COMPLETED'] as const) {
+        const booking = await createBooking({
+          userId: user.id,
+          startDate: '2027-04-10',
+          endDate: '2027-04-10',
+          status,
+        });
+
+        const response = await get(token, `/api/bookings/${booking.id}`);
+
+        expect(response.json()).toMatchObject({ canCancel: false, cancelUntil: null });
+      }
+    });
+
+    it('a lista também traz a permissão, para a tela não precisar abrir cada uma', async () => {
+      const { user, token } = await createClient();
+      await createBooking({ userId: user.id, startDate: '2027-04-10', endDate: '2027-04-10' });
+
+      const response = await get(token, '/api/bookings/me');
+
+      expect(response.json()[0]).toMatchObject({ canCancel: true });
+    });
+
+    /*
+     * A garantia que justifica o campo existir: se o servidor diz que não pode,
+     * tentar recebe `CANCEL_WINDOW_CLOSED`. Botão e recusa saem da mesma função.
+     */
+    it('o que vem com canCancel falso é recusado quando se tenta cancelar', async () => {
+      const { user, token } = await createClient();
+      const soon = addDays(todayInSaoPaulo(), 2);
+      const booking = await createBooking({
+        userId: user.id,
+        startDate: soon,
+        endDate: soon,
+        status: 'CONFIRMED',
+      });
+
+      expect((await get(token, `/api/bookings/${booking.id}`)).json().canCancel).toBe(false);
+
+      const refused = await cancel(token, booking.id);
+
+      expect(refused.statusCode).toBe(422);
+      expect(refused.json().error.code).toBe('CANCEL_WINDOW_CLOSED');
+    });
+
+    it('o que vem com canCancel verdadeiro é aceito', async () => {
+      const { user, token } = await createClient();
+      const booking = await createBooking({
+        userId: user.id,
+        startDate: '2027-04-10',
+        endDate: '2027-04-10',
+        status: 'CONFIRMED',
+      });
+
+      expect((await get(token, `/api/bookings/${booking.id}`)).json().canCancel).toBe(true);
+
+      expect((await cancel(token, booking.id)).statusCode).toBe(200);
+    });
+
+    it('a resposta do cancelamento já vem sem permissão de cancelar de novo', async () => {
+      const { user, token } = await createClient();
+      const booking = await createBooking({
+        userId: user.id,
+        startDate: '2027-04-10',
+        endDate: '2027-04-10',
+        status: 'CONFIRMED',
+      });
+
+      const response = await cancel(token, booking.id);
+
+      expect(response.json()).toMatchObject({ canCancel: false, cancelUntil: null });
+    });
+  });
+
   describe('PATCH /bookings/:id/cancel', () => {
     /* Desistir de um pedido é o mesmo que deixá-lo vencer: sem prazo (§9.2). */
     it('cancela pedido aguardando confirmação sem restrição de prazo', async () => {

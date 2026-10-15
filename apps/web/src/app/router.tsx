@@ -32,6 +32,22 @@ const BookingWizard = lazy(() =>
   })),
 );
 
+/*
+ * A área do cliente também é separada: só quem tem sessão chega nela, e a maior
+ * parte de quem abre o site nunca passa por ali.
+ */
+const MyBookingsPage = lazy(() =>
+  import('@/features/account/MyBookingsPage').then((module) => ({
+    default: module.MyBookingsPage,
+  })),
+);
+
+const BookingDetailPage = lazy(() =>
+  import('@/features/account/BookingDetailPage').then((module) => ({
+    default: module.BookingDetailPage,
+  })),
+);
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -50,11 +66,8 @@ export function AppRouter() {
 
             {/* Área do cliente: exige sessão, e volta para cá depois de entrar. */}
             <Route element={<RequireAuth />}>
-              <Route
-                path="minhas-reservas"
-                element={<UnderConstructionPage title="Minhas reservas" />}
-              />
-              <Route path="reservas/:id" element={<UnderConstructionPage title="Reserva" />} />
+              <Route path="minhas-reservas" element={<MyBookingsPage />} />
+              <Route path="reservas/:id" element={<BookingDetailPage />} />
             </Route>
 
             <Route path="termos" element={<UnderConstructionPage title="Termos de uso" />} />

@@ -50,3 +50,21 @@
 .ghost:hover:not(:disabled) {
   background: var(--bg-alt);
 }
+
+/*
+ * Ação destrutiva: contorno, não preenchimento.
+ *
+ * Um botão vermelho chapado competiria com a ação principal da tela e puxaria o
+ * olho para o que a pessoa normalmente **não** quer fazer. O peso vem do
+ * contorno e do texto; a confirmação em diálogo é que protege do clique por
+ * engano (§13.4).
+ */
+.danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--st-cancelled-bg);
+}

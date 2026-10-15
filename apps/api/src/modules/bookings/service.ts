@@ -1,5 +1,6 @@
 import {
   type Booking,
+  type BookingStatus,
   type CreateBookingBody,
   HOLD_EXPIRED_REASON,
   type Quote,
@@ -53,7 +54,36 @@ import { quoteFromDatabase } from '../pricing/service.js';
 
 type BookingRow = Prisma.BookingGetPayload<{ include: { items: true } }>;
 
-function toBooking(row: BookingRow): Booking {
+/**
+ * Pode o cliente cancelar esta reserva pelo site, e até quando (§9.2).
+ *
+ * Esta é a **única** implementação da regra: a resposta da API a usa para dizer
+ * se o botão aparece, e `cancelMyBooking` a usa para recusar. Duas cópias
+ * acabariam divergindo em exatamente um ponto — a comparação de bordas do prazo —
+ * e o sintoma seria um botão que existe e não funciona.
+ */
+export function cancelPermission(
+  status: BookingStatus,
+  startDate: ISODate,
+  freeCancelUntilDays: number,
+  now: Date,
+): { canCancel: boolean; cancelUntil: ISODate | null } {
+  // Nada foi confirmado ainda: desistir de um pedido é o mesmo que deixá-lo vencer.
+  if (status === 'PENDING') return { canCancel: true, cancelUntil: null };
+
+  if (status === 'CONFIRMED') {
+    // Último dia em que ainda dá para cancelar pelo site.
+    const deadline = addDays(todayInSaoPaulo(now), freeCancelUntilDays);
+    return { canCancel: startDate >= deadline, cancelUntil: deadline };
+  }
+
+  // Cancelada ou concluída: não há o que cancelar, nem prazo a explicar.
+  return { canCancel: false, cancelUntil: null };
+}
+
+type CancelRules = { freeCancelUntilDays: number; now: Date };
+
+function toBooking(row: BookingRow, cancelRules: CancelRules): Booking {
   /*
    * `dailyBreakdown` e `appliedCombos` são `Json` no banco, então o tipo não
    * garante nada. Foram gravados por este mesmo service a partir do
@@ -62,15 +92,25 @@ function toBooking(row: BookingRow): Booking {
    */
   const days = (row.dailyBreakdown ?? []) as Booking['days'];
   const combos = (row.appliedCombos ?? []) as Booking['combos'];
+  const startDate = toISODate(row.startDate);
+
+  const { canCancel, cancelUntil } = cancelPermission(
+    row.status,
+    startDate,
+    cancelRules.freeCancelUntilDays,
+    cancelRules.now,
+  );
 
   return {
     id: row.id,
-    startDate: toISODate(row.startDate),
+    startDate,
     endDate: toISODate(row.endDate),
     eventType: row.eventType,
     guestCount: row.guestCount,
     status: row.status,
     holdExpiresAt: row.holdExpiresAt?.toISOString() ?? null,
+    canCancel,
+    cancelUntil,
 
     days,
     dailyTotalCents: row.dailyTotalCents,
@@ -96,12 +136,18 @@ type VenueRules = {
   maxGuests: number;
   holdHours: number;
   maxPendingPerUser: number;
+  freeCancelUntilDays: number;
 };
 
 async function loadVenueRules(prisma: PrismaClient): Promise<VenueRules> {
   const settings = await prisma.venueSettings.findUnique({
     where: { id: 1 },
-    select: { maxGuests: true, holdHours: true, maxPendingPerUser: true },
+    select: {
+      maxGuests: true,
+      holdHours: true,
+      maxPendingPerUser: true,
+      freeCancelUntilDays: true,
+    },
   });
 
   if (!settings) {
@@ -230,7 +276,7 @@ export async function createBooking({
    */
   await notify({ prisma, row, user, rules, expiredHolds });
 
-  return toBooking(row);
+  return toBooking(row, { freeCancelUntilDays: rules.freeCancelUntilDays, now });
 
   /**
    * Roda a transação, repetindo quando o Postgres aborta por conflito de escrita.
@@ -565,14 +611,21 @@ export { toBooking };
  * dançar entre cargas. O agrupamento em "próximas / passadas / canceladas" é da
  * tela (§13.3), que já tem as datas para decidir.
  */
-export async function listMyBookings(prisma: PrismaClient, userId: string): Promise<Booking[]> {
-  const rows = await prisma.booking.findMany({
-    where: { userId },
-    include: { items: true },
-    orderBy: [{ startDate: 'desc' }, { id: 'asc' }],
-  });
+export async function listMyBookings(
+  prisma: PrismaClient,
+  userId: string,
+  now: Date = new Date(),
+): Promise<Booking[]> {
+  const [rows, rules] = await Promise.all([
+    prisma.booking.findMany({
+      where: { userId },
+      include: { items: true },
+      orderBy: [{ startDate: 'desc' }, { id: 'asc' }],
+    }),
+    loadVenueRules(prisma),
+  ]);
 
-  return rows.map(toBooking);
+  return rows.map((row) => toBooking(row, { freeCancelUntilDays: rules.freeCancelUntilDays, now }));
 }
 
 /**
@@ -586,12 +639,16 @@ export async function getMyBooking(
   prisma: PrismaClient,
   userId: string,
   id: string,
+  now: Date = new Date(),
 ): Promise<Booking> {
-  const row = await prisma.booking.findFirst({ where: { id, userId }, include: { items: true } });
+  const [row, rules] = await Promise.all([
+    prisma.booking.findFirst({ where: { id, userId }, include: { items: true } }),
+    loadVenueRules(prisma),
+  ]);
 
   if (!row) throw new AppError('NOT_FOUND', 404, 'Não encontramos esta reserva.');
 
-  return toBooking(row);
+  return toBooking(row, { freeCancelUntilDays: rules.freeCancelUntilDays, now });
 }
 
 export type CancelBookingInput = {
@@ -646,21 +703,20 @@ export async function cancelMyBooking({
     throw new AppError('INTERNAL', 500, 'Configuração da chácara não encontrada.');
   }
 
-  if (current.status === 'CONFIRMED') {
-    const startDate = toISODate(current.startDate);
-    // Último dia em que ainda dá para cancelar pelo site.
-    const deadline = addDays(todayInSaoPaulo(now), settings.freeCancelUntilDays);
+  const startDate = toISODate(current.startDate);
 
-    if (startDate < deadline) {
-      throw new AppError(
-        'CANCEL_WINDOW_CLOSED',
-        422,
-        settings.whatsapp
-          ? `O prazo para cancelar pelo site terminou (até ${settings.freeCancelUntilDays} dias antes). Fale com a chácara pelo WhatsApp ${settings.whatsapp}.`
-          : `O prazo para cancelar pelo site terminou (até ${settings.freeCancelUntilDays} dias antes). Fale com a chácara pelo WhatsApp.`,
-        { freeCancelUntilDays: settings.freeCancelUntilDays, startDate },
-      );
-    }
+  // A mesma função que a resposta usa para dizer se o botão aparece (§9.2).
+  const permission = cancelPermission(current.status, startDate, settings.freeCancelUntilDays, now);
+
+  if (!permission.canCancel) {
+    throw new AppError(
+      'CANCEL_WINDOW_CLOSED',
+      422,
+      settings.whatsapp
+        ? `O prazo para cancelar pelo site terminou (até ${settings.freeCancelUntilDays} dias antes). Fale com a chácara pelo WhatsApp ${settings.whatsapp}.`
+        : `O prazo para cancelar pelo site terminou (até ${settings.freeCancelUntilDays} dias antes). Fale com a chácara pelo WhatsApp.`,
+      { freeCancelUntilDays: settings.freeCancelUntilDays, startDate },
+    );
   }
 
   /*
@@ -708,5 +764,5 @@ export async function cancelMyBooking({
     });
   }
 
-  return toBooking(row);
+  return toBooking(row, { freeCancelUntilDays: settings.freeCancelUntilDays, now });
 }

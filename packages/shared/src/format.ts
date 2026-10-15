@@ -11,6 +11,8 @@
  * nesta borda.
  */
 
+import { BUSINESS_TIMEZONE } from './dates.js';
+
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 /** Centavos como `R$ 1.800,00`. */
@@ -44,18 +46,14 @@ const weekdayAndDay = new Intl.DateTimeFormat('pt-BR', {
   month: 'long',
 });
 
-/**
- * Fuso do negócio (§7.3).
- *
+/*
  * Um prazo (`holdExpiresAt`) é um instante, não um dia: trafega em UTC e precisa
  * aparecer na hora da chácara. Formatar no fuso do navegador diria 18h para quem
  * está em São Paulo e 23h para quem abriu o e-mail em Lisboa — sobre o **mesmo**
  * prazo, o que faria a pessoa achar que tem cinco horas a mais.
  */
-const BUSINESS_TIME_ZONE = 'America/Sao_Paulo';
-
 const deadline = new Intl.DateTimeFormat('pt-BR', {
-  timeZone: BUSINESS_TIME_ZONE,
+  timeZone: BUSINESS_TIMEZONE,
   weekday: 'long',
   day: 'numeric',
   month: 'long',
@@ -91,6 +89,40 @@ export function formatWeekdayAndDay(isoDate: string): string {
  */
 export function formatDeadline(isoTimestamp: string): string {
   return deadline.format(new Date(isoTimestamp));
+}
+
+/*
+ * `numeric: 'always'` de propósito. Com `'auto'`, o Intl troca "em 2 dias" por
+ * "depois de amanhã" e "em 1 dia" por "amanhã" — simpático numa agenda, ruim num
+ * prazo: "depois de amanhã" não diz se restam 25 ou 47 horas, que é exatamente a
+ * conta que a pessoa precisa fazer.
+ */
+const relative = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'always' });
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+/**
+ * Quanto falta para um instante, em linguagem natural: "em 2 dias", "em 5 horas".
+ *
+ * A §13.3 pede a contagem de quando as datas deixam de ficar seguras. A unidade
+ * acompanha a ordem de grandeza porque "em 2.880 minutos" não ajuda ninguém a
+ * decidir se dá tempo de ligar para a chácara.
+ *
+ * Arredonda **para baixo**, sempre. Um prazo que falta 1 h 50 min vira "em 1
+ * hora": prometer duas seria dar à pessoa um tempo que ela não tem. Já passou,
+ * devolve a forma no passado ("há 3 horas"), e quem chama decide o texto.
+ */
+export function formatTimeUntil(isoTimestamp: string, now: Date = new Date()): string {
+  const diff = new Date(isoTimestamp).getTime() - now.getTime();
+  const sign = diff < 0 ? -1 : 1;
+  const size = Math.abs(diff);
+
+  if (size >= DAY) return relative.format(sign * Math.floor(size / DAY), 'day');
+  if (size >= HOUR) return relative.format(sign * Math.floor(size / HOUR), 'hour');
+
+  return relative.format(sign * Math.floor(size / MINUTE), 'minute');
 }
 
 /**

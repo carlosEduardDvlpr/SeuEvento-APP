@@ -75,6 +75,8 @@ const BOOKING: Booking = {
   guestCount: 60,
   status: 'PENDING',
   holdExpiresAt: '2026-12-03T21:00:00.000Z',
+  canCancel: true,
+  cancelUntil: null,
   days: QUOTE.days,
   dailyTotalCents: QUOTE.dailyTotalCents,
   items: QUOTE.lines,

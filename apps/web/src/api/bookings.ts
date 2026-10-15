@@ -69,6 +69,33 @@ export function useMyBookings() {
   });
 }
 
+/**
+ * Cancela uma reserva do próprio cliente (§9.2).
+ *
+ * A resposta já é a reserva atualizada, então ela entra direto no cache do
+ * detalhe: sem isso a tela mostraria o status antigo até a releitura chegar, logo
+ * depois de uma ação que a pessoa precisa ver surtir efeito.
+ *
+ * A disponibilidade também é invalidada: as datas acabaram de ficar livres.
+ */
+export function useCancelBooking() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string | null }) =>
+      apiFetch<Booking>(`/bookings/${id}/cancel`, {
+        method: 'PATCH',
+        body: { reason },
+        auth: true,
+      }),
+    onSuccess: (booking) => {
+      client.setQueryData(bookingKeys.one(booking.id), booking);
+      void client.invalidateQueries({ queryKey: bookingKeys.mine });
+      void client.invalidateQueries({ queryKey: ['availability'] });
+    },
+  });
+}
+
 export function useBooking(id: string | null) {
   return useQuery({
     queryKey: bookingKeys.one(id ?? ''),

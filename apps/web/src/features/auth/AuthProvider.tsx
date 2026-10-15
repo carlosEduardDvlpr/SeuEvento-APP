@@ -30,6 +30,14 @@ type AuthContextValue = {
   user: SessionUser | null;
   /** Guarda a sessão devolvida por login, cadastro confirmado ou Google. */
   signIn: (session: SessionResponse) => void;
+  /**
+   * Substitui o usuário em memória pelo que a API acabou de devolver.
+   *
+   * Existe para o `PATCH /me`: quem completa o telefone no meio da reserva
+   * precisa ver o campo preenchido na hora, e sem isto a sessão só se atualizaria
+   * na próxima renovação do token.
+   */
+  setUser: (user: SessionUser) => void;
   signOut: () => Promise<void>;
 };
 
@@ -85,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, signIn, signOut }),
+    () => ({ status, user, signIn, setUser, signOut }),
     [status, user, signIn, signOut],
   );
 

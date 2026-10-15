@@ -1,6 +1,6 @@
 import { registerBodySchema } from '@chacara/shared';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useGoogleLogin, useRegister } from '@/api/auth';
 import { Button } from '@/components/Button';
 import { Field } from '@/components/Field';
@@ -18,10 +18,15 @@ import { useAuth } from './AuthProvider';
  */
 export function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn } = useAuth();
 
   const register = useRegister();
   const googleLogin = useGoogleLogin();
+
+  // Quem veio do wizard volta para lá. Só vale no caminho do Google, que entra na
+  // hora: o cadastro por e-mail passa pela confirmação antes de abrir sessão.
+  const next = searchParams.get('next');
 
   const [values, setValues] = useState({
     name: '',
@@ -56,7 +61,8 @@ export function RegisterPage() {
     try {
       const session = await googleLogin.mutateAsync(idToken);
       signIn(session);
-      navigate('/', { replace: true });
+      // Só caminho interno: uma URL absoluta aqui viraria redirecionamento aberto.
+      navigate(next?.startsWith('/') ? next : '/', { replace: true });
     } catch {
       // A mensagem aparece pelo `googleLogin.error`.
     }
@@ -67,7 +73,13 @@ export function RegisterPage() {
       <AuthCard
         title="Confira seu e-mail"
         lead={`Enviamos um link de confirmação para ${values.email}. Ele vale por 24 horas.`}
-        footer={<Link to="/entrar">Voltar para entrar</Link>}
+        footer={
+          next?.startsWith('/') ? (
+            <Link to={next}>Voltar para o meu pedido</Link>
+          ) : (
+            <Link to="/entrar">Voltar para entrar</Link>
+          )
+        }
       >
         <p className={authStyles.lead}>
           Depois de confirmar, você já entra direto e pode enviar pedidos de reserva.

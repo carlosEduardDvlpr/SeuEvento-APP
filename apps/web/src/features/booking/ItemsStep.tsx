@@ -27,6 +27,13 @@ type Tab = 'itens' | 'combos';
 export type ItemsStepProps = {
   draft: BookingDraft;
   dispatch: (action: DraftAction) => void;
+  /**
+   * Recusa do envio que só tem conserto aqui (§13.2).
+   *
+   * É o caminho do `STOCK_INSUFFICIENT`: o item acabou entre o orçamento e o
+   * envio, e a pessoa volta para este passo para ajustar a quantidade.
+   */
+  notice?: string;
 };
 
 /** Quantas unidades do item ainda cabem, dado o que já está no rascunho. */
@@ -42,7 +49,7 @@ function comboProgress(combo: Combo, draft: BookingDraft) {
   };
 }
 
-export function ItemsStep({ draft, dispatch }: ItemsStepProps) {
+export function ItemsStep({ draft, dispatch, notice }: ItemsStepProps) {
   const [tab, setTab] = useState<Tab>('itens');
   const [categoryId, setCategoryId] = useState<string | null>(null);
 
@@ -86,6 +93,12 @@ export function ItemsStep({ draft, dispatch }: ItemsStepProps) {
 
   return (
     <div className={styles.step}>
+      {notice ? (
+        <p className={styles.problem} role="alert">
+          {notice}
+        </p>
+      ) : null}
+
       <section>
         <h2 className={styles.title}>Escolha o estilo da festa</h2>
         <p className={styles.hint}>

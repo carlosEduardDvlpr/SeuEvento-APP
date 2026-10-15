@@ -10,5 +10,6 @@ export {
   formatDateLong,
   formatDateRange,
   formatDateShort,
+  formatDeadline,
   formatWeekdayAndDay,
 } from '@chacara/shared';

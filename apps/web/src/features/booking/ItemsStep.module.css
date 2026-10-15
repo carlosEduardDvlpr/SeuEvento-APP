@@ -266,3 +266,18 @@
 .loading {
   color: var(--fg-soft);
 }
+
+/*
+ * Recusa vinda do envio (§16.4). Borda grossa além da cor, porque status nunca
+ * é comunicado só por cor (§14.2).
+ */
+.problem {
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--r-sm);
+  background: var(--st-cancelled-bg);
+  color: var(--st-cancelled-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

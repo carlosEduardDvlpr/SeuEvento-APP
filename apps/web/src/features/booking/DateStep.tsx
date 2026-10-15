@@ -26,9 +26,16 @@ export type DateStepProps = {
   venue: PublicVenue;
   /** Mostrado quando a pessoa tenta avançar com o passo incompleto. */
   errors: { range?: string; eventType?: string; guestCount?: string };
+  /**
+   * Recusa do envio que só tem conserto aqui (§13.2).
+   *
+   * É o caminho do `DATE_UNAVAILABLE`: a data foi tomada entre o orçamento e o
+   * envio, e a pessoa volta para este passo com a explicação à vista.
+   */
+  notice?: string;
 };
 
-export function DateStep({ draft, dispatch, venue, errors }: DateStepProps) {
+export function DateStep({ draft, dispatch, venue, errors, notice }: DateStepProps) {
   const [visibleMonth, setVisibleMonth] = useState(() =>
     draft.startDate ? toCalendarDate(draft.startDate) : new Date(),
   );
@@ -72,6 +79,12 @@ export function DateStep({ draft, dispatch, venue, errors }: DateStepProps) {
 
   return (
     <div className={styles.step}>
+      {notice ? (
+        <p className={styles.problem} role="alert">
+          {notice}
+        </p>
+      ) : null}
+
       <section className={styles.block} aria-labelledby="titulo-datas">
         <h2 className={styles.title} id="titulo-datas">
           Quando é a festa?

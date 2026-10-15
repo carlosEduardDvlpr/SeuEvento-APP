@@ -1,0 +1,104 @@
+.gate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--sage-300);
+  border-radius: var(--r-md);
+  background: var(--bg-alt);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+}
+
+.lead {
+  max-width: var(--measure);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.fine {
+  max-width: var(--measure);
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-xs);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+/*
+ * Entrar e cadastrar são links, não botões: levam a outra página, e o
+ * comportamento de link (abrir em nova aba, copiar endereço) é o esperado.
+ * A aparência acompanha o `Button` para não parecer menos clicável.
+ */
+.primaryLink,
+.secondaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-24);
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.primaryLink {
+  border: 1px solid var(--brand);
+  background: var(--brand);
+  color: var(--paper);
+}
+
+.secondaryLink {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.primaryLink:hover,
+.secondaryLink:hover {
+  text-decoration: underline;
+}
+
+.divider {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-xs);
+}
+
+.phoneForm {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-12);
+  width: 100%;
+  max-width: 320px;
+}
+
+.waiting {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+/* Borda grossa além da cor: status não é comunicado só por cor (§14.2). */
+.problem {
+  width: 100%;
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--r-sm);
+  background: var(--st-cancelled-bg);
+  color: var(--st-cancelled-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

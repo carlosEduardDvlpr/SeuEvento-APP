@@ -4,6 +4,7 @@ import {
   formatDateLong,
   formatDateRange,
   formatDateShort,
+  formatDeadline,
   formatWeekdayAndDay,
 } from './format';
 
@@ -63,5 +64,30 @@ describe('formatDateRange', () => {
     expect(formatDateRange('2026-11-30', '2026-12-01')).toBe(
       '30 de novembro de 2026 a 1 de dezembro de 2026',
     );
+  });
+});
+
+describe('formatDeadline', () => {
+  /*
+   * O prazo é um instante, não um dia: `holdExpiresAt` chega em UTC e precisa
+   * aparecer na hora da chácara (UTC-3). Formatar no fuso de quem lê diria 18h
+   * para um e 23h para outro sobre o mesmo prazo.
+   */
+  it('mostra o prazo no horário da chácara, não no do navegador', () => {
+    expect(formatDeadline('2026-10-16T18:30:00.000Z')).toBe('sexta-feira, 16 de outubro às 15:30');
+  });
+
+  it('não escorrega para o dia anterior num prazo de madrugada', () => {
+    // 01:00 UTC do dia 17 ainda é 22:00 do dia 16 em São Paulo.
+    expect(formatDeadline('2026-10-17T01:00:00.000Z')).toBe('sexta-feira, 16 de outubro às 22:00');
+  });
+
+  it('atravessa a virada do mês pelo fuso certo', () => {
+    // 02:00 UTC de 1º de novembro é 23:00 de 31 de outubro em São Paulo.
+    expect(formatDeadline('2026-11-01T02:00:00.000Z')).toBe('sábado, 31 de outubro às 23:00');
+  });
+
+  it('nomeia o dia da semana, para a pessoa não precisar do calendário', () => {
+    expect(formatDeadline('2026-10-16T18:30:00.000Z')).toMatch(/^sexta-feira/);
   });
 });

@@ -44,6 +44,25 @@ const weekdayAndDay = new Intl.DateTimeFormat('pt-BR', {
   month: 'long',
 });
 
+/**
+ * Fuso do negócio (§7.3).
+ *
+ * Um prazo (`holdExpiresAt`) é um instante, não um dia: trafega em UTC e precisa
+ * aparecer na hora da chácara. Formatar no fuso do navegador diria 18h para quem
+ * está em São Paulo e 23h para quem abriu o e-mail em Lisboa — sobre o **mesmo**
+ * prazo, o que faria a pessoa achar que tem cinco horas a mais.
+ */
+const BUSINESS_TIME_ZONE = 'America/Sao_Paulo';
+
+const deadline = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: BUSINESS_TIME_ZONE,
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
 /** 05/12/2026 */
 export function formatDateShort(isoDate: string): string {
   return shortDate.format(fromISODate(isoDate));
@@ -57,6 +76,21 @@ export function formatDateLong(isoDate: string): string {
 /** sábado, 5 de dezembro */
 export function formatWeekdayAndDay(isoDate: string): string {
   return weekdayAndDay.format(fromISODate(isoDate));
+}
+
+/**
+ * Prazo em linguagem natural, no horário da chácara (§13.2).
+ *
+ * "sexta-feira, 16 de outubro às 15:30". O dia da semana entra de propósito: quem
+ * lê "16 de outubro" sozinho precisa consultar o calendário para saber se ainda
+ * dá tempo.
+ *
+ * O `Intl` em pt-BR já junta data e hora com "às", então não há pós-processamento
+ * aqui — remontar as partes à mão só criaria uma frase diferente a cada versão do
+ * ICU.
+ */
+export function formatDeadline(isoTimestamp: string): string {
+  return deadline.format(new Date(isoTimestamp));
 }
 
 /**

@@ -13,7 +13,7 @@ vi.mock('../src/lib/mailer.js', () => ({
 }));
 
 const { buildApp } = await import('../src/app.js');
-const { parseISODate } = await import('../src/lib/dates.js');
+const { addDays, parseISODate, todayInSaoPaulo } = await import('../src/lib/dates.js');
 const { isExclusionViolation } = await import('../src/lib/errors.js');
 const { prisma, truncateAll } = await import('./helpers/db.js');
 const { createCategory, createCombo, createItem, createUser } =
@@ -382,9 +382,17 @@ describe('criação de reserva', () => {
       expect(response.json().error.details.dates).toEqual(['2027-04-10']);
     });
 
+    /*
+     * "Amanhã" é calculado no fuso do negócio, não em UTC.
+     *
+     * `Date.now() + 24h` formatado em UTC passava o dia inteiro certo e errava
+     * depois das 21h de Brasília, quando em UTC já é o dia seguinte: o teste
+     * pedia depois de amanhã, que é data válida, e cobrava a recusa. A §7.3
+     * existe por isto, e vale para o teste também.
+     */
     it('recusa data dentro da antecedência mínima', async () => {
       const { token } = await createClient();
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const tomorrow = addDays(todayInSaoPaulo(), 1);
 
       const response = await post(token, {
         ...TWO_DAYS,

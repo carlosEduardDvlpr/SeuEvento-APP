@@ -1,16 +1,24 @@
+import type { QuoteRequest } from '@chacara/shared';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { ApiError } from '@/api/client';
+import { useCreateBooking, useBooking, useQuote } from '@/api/bookings';
+import { useItems } from '@/api/storefront';
+import { useVenue } from '@/api/venue';
 import { Button } from '@/components/Button';
 import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { ArrowLeftIcon, ArrowRightIcon } from '@/components/icons';
-import { useItems } from '@/api/storefront';
-import { useVenue } from '@/api/venue';
 import { formErrorMessage } from '@/lib/form';
+import { ConfirmationStep } from './ConfirmationStep';
 import { DateStep } from './DateStep';
 import { ItemsStep } from './ItemsStep';
+import { ReviewStep } from './ReviewStep';
+import { SubmitGate } from './SubmitGate';
 import {
   type BookingDraft,
+  EMPTY_DRAFT,
+  clearDraft,
   draftReducer,
   hasDates,
   isStepOneComplete,
@@ -18,21 +26,21 @@ import {
   saveDraft,
 } from './draft';
 import { STEP_LABELS, WIZARD_STEPS, type WizardStep, parseStep, stepIndex } from './steps';
+import { useDebouncedValue } from './useDebouncedValue';
 import styles from './BookingWizard.module.css';
 
 /**
  * Wizard de reserva (§13.2).
  *
- * Três responsabilidades, e nada de regra de negócio: manter o passo em sincronia
- * com a URL, manter o rascunho vivo entre recarregamentos, e mostrar o total
- * parcial no rodapé.
+ * Quatro responsabilidades, e nada de regra de negócio: manter o passo em
+ * sincronia com a URL, manter o rascunho vivo entre recarregamentos, pedir o
+ * orçamento ao servidor e mandar o pedido.
  *
- * A revisão e o envio entram na próxima entrega. O corte é proposital: aqui a
- * pessoa **escolhe**, lá ela **se compromete** — e são dois conjuntos de regras
- * diferentes (orçamento do servidor, desvio por login, mapa de erros).
+ * **O servidor decide.** O total oficial vem do `POST /pricing/quote`; o rodapé
+ * só estima enquanto o orçamento não existe, e diz que está estimando (§13.2).
  */
 
-/** Estimativa local do rodapé. Nunca é o total oficial (§13.2). */
+/** Estimativa do rodapé nos passos anteriores à revisão. Nunca é o total. */
 function estimateItemsCents(draft: BookingDraft, prices: Map<string, number>): number {
   return draft.items.reduce(
     (total, item) => total + item.quantity * (prices.get(item.itemId) ?? 0),
@@ -40,20 +48,50 @@ function estimateItemsCents(draft: BookingDraft, prices: Map<string, number>): n
   );
 }
 
+/**
+ * Para qual passo um erro de envio manda a pessoa de volta (§13.2).
+ *
+ * Mostrar "a data foi reservada" na tela de revisão deixaria o problema sem
+ * conserto: o que resolve está no passo 1. Os outros códigos são sobre o envio em
+ * si e ficam onde estão.
+ */
+function stepForError(error: unknown): WizardStep {
+  if (!(error instanceof ApiError)) return 'revisao';
+
+  if (error.code === 'DATE_UNAVAILABLE') return 'datas';
+  if (error.code === 'STOCK_INSUFFICIENT') return 'itens';
+
+  return 'revisao';
+}
+
 export function BookingWizard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const step = parseStep(searchParams.get('step'));
+  const sentBookingId = searchParams.get('reserva');
 
   // O rascunho nasce do que estava guardado: quem voltou de /entrar continua
   // de onde parou (§13.2).
   const [draft, dispatch] = useReducer(draftReducer, undefined, loadDraft);
   const [showErrors, setShowErrors] = useState(false);
+  const [blocker, setBlocker] = useState<{ step: WizardStep; message: string } | null>(null);
 
   const venue = useVenue();
   const catalog = useItems();
+  const createBooking = useCreateBooking();
+  const sentBooking = useBooking(sentBookingId);
 
+  /*
+   * Espelho do rascunho, com um dono só.
+   *
+   * O `reset` devolve a **mesma** referência de `EMPTY_DRAFT`, e é só o que
+   * produz essa referência: por isso ele serve para distinguir "pedido enviado,
+   * pode esquecer" de "rascunho em branco porque a pessoa ainda não escolheu".
+   * Sem esse ramo, apagar a chave no envio não serviria de nada — este efeito
+   * rodaria em seguida e regravaria um rascunho vazio.
+   */
   useEffect(() => {
-    saveDraft(draft);
+    if (draft === EMPTY_DRAFT) clearDraft();
+    else saveDraft(draft);
   }, [draft]);
 
   const itemPrices = useMemo(() => {
@@ -61,6 +99,22 @@ export function BookingWizard() {
     for (const item of catalog.data ?? []) prices.set(item.id, item.priceCents);
     return prices;
   }, [catalog.data]);
+
+  /*
+   * Pedido do orçamento, memoizado para o debounce enxergar só mudança real.
+   *
+   * Só na revisão: nos passos anteriores a pessoa está experimentando, e pedir o
+   * valor a cada clique de quantidade seria uma requisição por toque sem ninguém
+   * olhando o número (§13.2).
+   */
+  const quoteRequest = useMemo<QuoteRequest | null>(() => {
+    if (step !== 'revisao' || !draft.startDate || !draft.endDate) return null;
+
+    return { startDate: draft.startDate, endDate: draft.endDate, items: draft.items };
+  }, [step, draft.startDate, draft.endDate, draft.items]);
+
+  const debouncedRequest = useDebouncedValue(quoteRequest);
+  const quote = useQuote(debouncedRequest);
 
   function goTo(next: WizardStep) {
     setShowErrors(false);
@@ -77,6 +131,63 @@ export function BookingWizard() {
 
     const next = WIZARD_STEPS[stepIndex(step) + 1];
     if (next) goTo(next);
+  }
+
+  async function handleSubmit() {
+    if (!draft.startDate || !draft.endDate || !draft.eventType || !draft.guestCount) {
+      setBlocker({ step: 'datas', message: 'Confira as datas, o tipo de festa e os convidados.' });
+      goTo('datas');
+      return;
+    }
+
+    /*
+     * O total enviado é o que a pessoa viu, e ele vem do orçamento (§9.7). Sem
+     * orçamento carregado não há envio: mandar um total estimado pelo front faria
+     * a API recusar com `PRICE_CHANGED` sempre que a estimativa divergisse.
+     */
+    if (!quote.data) {
+      setBlocker({ step: 'revisao', message: 'Aguarde o valor terminar de calcular.' });
+      return;
+    }
+
+    setBlocker(null);
+
+    try {
+      const booking = await createBooking.mutateAsync({
+        startDate: draft.startDate,
+        endDate: draft.endDate,
+        eventType: draft.eventType,
+        guestCount: draft.guestCount,
+        items: draft.items,
+        customerNotes: draft.customerNotes.trim() === '' ? null : draft.customerNotes.trim(),
+        expectedTotalCents: quote.data.totalCents,
+      });
+
+      /*
+       * Só agora o rascunho pode ser esquecido: a §13.2 proíbe tratamento
+       * otimista para reserva, e limpar antes do 201 perderia o pedido se o envio
+       * falhasse. O `reset` apaga o espelho pelo efeito acima.
+       *
+       * `replace: true` para o botão voltar não trazer a pessoa de volta a uma
+       * revisão de um pedido que já foi enviado.
+       */
+      dispatch({ type: 'reset' });
+      setSearchParams({ reserva: booking.id }, { replace: true });
+    } catch (error) {
+      const target = stepForError(error);
+      const message = formErrorMessage(error) ?? 'Não conseguimos enviar o pedido.';
+
+      setBlocker({ step: target, message });
+
+      /*
+       * `PRICE_CHANGED` vem com o orçamento novo nos detalhes, mas em vez de
+       * confiar nele a gente refaz a consulta: o resultado passa pelo mesmo
+       * caminho de sempre e a tela não precisa de um segundo formato de dado.
+       */
+      void quote.refetch();
+
+      if (target !== step) goTo(target);
+    }
   }
 
   if (venue.isPending) {
@@ -96,6 +207,20 @@ export function BookingWizard() {
     );
   }
 
+  // Pedido enviado: a confirmação substitui o wizard, inclusive o rodapé.
+  if (sentBookingId) {
+    return (
+      <div className={styles.wizard}>
+        <ConfirmationStep
+          booking={sentBooking.data}
+          venue={venue.data}
+          isLoading={sentBooking.isPending}
+          error={sentBooking.error}
+        />
+      </div>
+    );
+  }
+
   const errors = showErrors
     ? {
         range: hasDates(draft) ? undefined : 'Escolha as datas da festa.',
@@ -104,6 +229,7 @@ export function BookingWizard() {
       }
     : {};
 
+  const notice = blocker?.step === step ? blocker.message : undefined;
   const itemsEstimate = estimateItemsCents(draft, itemPrices);
   const back = WIZARD_STEPS[stepIndex(step) - 1];
 
@@ -149,39 +275,65 @@ export function BookingWizard() {
       </header>
 
       {step === 'datas' ? (
-        <DateStep draft={draft} dispatch={dispatch} venue={venue.data} errors={errors} />
+        <DateStep
+          draft={draft}
+          dispatch={dispatch}
+          venue={venue.data}
+          errors={errors}
+          notice={notice}
+        />
       ) : null}
 
-      {step === 'itens' ? <ItemsStep draft={draft} dispatch={dispatch} /> : null}
+      {step === 'itens' ? <ItemsStep draft={draft} dispatch={dispatch} notice={notice} /> : null}
 
       {step === 'revisao' ? (
-        <section>
-          <h2 className={styles.title}>Revisão</h2>
-          <p>
-            O resumo com o valor calculado pela chácara e o envio do pedido entram na próxima
-            entrega. Suas escolhas estão guardadas.
-          </p>
-        </section>
+        <>
+          <ReviewStep
+            draft={draft}
+            dispatch={dispatch}
+            venue={venue.data}
+            quote={quote.data}
+            isLoading={quote.isFetching}
+            {...(quote.isError ? { notice: formErrorMessage(quote.error) ?? undefined } : {})}
+          />
+
+          <SubmitGate
+            error={notice ?? null}
+            isSubmitting={createBooking.isPending}
+            onSubmit={() => void handleSubmit()}
+          />
+        </>
       ) : null}
 
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
-          {/*
-            Estimativa, e marcada como tal. O total oficial vem do
-            `POST /pricing/quote` na revisão: o front não soma preço para exibir
-            valor de verdade (§13.2).
-          */}
-          <p className={styles.estimate}>
-            <span className={styles.estimateLabel}>
-              {draft.items.length === 0
-                ? 'Só a chácara, sem itens'
-                : `Itens escolhidos (${draft.items.length})`}
-            </span>
-            <span className={styles.estimateValue}>
-              <Money cents={itemsEstimate} />
-            </span>
-            <span className={styles.estimateLabel}>As diárias entram no total na revisão.</span>
-          </p>
+          {step === 'revisao' && quote.data ? (
+            <p className={styles.estimate}>
+              <span className={styles.estimateLabel}>
+                Total{quote.isFetching ? ' (calculando…)' : ''}
+              </span>
+              <span className={styles.estimateValue}>
+                <Money cents={quote.data.totalCents} />
+              </span>
+            </p>
+          ) : (
+            /*
+              Estimativa, e marcada como tal. O total oficial vem do
+              `POST /pricing/quote` na revisão: o front não soma preço para exibir
+              valor de verdade (§13.2).
+            */
+            <p className={styles.estimate}>
+              <span className={styles.estimateLabel}>
+                {draft.items.length === 0
+                  ? 'Só a chácara, sem itens'
+                  : `Itens escolhidos (${draft.items.length})`}
+              </span>
+              <span className={styles.estimateValue}>
+                <Money cents={itemsEstimate} />
+              </span>
+              <span className={styles.estimateLabel}>As diárias entram no total na revisão.</span>
+            </p>
+          )}
 
           <div className={styles.actions}>
             {back ? (

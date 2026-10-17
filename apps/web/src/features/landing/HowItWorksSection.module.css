@@ -1,0 +1,44 @@
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-24);
+  margin: var(--space-32) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/*
+ * O número é decorativo: a ordem já está no `<ol>`, e repeti-la para o leitor de
+ * tela seria "um, um, escolha os itens". Por isso `aria-hidden` no JSX.
+ */
+.number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-alt);
+  color: var(--brand);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.stepTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: 1.2;
+}
+
+.stepText {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}

@@ -1,98 +1,74 @@
-import { Link } from 'react-router';
+import { useCombos, useGallery, useThemes } from '@/api/storefront';
 import { useVenue } from '@/api/venue';
-import { ArchFrame } from '@/components/ArchFrame';
-import { CalendarIcon, ClockIcon, UsersIcon } from '@/components/icons';
+import { Skeleton } from '@/components/Skeleton';
+import { formErrorMessage } from '@/lib/form';
+import { CombosSection } from './CombosSection';
+import { DirectionsSection } from './DirectionsSection';
+import { FaqSection } from './FaqSection';
+import { GallerySection } from './GallerySection';
+import { HeroSection } from './HeroSection';
+import { HowItWorksSection } from './HowItWorksSection';
+import { ThemesSection } from './ThemesSection';
+import { VenueSection } from './VenueSection';
 import styles from './LandingPage.module.css';
 
 /**
  * Landing (§13.1).
  *
- * Nesta etapa existe o hero e o bloco de fatos, os dois lendo dados reais do
- * banco. O tour pela chácara, a galeria, os estilos, os combos, o FAQ e o "como
- * chegar" entram junto com as fotos e a copy aprovada pelo dono.
+ * A ordem das seções é decisão de produto e está fixada na §13.1 — não mexer sem
+ * aprovação. O objetivo é fazer a pessoa sentir a festa na chácara e chegar às
+ * datas em um gesto, e é por isso que o seletor de datas está no hero, não no
+ * fim.
+ *
+ * **Seção sem conteúdo não aparece.** Galeria, estilos e combos se escondem
+ * sozinhos quando o painel ainda não tem nada: a §16.6 proíbe inventar conteúdo,
+ * e uma seção vazia é pior que a ausência dela.
+ *
+ * Os depoimentos da §13.1 (item 7) ficam de fora por decisão consciente: a §13.1
+ * exige depoimento **real, com nome e tipo de evento**, e não há onde guardá-los
+ * (§8 não tem o modelo). Inventar seria o único jeito de a seção existir hoje.
+ *
+ * Cada seção busca o que precisa por hook próprio, em paralelo: só o hero depende
+ * de `venue` para renderizar, e o resto aparece conforme chega.
  */
 export function LandingPage() {
-  const { data: venue, isPending, isError, error } = useVenue();
+  const venue = useVenue();
+  const gallery = useGallery();
+  const themes = useThemes();
+  const combos = useCombos();
 
-  if (isPending) {
+  if (venue.isPending) {
     return (
-      <section className={styles.state} aria-busy="true">
-        <p>Carregando as informações da chácara…</p>
-      </section>
+      <div className={styles.state} aria-busy="true">
+        <Skeleton rows={6} />
+      </div>
     );
   }
 
-  if (isError) {
+  if (venue.isError || !venue.data) {
     return (
-      <section className={styles.state}>
+      <div className={styles.state}>
         <h1>Não conseguimos carregar a página</h1>
-        <p>{error.message}</p>
-      </section>
+        <p>{formErrorMessage(venue.error) ?? 'Tente de novo em instantes.'}</p>
+      </div>
     );
   }
 
-  const facts = [
-    { icon: UsersIcon, label: 'Cabem até', value: `${venue.maxGuests} pessoas` },
-    {
-      icon: ClockIcon,
-      label: 'Entrada e saída',
-      value: `${venue.checkInTime} às ${venue.checkOutTime}`,
-    },
-    {
-      icon: CalendarIcon,
-      label: 'Período',
-      value:
-        venue.minDays === venue.maxDays
-          ? `${venue.maxDays} ${venue.maxDays === 1 ? 'dia' : 'dias'}`
-          : `de ${venue.minDays} a ${venue.maxDays} dias`,
-    },
-  ];
+  const images = gallery.data ?? [];
+  const hero = images.find((image) => image.kind === 'HERO');
+  const areas = images.filter((image) => image.kind === 'VENUE');
+  const events = images.filter((image) => image.kind === 'EVENTS');
 
   return (
     <>
-      <section className={styles.hero}>
-        <div className={styles.heroText}>
-          <h1>Sua festa no nosso quintal</h1>
-          <p className={styles.heroLead}>
-            Alugue a chácara por dia e monte a decoração você mesmo, escolhendo os itens do estilo
-            que combina com a sua festa.
-          </p>
-
-          <Link to="/reservar" className={styles.heroAction}>
-            Ver datas livres
-          </Link>
-
-          <p className={styles.heroNote}>
-            As datas ficam seguras por até {venue.holdHours} horas enquanto a chácara confirma.
-          </p>
-        </div>
-
-        {/* Sem foto real ainda: a §14.9 pede bloco de cor, nunca banco de imagens. */}
-        <ArchFrame className={styles.heroImage} />
-      </section>
-
-      <section className={styles.facts} aria-labelledby="titulo-fatos">
-        <h2 id="titulo-fatos">A chácara</h2>
-
-        <dl className={styles.factList}>
-          {facts.map(({ icon: FactIcon, label, value }) => (
-            <div className={styles.fact} key={label}>
-              <FactIcon size={22} />
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-
-        {venue.address ? <p className={styles.address}>{venue.address}</p> : null}
-
-        {venue.houseRules ? (
-          <div className={styles.rules}>
-            <h3>Regras da casa</h3>
-            <p>{venue.houseRules}</p>
-          </div>
-        ) : null}
-      </section>
+      <HeroSection venue={venue.data} hero={hero} />
+      <VenueSection venue={venue.data} areas={areas} />
+      <GallerySection images={events} />
+      <HowItWorksSection />
+      <ThemesSection themes={themes.data ?? []} />
+      <CombosSection combos={combos.data ?? []} />
+      <FaqSection venue={venue.data} />
+      <DirectionsSection venue={venue.data} />
     </>
   );
 }

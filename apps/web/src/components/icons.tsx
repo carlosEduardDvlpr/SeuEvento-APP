@@ -295,3 +295,13 @@ export function SparkIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** Localização: endereço da chácara na landing (§13.1). */
+export function PinIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </Icon>
+  );
+}

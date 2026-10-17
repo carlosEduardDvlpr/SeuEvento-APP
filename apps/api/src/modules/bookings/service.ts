@@ -19,6 +19,7 @@ import {
 import { AppError, fieldError, isExclusionViolation, isWriteConflict } from '../../lib/errors.js';
 import {
   bookingCancelledTemplate,
+  bookingConfirmedTemplate,
   bookingReceivedTemplate,
   holdExpiredTemplate,
   newBookingForAdminTemplate,
@@ -164,12 +165,23 @@ async function loadVenueRules(prisma: PrismaClient): Promise<VenueRules> {
  * fala com a pessoa no dia da festa. Sem os dois, confirmar a reserva depois
  * seria impossível.
  */
-async function loadEligibleUser(prisma: PrismaClient, userId: string) {
+async function loadEligibleUser(
+  prisma: PrismaClient,
+  userId: string,
+  { requireVerifiedContact }: { requireVerifiedContact: boolean },
+) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
   if (!user) {
+    // Pelo painel, o id vem do formulário: cliente apagado não é sessão expirada.
+    if (!requireVerifiedContact) {
+      throw new AppError('NOT_FOUND', 404, 'Não encontramos este cliente.');
+    }
+
     throw new AppError('UNAUTHORIZED', 401, 'Sua sessão expirou. Entre de novo para continuar.');
   }
+
+  if (!requireVerifiedContact) return user;
 
   if (user.emailVerifiedAt === null) {
     throw new AppError(
@@ -221,8 +233,26 @@ export type CreateBookingInput = {
   prisma: PrismaClient;
   userId: string;
   body: CreateBookingBody;
-  /** Reserva lançada pelo painel nasce confirmada (§9.8). Entra na T24. */
   now?: Date;
+  /**
+   * Reserva lançada pelo painel (§9.8).
+   *
+   * O núcleo é o **mesmo** — constraint de datas, trava de estoque, preço
+   * recalculado — e isso não é economia de código: é o marco de zero dupla
+   * reserva. Uma segunda implementação para o admin seria um segundo caminho
+   * para furar a agenda.
+   *
+   * O que muda são as exigências de quem pede, e cada uma por um motivo:
+   *
+   * - **Sem e-mail confirmado nem telefone obrigatório.** A §11.3 exige os dois
+   *   do cliente porque é como a chácara o encontra depois; aqui o dono já está
+   *   com a pessoa ao telefone, e o cliente pode nem ter e-mail (§9.8).
+   * - **Sem limite de pedidos abertos.** `maxPendingPerUser` existe para frear
+   *   quem envia pedido em série pelo site; o dono está registrando o que já foi
+   *   combinado.
+   * - **Pode nascer confirmada**, sem prazo correndo.
+   */
+  asAdmin?: { confirmed: boolean };
 };
 
 export async function createBooking({
@@ -230,9 +260,10 @@ export async function createBooking({
   userId,
   body,
   now = new Date(),
+  asAdmin,
 }: CreateBookingInput): Promise<Booking> {
   const [user, rules] = await Promise.all([
-    loadEligibleUser(prisma, userId),
+    loadEligibleUser(prisma, userId, { requireVerifiedContact: asAdmin === undefined }),
     loadVenueRules(prisma),
   ]);
 
@@ -264,6 +295,7 @@ export async function createBooking({
     );
   }
 
+  const confirmedByAdmin = asAdmin?.confirmed === true;
   const holdExpiresAt = new Date(now.getTime() + rules.holdHours * 60 * 60 * 1000);
   const expiredHolds: ExpiredHold[] = [];
 
@@ -274,7 +306,7 @@ export async function createBooking({
    * pode falhar, e a §17 manda a falha não desfazer nada. O `sendMail` já engole
    * o próprio erro.
    */
-  await notify({ prisma, row, user, rules, expiredHolds });
+  await notify({ prisma, row, user, rules, expiredHolds, asAdmin });
 
   return toBooking(row, { freeCancelUntilDays: rules.freeCancelUntilDays, now });
 
@@ -392,7 +424,7 @@ export async function createBooking({
           },
         });
 
-        if (openRequests >= rules.maxPendingPerUser) {
+        if (asAdmin === undefined && openRequests >= rules.maxPendingPerUser) {
           throw new AppError(
             'TOO_MANY_PENDING',
             422,
@@ -469,8 +501,11 @@ export async function createBooking({
             endDate: parseISODate(body.endDate),
             eventType: body.eventType,
             guestCount: body.guestCount,
-            status: 'PENDING',
-            holdExpiresAt,
+            status: confirmedByAdmin ? 'CONFIRMED' : 'PENDING',
+            // Reserva confirmada ocupa a data por ser confirmada; deixar o prazo
+            // correndo faria o job de expiração cancelá-la (§9.2).
+            holdExpiresAt: confirmedByAdmin ? null : holdExpiresAt,
+            createdByAdmin: asAdmin !== undefined,
             customerNotes: body.customerNotes,
 
             // Snapshot do que foi contratado (§2.1).
@@ -529,51 +564,97 @@ async function adminRecipients(prisma: PrismaClient): Promise<string[]> {
   return admins.flatMap((admin) => (admin.email ? [admin.email] : []));
 }
 
+/**
+ * Avisos da criação (§17).
+ *
+ * O que sai depende de **quem** criou, e a diferença não é detalhe:
+ *
+ * - Pedido pelo site: o cliente recebe "recebemos seu pedido" e o dono recebe o
+ *   aviso de pedido novo.
+ * - Reserva lançada pelo painel: o dono não se avisa do que ele mesmo acabou de
+ *   digitar. E o cliente só recebe algo se a reserva já nascer confirmada —
+ *   mandar "recebemos seu pedido" para quem não pediu nada confundiria, e um
+ *   lançamento que o dono deixou pendente é um rascunho dele.
+ */
 async function notify({
   prisma,
   row,
   user,
   rules,
   expiredHolds,
+  asAdmin,
 }: {
   prisma: PrismaClient;
   row: BookingRow;
   user: { name: string; email: string | null; phone: string | null };
   rules: VenueRules;
   expiredHolds: ExpiredHold[];
+  asAdmin?: { confirmed: boolean };
 }): Promise<void> {
   const dates = formatDateRange(toISODate(row.startDate), toISODate(row.endDate));
 
-  if (user.email) {
-    await sendMail({
-      to: user.email,
-      ...bookingReceivedTemplate({
-        name: user.name,
-        dates,
-        totalFormatted: formatBRL(row.totalCents),
-        holdHours: rules.holdHours,
-        bookingUrl: `${env.APP_URL}/reservas/${row.id}`,
-      }),
-    });
-  }
+  if (asAdmin) {
+    if (user.email && row.status === 'CONFIRMED') {
+      const settings = await prisma.venueSettings.findUnique({
+        where: { id: 1 },
+        select: {
+          checkInTime: true,
+          checkOutTime: true,
+          address: true,
+          houseRules: true,
+          whatsapp: true,
+        },
+      });
 
-  /*
-   * O dono precisa saber na hora: o e-mail do cliente diz "aguarde", e o prazo
-   * de bloqueio começa a correr agora. Sem este aviso a espera dependeria de
-   * alguém abrir o painel por conta própria.
-   */
-  for (const email of await adminRecipients(prisma)) {
-    await sendMail({
-      to: email,
-      ...newBookingForAdminTemplate({
-        customerName: user.name,
-        customerPhone: user.phone,
-        dates,
-        guestCount: row.guestCount,
-        totalFormatted: formatBRL(row.totalCents),
-        adminUrl: `${env.APP_URL}/admin/reservas/${row.id}`,
-      }),
-    });
+      if (settings) {
+        await sendMail({
+          to: user.email,
+          ...bookingConfirmedTemplate({
+            name: user.name,
+            dates,
+            checkInTime: settings.checkInTime,
+            checkOutTime: settings.checkOutTime,
+            totalFormatted: formatBRL(row.totalCents),
+            address: settings.address,
+            houseRules: settings.houseRules,
+            whatsapp: settings.whatsapp,
+            bookingUrl: `${env.APP_URL}/reservas/${row.id}`,
+          }),
+        });
+      }
+    }
+  } else {
+    if (user.email) {
+      await sendMail({
+        to: user.email,
+        ...bookingReceivedTemplate({
+          name: user.name,
+          dates,
+          totalFormatted: formatBRL(row.totalCents),
+          holdHours: rules.holdHours,
+          bookingUrl: `${env.APP_URL}/reservas/${row.id}`,
+        }),
+      });
+    }
+
+    /*
+     * O dono precisa saber na hora: o e-mail do cliente diz "aguarde", e o prazo
+     * de bloqueio começa a correr agora. Sem este aviso a espera dependeria de
+     * alguém abrir o painel por conta própria.
+     */
+    for (const email of await adminRecipients(prisma)) {
+      await sendMail({
+        to: email,
+        ...newBookingForAdminTemplate({
+          customerName: user.name,
+          customerPhone: user.phone,
+          dates,
+          guestCount: row.guestCount,
+          totalFormatted: formatBRL(row.totalCents),
+          adminUrl: `${env.APP_URL}/admin/reservas/${row.id}`,
+        }),
+      });
+    }
   }
 
   /*

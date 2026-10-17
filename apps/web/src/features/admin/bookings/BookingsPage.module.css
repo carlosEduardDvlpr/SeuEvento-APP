@@ -125,3 +125,24 @@
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
+
+/* Atalho para a reserva manual, no cabeçalho da lista. */
+.newBooking {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-24);
+  border: 1px solid var(--brand);
+  border-radius: var(--r-sm);
+  background: var(--brand);
+  color: var(--paper);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.newBooking:hover {
+  text-decoration: underline;
+}

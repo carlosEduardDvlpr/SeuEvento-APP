@@ -3,10 +3,12 @@ import { adminBlockedDateRoutes } from './blocked-dates.js';
 import { adminBookingRoutes } from './bookings.js';
 import { adminCategoryRoutes } from './categories.js';
 import { adminComboRoutes } from './combos.js';
+import { adminCustomerRoutes } from './customers.js';
 import { adminGalleryRoutes } from './gallery.js';
 import { adminItemRoutes } from './items.js';
 import { adminOverviewRoutes } from './overview.js';
 import { adminPriceRuleRoutes } from './price-rules.js';
+import { adminSettingsRoutes } from './settings.js';
 import { adminThemeRoutes } from './themes.js';
 
 /**
@@ -32,4 +34,6 @@ export const adminRoutes: FastifyPluginAsyncZod = async (app) => {
   await app.register(adminComboRoutes);
   await app.register(adminPriceRuleRoutes);
   await app.register(adminGalleryRoutes);
+  await app.register(adminCustomerRoutes);
+  await app.register(adminSettingsRoutes);
 };

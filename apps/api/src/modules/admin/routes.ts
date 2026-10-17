@@ -4,6 +4,7 @@ import { adminCategoryRoutes } from './categories.js';
 import { adminComboRoutes } from './combos.js';
 import { adminGalleryRoutes } from './gallery.js';
 import { adminItemRoutes } from './items.js';
+import { adminOverviewRoutes } from './overview.js';
 import { adminPriceRuleRoutes } from './price-rules.js';
 import { adminThemeRoutes } from './themes.js';
 
@@ -21,6 +22,7 @@ export const adminRoutes: FastifyPluginAsyncZod = async (app) => {
   app.addHook('onRequest', app.authenticate);
   app.addHook('onRequest', app.requireRole('ADMIN'));
 
+  await app.register(adminOverviewRoutes);
   await app.register(adminBlockedDateRoutes);
   await app.register(adminCategoryRoutes);
   await app.register(adminThemeRoutes);

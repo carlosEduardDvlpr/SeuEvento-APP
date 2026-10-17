@@ -33,6 +33,10 @@ type BookingInput = {
   eventType?: EventType;
   guestCount?: number;
   holdExpiresAt?: Date | null;
+  /** Só onde o valor aparece na resposta, como nos resumos do painel. */
+  totalCents?: number;
+  /** Reserva lançada pelo painel (§9.8). */
+  createdByAdmin?: boolean;
 };
 
 /**
@@ -52,12 +56,13 @@ export function createBooking(input: BookingInput) {
       eventType: input.eventType ?? 'BABY_SHOWER',
       guestCount: input.guestCount ?? 40,
       holdExpiresAt: input.holdExpiresAt ?? null,
+      createdByAdmin: input.createdByAdmin ?? false,
       dailyBreakdown: [],
       appliedCombos: [],
       dailyTotalCents: 0,
       itemsTotalCents: 0,
       discountTotalCents: 0,
-      totalCents: 0,
+      totalCents: input.totalCents ?? 0,
     },
   });
 }

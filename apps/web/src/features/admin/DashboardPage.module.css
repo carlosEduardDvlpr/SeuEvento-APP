@@ -1,70 +1,155 @@
-.grid {
+/* Números do topo: as quatro respostas que o dono procura ao abrir o painel. */
+.numbers {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-16);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-12);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.card {
+.number {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  height: 100%;
   padding: var(--space-16);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--bg);
-  color: var(--fg);
-  text-decoration: none;
-  transition:
-    border-color var(--transition),
-    background var(--transition);
 }
 
-.card:hover {
-  border-color: var(--sage-300);
-  background: var(--bg-alt);
-}
-
-.icon {
-  color: var(--brand);
-  line-height: 0;
-}
-
-.cardTitle {
-  margin-top: var(--space-8);
+.numberValue {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-2xl);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
-.cardText {
+.numberLabel {
   color: var(--fg-soft);
   font-size: var(--text-sm);
 }
 
-.facts {
-  padding: var(--space-24);
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.sectionLink {
+  color: var(--brand);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Linha de reserva, não tabela: no celular uma tabela de seis colunas rola de
+ * lado, e o dono vai usar o painel no celular (§13.4).
+ */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.rowDates {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: 1.2;
+}
+
+.rowMeta {
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+/* Prazo com borda além da cor (§14.2). É o dado mais acionável da linha. */
+.hold {
+  align-self: flex-start;
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-12);
+  border-left: 4px solid var(--action);
+  border-radius: var(--r-sm);
+  background: var(--st-pending-bg);
+  color: var(--st-pending-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.rowSide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.rowTotal {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.rowActions {
+  display: flex;
+  gap: var(--space-12);
+}
+
+.rowLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  color: var(--brand);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.occupancy {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-16);
+  margin: 0;
+  padding: var(--space-16);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--bg-alt);
 }
 
-.factsTitle {
-  margin: 0 0 var(--space-16);
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-}
-
-.factsList {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--space-16);
-  margin: 0;
-}
-
-.factsList dt {
+.occupancy dt {
   color: var(--fg-soft);
   font-size: var(--text-xs);
   font-weight: 700;
@@ -72,7 +157,7 @@
   text-transform: uppercase;
 }
 
-.factsList dd {
+.occupancy dd {
   margin: var(--space-4) 0 0;
   font-weight: 600;
 }

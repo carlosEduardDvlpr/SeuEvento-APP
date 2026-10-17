@@ -3,6 +3,7 @@ import { ToastProvider } from '@/components/Toast';
 import { UnderConstructionPage } from '@/app/pages/UnderConstructionPage';
 import { AdminLayout } from './AdminLayout';
 import { DashboardPage } from './DashboardPage';
+import { CalendarPage } from './calendar/CalendarPage';
 import { CategoriesPage } from './catalog/CategoriesPage';
 import { CombosPage } from './catalog/CombosPage';
 import { GalleryPage } from './catalog/GalleryPage';
@@ -33,8 +34,10 @@ export default function AdminRoutes() {
           <Route path="precos" element={<PricesPage />} />
           <Route path="galeria" element={<GalleryPage />} />
 
-          <Route path="calendario" element={<UnderConstructionPage title="Calendário" />} />
+          <Route path="calendario" element={<CalendarPage />} />
           <Route path="reservas" element={<UnderConstructionPage title="Reservas" />} />
+          {/* O calendário e a visão geral já linkam para cá; a tela vem na T25. */}
+          <Route path="reservas/:id" element={<UnderConstructionPage title="Reserva" />} />
           <Route path="clientes" element={<UnderConstructionPage title="Clientes" />} />
           <Route path="configuracoes" element={<UnderConstructionPage title="Configurações" />} />
 

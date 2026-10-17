@@ -1,47 +1,81 @@
+import type { AdminBookingSummary } from '@chacara/shared';
+import { EVENT_TYPE_LABELS } from '@chacara/shared';
 import { Link } from 'react-router';
-import { BoxIcon, ImageIcon, PaletteIcon, TagIcon } from '@/components/icons';
+import { useAdminDashboard } from '@/api/overview';
 import { useVenue } from '@/api/venue';
+import { EmptyState } from '@/components/EmptyState';
+import { Money } from '@/components/Money';
+import { Skeleton } from '@/components/Skeleton';
+import { StatusBadge } from '@/components/StatusBadge';
+import { formErrorMessage } from '@/lib/form';
+import { formatDateRange, formatTimeUntil } from '@/lib/format';
+import { whatsappUrl } from '@/lib/whatsapp';
 import styles from './admin.module.css';
 import dashboardStyles from './DashboardPage.module.css';
 
 /**
- * Visão geral (§13).
+ * Visão geral (§13.4).
  *
- * Por enquanto é um ponto de partida: as caixas levam ao que já existe, e o
- * resumo do dia a dia (próximas reservas, pedidos aguardando) entra quando a
- * Fase 5 trouxer as reservas. Mostrar caixas vazias agora só ensinaria o dono a
- * ignorar esta tela.
+ * Três perguntas, nessa ordem: o que precisa de resposta hoje, o que vai
+ * acontecer logo, e como o mês está indo. A ordem não é estética — é a ordem em
+ * que as coisas custam dinheiro se forem ignoradas.
+ *
+ * Os pedidos vêm ordenados pelo **prazo**, não pela data da festa: o que vence
+ * primeiro é o que se perde se ninguém responder.
  */
 
-const SHORTCUTS = [
-  {
-    to: '/admin/itens',
-    label: 'Itens',
-    description: 'O que o cliente pode levar no pegue e monte, com preço e estoque.',
-    Icon: BoxIcon,
-  },
-  {
-    to: '/admin/combos',
-    label: 'Combos',
-    description: 'Conjuntos com desconto, para incentivar o pedido maior.',
-    Icon: TagIcon,
-  },
-  {
-    to: '/admin/temas',
-    label: 'Estilos',
-    description: 'As linhas estéticas que organizam a vitrine.',
-    Icon: PaletteIcon,
-  },
-  {
-    to: '/admin/galeria',
-    label: 'Galeria',
-    description: 'As fotos da landing. É o que faz a pessoa se imaginar na festa.',
-    Icon: ImageIcon,
-  },
-];
+function BookingRow({ booking }: { booking: AdminBookingSummary }) {
+  const dates = formatDateRange(booking.startDate, booking.endDate);
+
+  return (
+    <li className={dashboardStyles.row}>
+      <div className={dashboardStyles.rowMain}>
+        <span className={dashboardStyles.rowDates}>{dates}</span>
+        <span className={dashboardStyles.rowMeta}>
+          {booking.customer.name} · {EVENT_TYPE_LABELS[booking.eventType]} · {booking.guestCount}{' '}
+          pessoas
+        </span>
+
+        {booking.status === 'PENDING' && booking.holdExpiresAt ? (
+          <span className={dashboardStyles.hold}>
+            Responder {formatTimeUntil(booking.holdExpiresAt)}
+          </span>
+        ) : null}
+      </div>
+
+      <div className={dashboardStyles.rowSide}>
+        <StatusBadge status={booking.status} />
+        <span className={dashboardStyles.rowTotal}>
+          <Money cents={booking.totalCents} />
+        </span>
+
+        <div className={dashboardStyles.rowActions}>
+          <Link className={dashboardStyles.rowLink} to={`/admin/reservas/${booking.id}`}>
+            Abrir
+          </Link>
+
+          {booking.customer.phone ? (
+            <a
+              className={dashboardStyles.rowLink}
+              href={whatsappUrl(
+                booking.customer.phone,
+                `Olá, ${booking.customer.name}! Falo sobre a reserva de ${dates}.`,
+              )}
+              target="_blank"
+              rel="noreferrer"
+            >
+              WhatsApp
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </li>
+  );
+}
 
 export function DashboardPage() {
   const venue = useVenue();
+  const dashboard = useAdminDashboard();
 
   return (
     <div className={styles.page}>
@@ -49,60 +83,110 @@ export function DashboardPage() {
         <div className={styles.heading}>
           <h1 className={styles.title}>{venue.data?.name ?? 'Painel da chácara'}</h1>
           <p className={styles.subtitle}>
-            Daqui você muda preço, foto e item sem depender de ninguém. O calendário e as reservas
-            entram nas próximas entregas.
+            O que precisa de você agora, o que vem pela frente e como o mês está indo.
           </p>
         </div>
       </header>
 
-      <ul className={dashboardStyles.grid}>
-        {SHORTCUTS.map(({ to, label, description, Icon }) => (
-          <li key={to}>
-            <Link to={to} className={dashboardStyles.card}>
-              <span className={dashboardStyles.icon}>
-                <Icon size={28} />
-              </span>
-              <span className={dashboardStyles.cardTitle}>{label}</span>
-              <span className={dashboardStyles.cardText}>{description}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {dashboard.isError ? (
+        <p role="alert">{formErrorMessage(dashboard.error) ?? 'Tente de novo em instantes.'}</p>
+      ) : null}
 
-      {venue.data ? (
-        <section className={dashboardStyles.facts}>
-          <h2 className={dashboardStyles.factsTitle}>Como a chácara está configurada</h2>
-          <dl className={dashboardStyles.factsList}>
-            <div>
-              <dt>Capacidade</dt>
-              <dd>{venue.data.maxGuests} convidados</dd>
+      {dashboard.isPending ? <Skeleton rows={6} /> : null}
+
+      {dashboard.data ? (
+        <>
+          <ul className={dashboardStyles.numbers}>
+            <li className={dashboardStyles.number}>
+              <span className={dashboardStyles.numberValue}>{dashboard.data.counts.pending}</span>
+              <span className={dashboardStyles.numberLabel}>
+                {dashboard.data.counts.pending === 1
+                  ? 'pedido aguardando resposta'
+                  : 'pedidos aguardando resposta'}
+              </span>
+            </li>
+            <li className={dashboardStyles.number}>
+              <span className={dashboardStyles.numberValue}>{dashboard.data.counts.next7}</span>
+              <span className={dashboardStyles.numberLabel}>nos próximos 7 dias</span>
+            </li>
+            <li className={dashboardStyles.number}>
+              <span className={dashboardStyles.numberValue}>{dashboard.data.counts.next30}</span>
+              <span className={dashboardStyles.numberLabel}>nos próximos 30 dias</span>
+            </li>
+            <li className={dashboardStyles.number}>
+              <span className={dashboardStyles.numberValue}>
+                {dashboard.data.occupancy.bookedPercent}%
+              </span>
+              <span className={dashboardStyles.numberLabel}>
+                do mês reservado ({dashboard.data.occupancy.bookedDays} de{' '}
+                {dashboard.data.occupancy.totalDays} dias)
+              </span>
+            </li>
+          </ul>
+
+          <section className={dashboardStyles.section}>
+            <div className={dashboardStyles.sectionHead}>
+              <h2 className={dashboardStyles.sectionTitle}>Aguardando sua resposta</h2>
+              <Link className={dashboardStyles.sectionLink} to="/admin/reservas">
+                Ver todas as reservas
+              </Link>
             </div>
-            <div>
-              <dt>Horário</dt>
-              <dd>
-                {venue.data.checkInTime} às {venue.data.checkOutTime}
-              </dd>
+
+            {dashboard.data.pending.length === 0 ? (
+              <EmptyState
+                title="Nenhum pedido esperando"
+                description="Quando alguém enviar um pedido pelo site, ele aparece aqui com o prazo para você responder."
+              />
+            ) : (
+              <ul className={dashboardStyles.list}>
+                {dashboard.data.pending.map((booking) => (
+                  <BookingRow key={booking.id} booking={booking} />
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className={dashboardStyles.section}>
+            <div className={dashboardStyles.sectionHead}>
+              <h2 className={dashboardStyles.sectionTitle}>Próximos 30 dias</h2>
+              <Link className={dashboardStyles.sectionLink} to="/admin/calendario">
+                Abrir o calendário
+              </Link>
             </div>
-            <div>
-              <dt>Duração</dt>
-              <dd>
-                {venue.data.minDays} a {venue.data.maxDays} dias
-              </dd>
-            </div>
-            <div>
-              <dt>Antecedência mínima</dt>
-              <dd>{venue.data.minLeadDays} dias</dd>
-            </div>
-            <div>
-              <dt>Prazo do pedido</dt>
-              <dd>{venue.data.holdHours} horas</dd>
-            </div>
-            <div>
-              <dt>Cancelamento pelo cliente</dt>
-              <dd>até {venue.data.freeCancelUntilDays} dias antes</dd>
-            </div>
-          </dl>
-        </section>
+
+            {dashboard.data.upcoming.length === 0 ? (
+              <EmptyState
+                title="Nenhuma festa marcada por enquanto"
+                description="As reservas confirmadas e os pedidos em aberto dos próximos 30 dias aparecem aqui."
+              />
+            ) : (
+              <ul className={dashboardStyles.list}>
+                {dashboard.data.upcoming.map((booking) => (
+                  <BookingRow key={booking.id} booking={booking} />
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Ocupação em dias, não em reservas: é a pergunta que o dono faz. */}
+          <section className={dashboardStyles.section}>
+            <h2 className={dashboardStyles.sectionTitle}>Ocupação deste mês</h2>
+            <dl className={dashboardStyles.occupancy}>
+              <div>
+                <dt>Reservados</dt>
+                <dd>{dashboard.data.occupancy.bookedDays} dias</dd>
+              </div>
+              <div>
+                <dt>Bloqueados por você</dt>
+                <dd>{dashboard.data.occupancy.blockedDays} dias</dd>
+              </div>
+              <div>
+                <dt>Ainda livres</dt>
+                <dd>{dashboard.data.occupancy.freeDays} dias</dd>
+              </div>
+            </dl>
+          </section>
+        </>
       ) : null}
     </div>
   );

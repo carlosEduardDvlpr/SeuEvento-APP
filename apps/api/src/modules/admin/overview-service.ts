@@ -51,6 +51,7 @@ type BookingRow = Prisma.BookingGetPayload<{
     totalCents: true;
     holdExpiresAt: true;
     createdByAdmin: true;
+    createdAt: true;
     user: { select: { id: true; name: true; email: true; phone: true } };
   };
 }>;
@@ -66,6 +67,7 @@ const summarySelect = {
   totalCents: true,
   holdExpiresAt: true,
   createdByAdmin: true,
+  createdAt: true,
   user: { select: { id: true, name: true, email: true, phone: true } },
 } as const;
 
@@ -80,6 +82,7 @@ function toSummary(row: BookingRow): AdminBookingSummary {
     totalCents: row.totalCents,
     holdExpiresAt: row.holdExpiresAt?.toISOString() ?? null,
     createdByAdmin: row.createdByAdmin,
+    createdAt: row.createdAt.toISOString(),
     customer: {
       id: row.user.id,
       name: row.user.name,

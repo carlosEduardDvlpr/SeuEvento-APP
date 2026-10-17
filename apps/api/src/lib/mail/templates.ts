@@ -234,3 +234,56 @@ export function bookingCancelledTemplate({
     note: 'As datas voltaram para o calendário. Se quiser tentar de novo, elas podem estar livres.',
   });
 }
+
+/**
+ * Reserva confirmada (§17).
+ *
+ * É o e-mail que encerra a espera, então ele carrega o que a pessoa vai precisar
+ * no dia: horário de entrada e saída, endereço e as regras da casa. Quem recebe
+ * isto arquiva o e-mail e volta a ele na véspera da festa — por isso os dados
+ * vêm no corpo, e não só num link para o site.
+ */
+export function bookingConfirmedTemplate({
+  name,
+  dates,
+  checkInTime,
+  checkOutTime,
+  totalFormatted,
+  address,
+  houseRules,
+  whatsapp,
+  bookingUrl,
+}: {
+  name: string;
+  dates: string;
+  checkInTime: string;
+  checkOutTime: string;
+  totalFormatted: string;
+  address: string | null;
+  houseRules: string | null;
+  whatsapp: string | null;
+  bookingUrl: string;
+}): Email {
+  const paragraphs = [
+    `Olá, ${name}. Sua reserva de ${dates} está confirmada. A chácara é sua nesses dias.`,
+    `Entrada a partir das ${checkInTime} e saída até as ${checkOutTime}.`,
+    `Valor combinado: ${totalFormatted}.`,
+  ];
+
+  if (address) paragraphs.push(`Endereço: ${address}`);
+  if (houseRules) paragraphs.push(`Regras da casa: ${houseRules}`);
+
+  paragraphs.push(
+    whatsapp
+      ? `Qualquer dúvida até lá, fale com a gente pelo WhatsApp ${whatsapp}.`
+      : 'Qualquer dúvida até lá, responda este e-mail.',
+  );
+
+  return renderEmail('Sua reserva está confirmada', {
+    preheader: `${dates}, das ${checkInTime} às ${checkOutTime}.`,
+    heading: 'Reserva confirmada',
+    paragraphs,
+    action: { label: 'Ver minha reserva', url: bookingUrl },
+    note: 'O pagamento é combinado direto com a chácara.',
+  });
+}

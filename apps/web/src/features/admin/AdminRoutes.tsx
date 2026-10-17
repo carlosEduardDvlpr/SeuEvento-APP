@@ -5,8 +5,12 @@ import { AdminLayout } from './AdminLayout';
 import { DashboardPage } from './DashboardPage';
 import { BookingDetailPage } from './bookings/BookingDetailPage';
 import { BookingsPage } from './bookings/BookingsPage';
+import { NewBookingPage } from './bookings/NewBookingPage';
 import { CalendarPage } from './calendar/CalendarPage';
 import { CategoriesPage } from './catalog/CategoriesPage';
+import { CustomerDetailPage } from './customers/CustomerDetailPage';
+import { CustomersPage } from './customers/CustomersPage';
+import { SettingsPage } from './settings/SettingsPage';
 import { CombosPage } from './catalog/CombosPage';
 import { GalleryPage } from './catalog/GalleryPage';
 import { ItemsPage } from './catalog/ItemsPage';
@@ -38,9 +42,13 @@ export default function AdminRoutes() {
 
           <Route path="calendario" element={<CalendarPage />} />
           <Route path="reservas" element={<BookingsPage />} />
+          {/* Antes de `:id`, senão "nova" cairia no detalhe de uma reserva. */}
+          <Route path="reservas/nova" element={<NewBookingPage />} />
           <Route path="reservas/:id" element={<BookingDetailPage />} />
-          <Route path="clientes" element={<UnderConstructionPage title="Clientes" />} />
-          <Route path="configuracoes" element={<UnderConstructionPage title="Configurações" />} />
+
+          <Route path="clientes" element={<CustomersPage />} />
+          <Route path="clientes/:id" element={<CustomerDetailPage />} />
+          <Route path="configuracoes" element={<SettingsPage />} />
 
           <Route path="*" element={<UnderConstructionPage title="Painel da chácara" />} />
         </Route>

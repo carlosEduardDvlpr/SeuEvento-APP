@@ -1,0 +1,225 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  align-self: flex-start;
+  min-height: var(--touch-target);
+  color: var(--brand);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  margin: 0;
+  padding: var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+
+.legend {
+  padding: 0 var(--space-8);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-16);
+}
+
+.hint {
+  max-width: var(--measure);
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+/* Alternância entre cliente existente e novo: dois botões, um ativo. */
+.switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.switchOption {
+  min-height: var(--touch-target);
+  padding: 0 var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.switchOptionActive {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--paper);
+}
+
+/* Resultado da busca de cliente: lista curta, clicável. */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result {
+  display: flex;
+}
+
+.resultButton {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.resultButton:hover {
+  border-color: var(--sage-300);
+  background: var(--bg-alt);
+}
+
+.resultName {
+  font-weight: 600;
+}
+
+.resultMeta {
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+/* Cliente escolhido: confirma a escolha e oferece trocar. */
+.chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-12);
+  border: 1px solid var(--sage-300);
+  border-radius: var(--r-sm);
+  background: var(--bg-alt);
+}
+
+.itemRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.itemRow:last-child {
+  border-bottom: 0;
+}
+
+.itemName {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itemPrice {
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+/* Resumo do orçamento: o total vem do servidor, nunca somado aqui (§13.2). */
+.quote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-alt);
+}
+
+.quoteLine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-16);
+  font-size: var(--text-sm);
+}
+
+.quoteTotal {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding-top: var(--space-8);
+  border-top: 2px solid var(--line);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.quoteValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-12);
+  font-size: var(--text-sm);
+}
+
+.checkbox input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+}
+
+.problem {
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--r-sm);
+  background: var(--st-cancelled-bg);
+  color: var(--st-cancelled-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

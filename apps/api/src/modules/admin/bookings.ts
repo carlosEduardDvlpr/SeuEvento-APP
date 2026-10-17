@@ -2,26 +2,31 @@ import {
   adminBookingSchema,
   adminBookingsPageSchema,
   adminBookingsQuerySchema,
+  createAdminBookingBodySchema,
   idParamsSchema,
   updateBookingNotesBodySchema,
   updateBookingStatusBodySchema,
 } from '@chacara/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import {
+  createManualBooking,
   getAdminBooking,
   listAdminBookings,
   updateAdminBookingNotes,
   updateAdminBookingStatus,
 } from './bookings-service.js';
 
-/**
- * Reservas no painel (§11.2).
- *
- * `POST /admin/bookings` — a reserva manual da §9.8 — entra na próxima entrega:
- * confirmar e recusar o que já existe é um conjunto de regras; criar uma reserva
- * em nome de alguém é outro, com cliente novo e cálculo de preço.
- */
+/** Reservas no painel (§11.2), incluindo a reserva manual da §9.8. */
 export const adminBookingRoutes: FastifyPluginAsyncZod = async (app) => {
+  app.post(
+    '/bookings',
+    { schema: { body: createAdminBookingBodySchema, response: { 201: adminBookingSchema } } },
+    async (request, reply) => {
+      const booking = await createManualBooking(app.prisma, request.body);
+      return reply.code(201).send(booking);
+    },
+  );
+
   app.get(
     '/bookings',
     {

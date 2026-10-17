@@ -10,6 +10,7 @@ import { Money } from '@/components/Money';
 import { Select } from '@/components/Select';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
+import { PlusIcon } from '@/components/icons';
 import { useDebouncedValue } from '@/features/booking/useDebouncedValue';
 import { formErrorMessage } from '@/lib/form';
 import { formatDateRange, formatDateShort, formatTimeUntil } from '@/lib/format';
@@ -119,6 +120,11 @@ export function BookingsPage() {
             Procure pelo nome, e-mail ou telefone do cliente, ou filtre por situação e período.
           </p>
         </div>
+
+        <Link className={styles.newBooking} to="/admin/reservas/nova">
+          <PlusIcon size={20} />
+          Nova reserva
+        </Link>
       </header>
 
       <div className={styles.filters}>

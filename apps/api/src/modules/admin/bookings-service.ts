@@ -3,6 +3,7 @@ import type {
   AdminBookingsPage,
   AdminBookingsQuery,
   BookingStatus,
+  CreateAdminBookingBody,
   UpdateBookingNotesBody,
   UpdateBookingStatusBody,
 } from '@chacara/shared';
@@ -13,6 +14,8 @@ import { parseISODate, toISODate } from '../../lib/dates.js';
 import { AppError } from '../../lib/errors.js';
 import { bookingCancelledTemplate, bookingConfirmedTemplate } from '../../lib/mail/templates.js';
 import { sendMail } from '../../lib/mailer.js';
+import { createBooking } from '../bookings/service.js';
+import { createAdminCustomer } from './customers-service.js';
 
 /**
  * Reservas pelo painel (§11.2, §13.4).
@@ -327,4 +330,53 @@ async function notifyCustomer(
    * `COMPLETED` não manda e-mail, e a §17 não prevê um: a festa aconteceu, a
    * pessoa sabe. Avisar que "sua reserva foi concluída" seria ruído.
    */
+}
+
+/**
+ * Reserva lançada pelo painel (§9.8).
+ *
+ * Reaproveita o `createBooking` do módulo de reservas, e isso é o ponto: o núcleo
+ * transacional — exclusion constraint das datas, trava e contagem de estoque,
+ * preço recalculado — é o que garante zero dupla reserva (§8.1, §9.3). Uma
+ * segunda implementação aqui seria um segundo caminho para furar a agenda.
+ *
+ * O que esta função faz além disso é resolver **de quem** é a reserva: cliente
+ * escolhido da lista, ou criado agora com nome e telefone.
+ *
+ * O cliente novo é criado **antes** da reserva, fora da transação dela. Se a data
+ * cair, o cliente fica cadastrado — e isso é o comportamento desejado: o dono
+ * acabou de digitar os dados de alguém real, e perdê-los por conflito de data o
+ * faria digitar tudo de novo. O que ele precisa é escolher outra data.
+ */
+export async function createManualBooking(
+  prisma: PrismaClient,
+  body: CreateAdminBookingBody,
+): Promise<AdminBooking> {
+  const userId = body.customerId ?? (await createAdminCustomer(prisma, body.customer!)).id;
+
+  const created = await createBooking({
+    prisma,
+    userId,
+    body: {
+      startDate: body.startDate,
+      endDate: body.endDate,
+      eventType: body.eventType,
+      guestCount: body.guestCount,
+      items: body.items,
+      customerNotes: body.customerNotes,
+      expectedTotalCents: body.expectedTotalCents,
+    },
+    asAdmin: { confirmed: body.confirmed },
+  });
+
+  /*
+   * A nota interna entra depois: ela não pertence ao corpo que o cliente envia, e
+   * enfiá-la no `createBooking` obrigaria aquele caminho a conhecer um campo que
+   * nunca vai receber.
+   */
+  if (body.adminNotes) {
+    return updateAdminBookingNotes(prisma, created.id, { adminNotes: body.adminNotes });
+  }
+
+  return getAdminBooking(prisma, created.id);
 }

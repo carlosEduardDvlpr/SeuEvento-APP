@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { createCustomerBodySchema } from './admin-customers.js';
 import { adminBookingSummarySchema, adminCustomerSummarySchema } from './admin-overview.js';
 import { optionalText } from './catalog.js';
 import { dailyPriceSchema } from './pricing.js';
-import { appliedComboSchema, quoteLineSchema } from './quote.js';
+import { appliedComboSchema, quoteItemsSchema, quoteLineSchema } from './quote.js';
 import {
   bookingStatusSchema,
   centsSchema,
@@ -92,6 +93,44 @@ export const adminBookingsPageSchema = z.object({
  * (§17), e "cancelada" sem explicação é a pior notícia possível de receber. Nas
  * outras transições o motivo não se aplica.
  */
+/**
+ * Reserva lançada pelo painel (§9.8).
+ *
+ * É o corpo do cliente mais duas coisas: de **quem** é a reserva, e se ela já
+ * nasce confirmada. O `expectedTotalCents` continua obrigatório — o dono também
+ * vê o valor antes de salvar, e a §9.7 vale para ele igual.
+ *
+ * O cliente pode ser escolhido (`customerId`) ou criado na hora (`customer`), e
+ * exatamente um dos dois: aceitar os dois deixaria ambíguo qual vale.
+ */
+export const createAdminBookingBodySchema = z
+  .object({
+    customerId: z.uuid({ error: 'Escolha um cliente.' }).optional(),
+    customer: createCustomerBodySchema.optional(),
+    startDate: isoDateSchema,
+    endDate: isoDateSchema,
+    eventType: eventTypeSchema,
+    guestCount: z
+      .number({ error: 'Informe quantas pessoas são esperadas.' })
+      .int()
+      .min(1, { error: 'Informe pelo menos um convidado.' })
+      .max(2000),
+    items: quoteItemsSchema.default([]),
+    customerNotes: optionalText(600).default(null),
+    adminNotes: optionalText(2000).default(null),
+    expectedTotalCents: centsSchema,
+    /** Reserva de algo já combinado nasce confirmada; o resto fica aguardando. */
+    confirmed: z.boolean().default(true),
+  })
+  .refine((body) => (body.customerId === undefined) !== (body.customer === undefined), {
+    error: 'Escolha um cliente da lista ou cadastre um novo.',
+    path: ['customerId'],
+  })
+  .refine(({ startDate, endDate }) => startDate <= endDate, {
+    error: 'A data de saída não pode ser anterior à de entrada.',
+    path: ['endDate'],
+  });
+
 export const updateBookingStatusBodySchema = z
   .object({
     status: bookingStatusSchema,
@@ -108,6 +147,7 @@ export const updateBookingNotesBodySchema = z.object({
 });
 
 export type AdminBooking = z.infer<typeof adminBookingSchema>;
+export type CreateAdminBookingBody = z.infer<typeof createAdminBookingBodySchema>;
 export type AdminBookingsQuery = z.infer<typeof adminBookingsQuerySchema>;
 export type AdminBookingsPage = z.infer<typeof adminBookingsPageSchema>;
 export type UpdateBookingStatusBody = z.infer<typeof updateBookingStatusBodySchema>;

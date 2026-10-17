@@ -37,6 +37,7 @@ const PEDIDO: AdminBookingSummary = {
   guestCount: 60,
   totalCents: 436_000,
   createdByAdmin: false,
+  createdAt: '2026-11-10T12:00:00.000Z',
   customer: { id: 'u-1', name: 'Ana Beatriz', email: 'ana@exemplo.com', phone: '11988887777' },
 };
 

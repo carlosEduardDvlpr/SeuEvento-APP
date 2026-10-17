@@ -1,3 +1,4 @@
+export * from './admin-bookings.js';
 export * from './admin-overview.js';
 export * from './auth.js';
 export * from './availability.js';

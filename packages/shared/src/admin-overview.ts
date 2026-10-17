@@ -56,6 +56,8 @@ export const adminBookingSummarySchema = z.object({
   holdExpiresAt: z.string().nullable(),
   /** Reserva lançada pelo painel, não pedida pelo site (§9.8). */
   createdByAdmin: z.boolean(),
+  /** Quando o pedido chegou. Na lista, é por onde o dono encontra "o de ontem". */
+  createdAt: z.string(),
   customer: adminCustomerSummarySchema,
 });
 

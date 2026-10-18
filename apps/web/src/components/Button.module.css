@@ -27,7 +27,7 @@
 }
 
 .primary:hover:not(:disabled) {
-  background: #e0a80f;
+  background: var(--action-hover);
 }
 
 /* Ação secundária: contorno da marca. */

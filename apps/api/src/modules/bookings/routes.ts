@@ -6,7 +6,7 @@ import {
 } from '@chacara/shared';
 import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { AppError } from '../../lib/errors.js';
+import { requireUserId } from '../../plugins/auth.js';
 import { cancelMyBooking, createBooking, getMyBooking, listMyBookings } from './service.js';
 
 /**
@@ -16,15 +16,6 @@ import { cancelMyBooking, createBooking, getMyBooking, listMyBookings } from './
  * requisição: não existe o caminho "ver" nem "cancelar a reserva de outra
  * pessoa". Reserva de outro dono responde 404, não 403 (§10.6).
  */
-
-/** O `authenticate` já barrou quem não tem token; isto é só a garantia de tipo. */
-function requireUserId(auth: { userId: string } | undefined): string {
-  if (!auth?.userId) {
-    throw new AppError('UNAUTHORIZED', 401, 'Sua sessão expirou. Entre de novo para continuar.');
-  }
-
-  return auth.userId;
-}
 
 export const bookingRoutes: FastifyPluginAsyncZod = async (app) => {
   // Autenticação para todo o módulo: rota nova de cliente nasce protegida.

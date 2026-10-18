@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formErrorMessage } from '@/lib/form';
 import { formatDateRange, formatTimeUntil } from '@/lib/format';
+import { DeleteAccountSection } from './DeleteAccountSection';
 import { groupBookings } from './groupBookings';
 import styles from './MyBookingsPage.module.css';
 
@@ -115,6 +116,14 @@ export function MyBookingsPage() {
           <Group title="Canceladas" bookings={groups.cancelled} />
         </>
       )}
+
+      {/*
+        §10.8: o direito de apagar a conta precisa ter onde ser exercido. Fica no
+        fim desta página porque é a casa do cliente no site — não existe tela de
+        perfil na §12.1, e criar uma só para um botão seria uma rota a mais para
+        manter.
+      */}
+      <DeleteAccountSection />
     </div>
   );
 }

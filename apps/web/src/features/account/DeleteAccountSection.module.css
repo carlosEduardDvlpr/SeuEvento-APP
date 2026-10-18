@@ -1,0 +1,48 @@
+/*
+ * Bloco de fim de página, separado do conteúdo por uma linha.
+ *
+ * Sem fundo de alerta e sem borda vermelha de propósito (§14.2): a cor de perigo
+ * fica no botão, que é o que realmente apaga. Pintar a seção inteira trataria a
+ * informação como ameaça, e ela é só informação.
+ */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  max-width: var(--measure);
+  margin-top: var(--space-48);
+  padding-top: var(--space-24);
+  border-top: 1px solid var(--line);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.lead {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  margin-top: var(--space-8);
+}
+
+.confirmText {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.problem {
+  margin: 0 0 var(--space-12);
+  padding: var(--space-12);
+  border-radius: var(--r-sm);
+  background: var(--st-cancelled-bg);
+  color: var(--st-cancelled-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

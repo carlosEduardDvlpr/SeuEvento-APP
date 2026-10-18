@@ -1,13 +1,17 @@
 import { sessionUserSchema, updateMeBodySchema } from '@chacara/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { AppError } from '../../lib/errors.js';
-import { sessionUserSelect, toSessionUser } from '../auth/session.js';
+import { requireUserId } from '../../plugins/auth.js';
+import { clearSessionCookie, sessionUserSelect, toSessionUser } from '../auth/session.js';
+import { anonymizeOwnAccount } from './service.js';
 
 /**
  * Perfil do próprio cliente (§11.2).
  *
  * Toda rota aqui trabalha sobre o `userId` do token, nunca sobre um id vindo da
- * requisição: assim não existe o caminho "editar o perfil de outra pessoa".
+ * requisição: assim não existe o caminho "editar o perfil de outra pessoa" nem
+ * "apagar a conta de outra pessoa".
  */
 export const userRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
@@ -57,6 +61,30 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
       });
 
       return toSessionUser(user);
+    },
+  );
+
+  /**
+   * Remoção da conta (§10.8).
+   *
+   * Anonimiza em vez de apagar a linha, porque as reservas ficam. O corpo é
+   * vazio de propósito: pedir confirmação por texto digitado é trabalho da
+   * interface (§13.4), e um campo aqui só daria a ilusão de proteção — quem
+   * chama a API direto não passa por tela nenhuma. O que protege é o token.
+   */
+  app.delete(
+    '/me',
+    {
+      onRequest: app.authenticate,
+      schema: { response: { 204: z.null() } },
+    },
+    async (request, reply) => {
+      await anonymizeOwnAccount(app.prisma, requireUserId(request.auth));
+
+      // A sessão deste aparelho também cai, e o cookie precisa sair do navegador.
+      clearSessionCookie(reply);
+
+      return reply.status(204).send(null);
     },
   );
 };

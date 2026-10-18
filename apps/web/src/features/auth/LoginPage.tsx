@@ -30,6 +30,7 @@ export function LoginPage() {
 
   const next = searchParams.get('next');
   const justResetPassword = searchParams.get('senha-redefinida') === '1';
+  const accountRemoved = searchParams.get('conta-removida') === '1';
 
   const failure = login.error ?? googleLogin.error;
   const needsVerification = failure instanceof ApiError && failure.code === 'EMAIL_NOT_VERIFIED';
@@ -80,6 +81,18 @@ export function LoginPage() {
       }
     >
       {justResetPassword ? <FormNotice>Senha alterada. Entre com a nova senha.</FormNotice> : null}
+
+      {/*
+        A conta acabou de ser apagada, então a sessão caiu e esta é a tela em que
+        a pessoa aterrissa. O aviso existe para a volta ao login não parecer erro
+        (§16.2), e diz o que foi guardado — a §10.8 mantém as reservas.
+      */}
+      {accountRemoved ? (
+        <FormNotice>
+          Sua conta foi apagada. Seus dados pessoais saíram do sistema; o registro das reservas que
+          já aconteceram fica guardado por obrigação fiscal.
+        </FormNotice>
+      ) : null}
 
       <form className={authStyles.form} onSubmit={handleSubmit} noValidate>
         <FormError message={formErrorMessage(failure)} />

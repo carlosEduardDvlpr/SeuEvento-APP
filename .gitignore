@@ -14,9 +14,10 @@ coverage
 # Client do Prisma é gerado (generator `prisma-client` com output próprio).
 apps/api/src/generated
 
-# Playwright
+# Playwright: rastros, capturas e o log da API que o E2E lê.
 test-results
 playwright-report
+e2e/.artifacts
 
 # Nota de trabalho local (o guia versionado do projeto é o agents.md).
 PROGRESSO.md

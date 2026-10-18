@@ -4,3 +4,8 @@ coverage
 apps/api/src/generated
 apps/api/prisma/migrations
 agents.md
+
+# Rastros, capturas e relatórios do Playwright: saída de ferramenta, não código.
+e2e/.artifacts
+playwright-report
+test-results

@@ -1,0 +1,159 @@
+/*
+ * Mosaico de proporções variadas (§13.1).
+ *
+ * A cada três fotos, uma ocupa duas colunas. A irregularidade vem da posição na
+ * lista, não de um tamanho gravado por foto — assim o dono reordena a galeria no
+ * painel e o mosaico se refaz sozinho.
+ */
+.mosaic {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cell {
+  display: flex;
+}
+
+.thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--bg-alt);
+  cursor: zoom-in;
+}
+
+.thumb img {
+  display: block;
+  width: 100%;
+  /* Proporção reservada: trocar a foto depois não causa salto de layout (§14.9). */
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.cellWide .thumb img {
+  aspect-ratio: 4 / 3;
+}
+
+.thumb:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Legenda sobre a foto, com gradiente para o texto ter contraste em qualquer imagem. */
+.caption {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: var(--space-24) var(--space-12) var(--space-8);
+  background: linear-gradient(to top, rgb(18 41 31 / 0.78), transparent);
+  color: var(--paper);
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.zoom {
+  position: absolute;
+  top: var(--space-8);
+  right: var(--space-8);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgb(252 252 249 / 0.9);
+  color: var(--brand);
+}
+
+@media (min-width: 700px) {
+  .mosaic {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .cellWide {
+    grid-column: span 2;
+  }
+
+  .cellWide .thumb img {
+    aspect-ratio: 16 / 9;
+  }
+}
+
+/* ---------------------------------------------------------------- ampliação */
+
+.lightbox {
+  width: min(960px, calc(100vw - 2 * var(--space-16)));
+  max-height: calc(100vh - 2 * var(--space-24));
+  padding: var(--space-12);
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.lightbox::backdrop {
+  background: rgb(18 41 31 / 0.82);
+}
+
+.lightboxBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  margin-bottom: var(--space-8);
+}
+
+.lightboxCount {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.lightboxImage {
+  display: block;
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--r-sm);
+  background: var(--bg-alt);
+}
+
+.lightboxCaption {
+  max-width: var(--measure);
+  margin: var(--space-12) 0 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+.lightboxNav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+.lightboxButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.lightboxButton:hover {
+  background: var(--bg-alt);
+  color: var(--brand);
+}

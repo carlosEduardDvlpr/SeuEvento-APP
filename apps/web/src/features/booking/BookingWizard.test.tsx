@@ -226,6 +226,72 @@ describe('BookingWizard', () => {
   });
 
   /*
+   * §13.1: clicar numa data livre na landing abre o wizard "já preenchido". A
+   * aplicação acontece na inicialização do rascunho, não num efeito, para o
+   * calendário não aparecer vazio por um instante.
+   */
+  describe('escolha vinda da landing', () => {
+    it('aplica a data do link como reserva de um dia', async () => {
+      stubFetch();
+      renderWizard('/reservar?data=2026-12-09');
+
+      expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
+      expect(screen.getByText('(1 dia)')).toBeVisible();
+    });
+
+    it('a data do link vence o rascunho guardado', async () => {
+      stubFetch();
+      seedDraft({ startDate: '2026-12-05', endDate: '2026-12-06' });
+      renderWizard('/reservar?data=2026-12-09');
+
+      expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
+    });
+
+    it('ignora data fora do formato em vez de quebrar', async () => {
+      stubFetch();
+      renderWizard('/reservar?data=ontem');
+
+      await screen.findByText('Quando é a festa?');
+      expect(screen.queryByText('(1 dia)')).not.toBeInTheDocument();
+    });
+
+    it('aplica o estilo do link ao filtro de itens', async () => {
+      const urls = stubFetch();
+      seedDraft();
+      renderWizard(`/reservar?step=itens&estilo=${BOHO.id}`);
+
+      await screen.findByText('Escolha o estilo da festa');
+
+      await waitFor(() => {
+        expect(urls).toContain(`/api/items?themeId=${BOHO.id}`);
+      });
+    });
+
+    /*
+     * A data do link entra no rascunho guardado, e não só no estado da tela: é
+     * isso que faz a escolha sobreviver ao desvio por login mais adiante.
+     *
+     * A limpeza do parâmetro da URL não é verificável aqui — o `MemoryRouter` não
+     * mexe em `window.location`, e um teste que passa por vacuidade seria pior
+     * que nenhum. Ela está coberta na verificação ao vivo.
+     */
+    it('guarda no rascunho a data que veio do link', async () => {
+      stubFetch();
+      renderWizard('/reservar?data=2026-12-09');
+
+      await screen.findByText('9 de dezembro de 2026');
+
+      await waitFor(() => {
+        const stored = JSON.parse(
+          window.sessionStorage.getItem('chacara:booking-draft') ?? '{}',
+        ) as BookingDraft;
+        expect(stored.startDate).toBe('2026-12-09');
+        expect(stored.endDate).toBe('2026-12-09');
+      });
+    });
+  });
+
+  /*
    * §13.2: o passo mora na URL para o botão voltar do navegador andar um passo.
    * No celular esse botão é o gesto de voltar do sistema.
    */

@@ -1,0 +1,111 @@
+/* §14.7: duas colunas alternando texto e imagem no desktop, coluna única no
+   celular. Alinhamento à esquerda, muito respiro. */
+.hero {
+  display: grid;
+  gap: var(--space-48);
+  align-items: center;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: var(--space-48) var(--space-16) var(--space-64);
+}
+
+.text {
+  max-width: var(--measure);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-3xl), 6vw, 3.815rem);
+  line-height: 1.1;
+}
+
+.lead {
+  margin: var(--space-24) 0 0;
+  color: var(--fg-soft);
+  font-size: var(--text-lg);
+}
+
+/*
+ * Seletor de datas: o bloco que cumpre a promessa de "chegar às datas em um
+ * gesto". Fica dentro do hero, com fundo próprio para se destacar do texto.
+ */
+.datePicker {
+  margin-top: var(--space-32);
+  padding: var(--space-16);
+  border: 1px solid var(--sage-300);
+  border-radius: var(--r-md);
+  background: var(--bg-alt);
+}
+
+.datePickerTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin: var(--space-12) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Cada data é um alvo de toque completo, não um texto clicável: no celular essa
+ * é a primeira interação do site e precisa ser fácil de acertar (§14.11).
+ */
+.date {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-16);
+  border: 1px solid var(--brand);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--brand);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  /* Nome de dia da semana vem minúsculo do Intl. */
+  text-transform: capitalize;
+}
+
+.date:hover {
+  background: var(--brand);
+  color: var(--paper);
+}
+
+.allDates {
+  display: inline-block;
+  margin-top: var(--space-12);
+  color: var(--brand);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.datesNote {
+  margin: var(--space-12) 0 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+.note {
+  margin: var(--space-16) 0 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+.image {
+  width: 100%;
+  max-width: 420px;
+}
+
+@media (min-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr auto;
+    padding-block: var(--space-96);
+  }
+}

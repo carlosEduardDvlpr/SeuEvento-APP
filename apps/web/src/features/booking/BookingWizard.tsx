@@ -49,6 +49,30 @@ function estimateItemsCents(draft: BookingDraft, prices: Map<string, number>): n
 }
 
 /**
+ * Aplica ao rascunho o que a landing escolheu (§13.1).
+ *
+ * `?data=` vem de clicar numa data livre no hero; `?estilo=` de clicar num
+ * cartão de estilo. O que vem na URL **vence** o que estava guardado: a pessoa
+ * acabou de apontar o que quer, e manter o rascunho antigo faria o clique dela
+ * parecer ignorado.
+ *
+ * A data preenche as duas pontas, porque um clique é uma festa de um dia (§7.3) —
+ * e ela fica editável no calendário, que é o passo onde a pessoa cai.
+ */
+function withLandingChoice(
+  draft: BookingDraft,
+  choice: { date: string | null; themeId: string | null },
+): BookingDraft {
+  const isDate = choice.date !== null && /^\d{4}-\d{2}-\d{2}$/.test(choice.date);
+
+  return {
+    ...draft,
+    ...(isDate ? { startDate: choice.date, endDate: choice.date } : {}),
+    ...(choice.themeId ? { themeId: choice.themeId } : {}),
+  };
+}
+
+/**
  * Para qual passo um erro de envio manda a pessoa de volta (§13.2).
  *
  * Mostrar "a data foi reservada" na tela de revisão deixaria o problema sem
@@ -69,9 +93,20 @@ export function BookingWizard() {
   const step = parseStep(searchParams.get('step'));
   const sentBookingId = searchParams.get('reserva');
 
-  // O rascunho nasce do que estava guardado: quem voltou de /entrar continua
-  // de onde parou (§13.2).
-  const [draft, dispatch] = useReducer(draftReducer, undefined, loadDraft);
+  /*
+   * O rascunho nasce do que estava guardado — quem voltou de /entrar continua de
+   * onde parou (§13.2) — e já recebe o que a landing mandou na URL.
+   *
+   * A aplicação acontece na **inicialização**, não num efeito: a §13.1 pede que
+   * clicar numa data livre abra o wizard "já preenchido", e fazer isso depois da
+   * primeira renderização mostraria o calendário vazio por um instante.
+   */
+  const [draft, dispatch] = useReducer(draftReducer, undefined, () =>
+    withLandingChoice(loadDraft(), {
+      date: searchParams.get('data'),
+      themeId: searchParams.get('estilo'),
+    }),
+  );
   const [showErrors, setShowErrors] = useState(false);
   const [blocker, setBlocker] = useState<{ step: WizardStep; message: string } | null>(null);
 
@@ -93,6 +128,22 @@ export function BookingWizard() {
     if (draft === EMPTY_DRAFT) clearDraft();
     else saveDraft(draft);
   }, [draft]);
+
+  /*
+   * A escolha da landing sai da URL depois de aplicada.
+   *
+   * Sem isto, mudar a data no calendário e recarregar a página traria de volta a
+   * data do link — o parâmetro venceria a escolha mais recente da pessoa.
+   * `replace` para a limpeza não criar uma entrada no histórico.
+   */
+  useEffect(() => {
+    if (!searchParams.has('data') && !searchParams.has('estilo')) return;
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('data');
+    next.delete('estilo');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const itemPrices = useMemo(() => {
     const prices = new Map<string, number>();

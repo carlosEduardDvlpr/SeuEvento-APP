@@ -30,6 +30,20 @@ export function useUpdateMe() {
  *
  * Fica desligada por padrão: quem conhece o momento de perguntar é a tela.
  */
+/**
+ * Remoção da conta (§10.8).
+ *
+ * Anonimiza os dados pessoais e mantém as reservas. A API recusa enquanto
+ * houver reserva em andamento, e a mensagem dessa recusa é o que a tela mostra —
+ * ela diz o que fazer (cancelar pelo site ou falar com a chácara), e repetir essa
+ * regra aqui criaria uma segunda versão dela.
+ */
+export function useDeleteMe() {
+  return useMutation({
+    mutationFn: () => apiFetch<null>('/me', { method: 'DELETE', auth: true }),
+  });
+}
+
 export function useMe({ enabled = false }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['me'],

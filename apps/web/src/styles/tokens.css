@@ -16,6 +16,7 @@
   --sage-100: #e4ecdf; /* Sálvia clara: fundos de seção alternados */
   --paper: #fcfcf9; /* Papel: fundo padrão */
   --ipe-400: #f2b71f; /* Ipê: ação principal */
+  --ipe-500: #e0a80f; /* Ipê um tom abaixo: hover da ação principal */
   --ipe-800: #8a5f00; /* Ipê escuro: texto/ícone amarelo sobre fundo claro */
   --guava-500: #e0606b; /* Goiaba: selo de desconto, avisos leves */
   --ink: #1d2a24; /* Tinta: texto principal */
@@ -32,6 +33,12 @@
   --brand: var(--forest-700);
   --action: var(--ipe-400);
   --action-fg: var(--ink); /* texto sobre o botão de ação */
+  /*
+   * §24 pegou isto: o mesmo hex de hover estava escrito à mão em três CSS
+   * Modules, o que a §2.2 proíbe. Três cópias de uma cor são três lugares para
+   * esquecer quando a paleta mudar.
+   */
+  --action-hover: var(--ipe-500);
   --danger: #a32e3a;
   --focus: #1b6fd1; /* anel de foco visível, distinto da marca */
 

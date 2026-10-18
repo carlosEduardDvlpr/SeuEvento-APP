@@ -57,7 +57,7 @@
 }
 
 .action:hover {
-  background: #e0a80f;
+  background: var(--action-hover);
 }
 
 .secondaryAction {

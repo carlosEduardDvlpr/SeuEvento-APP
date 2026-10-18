@@ -31,6 +31,21 @@ declare module 'fastify' {
   }
 }
 
+/**
+ * Garantia de tipo para rota que já passou pelo `authenticate`.
+ *
+ * O hook barra quem não tem token, então na prática isto nunca dispara. Mora
+ * aqui, junto do `RequestAuth`, porque mais de um módulo precisa dele e duas
+ * cópias desta guarda divergiriam na primeira mudança de mensagem.
+ */
+export function requireUserId(auth: RequestAuth | undefined): string {
+  if (!auth?.userId) {
+    throw new AppError('UNAUTHORIZED', 401, 'Sua sessão expirou. Entre de novo para continuar.');
+  }
+
+  return auth.userId;
+}
+
 export const REFRESH_COOKIE_NAME = 'refresh_token';
 
 /** Opções do cookie de refresh, num só lugar para login e logout não divergirem. */

@@ -6,11 +6,12 @@ import { RegisterPage } from '@/features/auth/RegisterPage';
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage';
 import { LandingPage } from '@/features/landing/LandingPage';
+import { PrivacyPage } from '@/features/legal/PrivacyPage';
+import { TermsPage } from '@/features/legal/TermsPage';
 import { Seo } from '@/features/seo/Seo';
 import { RequireAuth, RequireRole } from './guards';
 import { PublicLayout } from './layout/PublicLayout';
 import { NotFoundPage } from './pages/NotFoundPage';
-import { UnderConstructionPage } from './pages/UnderConstructionPage';
 
 /**
  * Mapa de rotas da §12.1.
@@ -90,11 +91,8 @@ export function AppRoutes() {
               <Route path="reservas/:id" element={<BookingDetailPage />} />
             </Route>
 
-            <Route path="termos" element={<UnderConstructionPage title="Termos de uso" />} />
-            <Route
-              path="privacidade"
-              element={<UnderConstructionPage title="Política de privacidade" />}
-            />
+            <Route path="termos" element={<TermsPage />} />
+            <Route path="privacidade" element={<PrivacyPage />} />
 
             <Route path="*" element={<NotFoundPage />} />
           </Route>

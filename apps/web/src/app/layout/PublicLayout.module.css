@@ -66,7 +66,7 @@
 }
 
 .navLink:first-child:hover {
-  background: #e0a80f;
+  background: var(--action-hover);
 }
 
 .footer {

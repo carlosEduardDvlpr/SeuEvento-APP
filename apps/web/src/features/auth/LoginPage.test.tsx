@@ -124,6 +124,14 @@ describe('LoginPage', () => {
     expect(await screen.findByRole('button', { name: 'Link reenviado' })).toBeInTheDocument();
   });
 
+  // §10.8: quem apaga a conta cai aqui, e a volta ao login não pode parecer erro.
+  it('avisa quando a conta acabou de ser apagada, dizendo o que ficou guardado', async () => {
+    renderWithProviders(<LoginPage />, { route: '/entrar?conta-removida=1' });
+
+    expect(await screen.findByText(/Sua conta foi apagada/)).toBeInTheDocument();
+    expect(screen.getByText(/obrigação fiscal/)).toBeInTheDocument();
+  });
+
   it('avisa quando a pessoa acabou de redefinir a senha', async () => {
     renderWithProviders(<LoginPage />, { route: '/entrar?senha-redefinida=1' });
 

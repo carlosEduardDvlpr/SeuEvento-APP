@@ -1,0 +1,19 @@
+# §18.3: bloqueia o que não é conteúdo público.
+#
+# O painel, a área do cliente e o wizard não têm nada que sirva a quem busca
+# "chácara para festa": são telas de quem já chegou. Indexá-las gastaria o
+# orçamento de rastreamento do buscador e colocaria no índice páginas que só
+# respondem com uma tela de login.
+
+User-agent: *
+Disallow: /admin
+Disallow: /minhas-reservas
+Disallow: /reservas
+Disallow: /reservar
+Disallow: /entrar
+Disallow: /cadastro
+Disallow: /verificar-email
+Disallow: /esqueci-senha
+Disallow: /redefinir-senha
+
+Sitemap: https://chacara.exemplo.com.br/sitemap.xml

@@ -65,18 +65,26 @@
   font-size: var(--text-sm);
 }
 
+/*
+ * §18.1, alvo de toque de 44 px.
+ *
+ * A caixa de marcação em si tem 20 px — aumentá-la deixaria o controle
+ * desproporcional ao lado do texto. O alvo são os 44 px do `<label>` inteiro,
+ * que é clicável por envolver o input: o dedo acerta a linha, não a caixinha.
+ */
 .checkbox {
   display: flex;
   gap: var(--space-8);
-  align-items: flex-start;
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: var(--space-4) 0;
   font-size: var(--text-sm);
+  cursor: pointer;
 }
 
 .checkbox input {
-  /* Alvo de toque, mesmo sendo caixa de marcação (§18.1). */
   width: 20px;
   height: 20px;
-  margin: 2px 0 0;
   flex: none;
 }
 

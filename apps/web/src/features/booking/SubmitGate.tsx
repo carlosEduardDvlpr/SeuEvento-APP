@@ -88,7 +88,7 @@ export function SubmitGate({ error, isSubmitting, onSubmit }: SubmitGateProps) {
   if (status === 'anonymous') {
     return (
       <section className={styles.gate}>
-        <h3 className={styles.title}>Falta só entrar</h3>
+        <h2 className={styles.title}>Falta só entrar</h2>
         <p className={styles.lead}>
           Seu pedido está montado e guardado. Entre ou crie uma conta para enviar — nada do que você
           escolheu se perde.
@@ -128,7 +128,7 @@ export function SubmitGate({ error, isSubmitting, onSubmit }: SubmitGateProps) {
   if (user && !user.emailVerified) {
     return (
       <section className={styles.gate}>
-        <h3 className={styles.title}>Confirme seu e-mail</h3>
+        <h2 className={styles.title}>Confirme seu e-mail</h2>
 
         {user.email ? (
           <>
@@ -184,7 +184,7 @@ export function SubmitGate({ error, isSubmitting, onSubmit }: SubmitGateProps) {
   if (user && !user.phone) {
     return (
       <section className={styles.gate}>
-        <h3 className={styles.title}>Qual é o seu WhatsApp?</h3>
+        <h2 className={styles.title}>Qual é o seu WhatsApp?</h2>
         <p className={styles.lead}>
           É por aí que a chácara fala com você sobre a reserva. Peça uma vez, vale para sempre.
         </p>

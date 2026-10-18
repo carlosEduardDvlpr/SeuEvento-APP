@@ -198,7 +198,11 @@ export function ThemesPage() {
 
       {themes.isPending ? <Skeleton rows={5} /> : null}
 
-      {themes.isError ? <p className={styles.formError}>{formErrorMessage(themes.error)}</p> : null}
+      {themes.isError ? (
+        <p className={styles.formError} role="alert">
+          {formErrorMessage(themes.error)}
+        </p>
+      ) : null}
 
       {themes.data?.length === 0 ? (
         <EmptyState

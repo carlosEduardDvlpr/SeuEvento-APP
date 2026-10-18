@@ -105,8 +105,10 @@
 }
 
 .categoryChip {
-  min-height: 36px;
-  padding: 0 var(--space-12);
+  min-height: var(--touch-target);
+  /* Largura mínima junto com a altura: "Mesas" não pode virar alvo estreito. */
+  min-width: var(--touch-target);
+  padding: 0 var(--space-16);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--bg);

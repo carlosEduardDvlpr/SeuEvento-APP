@@ -170,7 +170,12 @@ async function loadEligibleUser(
   userId: string,
   { requireVerifiedContact }: { requireVerifiedContact: boolean },
 ) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    // §18.2: só o que a elegibilidade e o e-mail de confirmação usam. Sem isto,
+    // todo pedido de reserva lia o hash da senha sem precisar.
+    select: { id: true, name: true, email: true, phone: true, emailVerifiedAt: true },
+  });
 
   if (!user) {
     // Pelo painel, o id vem do formulário: cliente apagado não é sessão expirada.
@@ -763,7 +768,12 @@ export async function cancelMyBooking({
   reason,
   now = new Date(),
 }: CancelBookingInput): Promise<Booking> {
-  const current = await prisma.booking.findFirst({ where: { id, userId } });
+  const current = await prisma.booking.findFirst({
+    // §18.2: a decisão usa dois campos. Sem o `select`, esta leitura trazia as
+    // duas colunas JSON do instantâneo financeiro para descartá-las em seguida.
+    where: { id, userId },
+    select: { status: true, startDate: true },
+  });
 
   if (!current) throw new AppError('NOT_FOUND', 404, 'Não encontramos esta reserva.');
 

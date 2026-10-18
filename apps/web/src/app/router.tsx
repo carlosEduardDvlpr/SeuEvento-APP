@@ -6,6 +6,7 @@ import { RegisterPage } from '@/features/auth/RegisterPage';
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage';
 import { LandingPage } from '@/features/landing/LandingPage';
+import { Seo } from '@/features/seo/Seo';
 import { RequireAuth, RequireRole } from './guards';
 import { PublicLayout } from './layout/PublicLayout';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -48,9 +49,28 @@ const BookingDetailPage = lazy(() =>
   })),
 );
 
-export function AppRouter() {
+/**
+ * Conteúdo do roteador, sem o roteador.
+ *
+ * Existe separado para o pré-renderizador do build (§18.3, camada 3) montar a
+ * mesma árvore com `StaticRouter`, em vez de `BrowserRouter`, sem precisar de
+ * uma segunda tabela de rotas — duas tabelas divergiriam na primeira rota nova,
+ * e o HTML do build passaria a mostrar coisa diferente do site.
+ *
+ * O `StaticRouter` fica de fora deste arquivo de propósito: ele vem do módulo de
+ * servidor do react-router, e importá-lo aqui o arrastaria para o bundle que o
+ * celular baixa.
+ */
+export function AppRoutes() {
   return (
-    <BrowserRouter>
+    <>
+      {/*
+        Fora do `Suspense` e fora das rotas: o `<head>` tem de ser atualizado
+        mesmo enquanto o bundle da rota carrega, senão o título fica no da página
+        anterior durante o download (§18.3).
+      */}
+      <Seo />
+
       <Suspense fallback={<p className="sr-only">Carregando…</p>}>
         <Routes>
           <Route element={<PublicLayout />}>
@@ -84,6 +104,14 @@ export function AppRouter() {
           </Route>
         </Routes>
       </Suspense>
+    </>
+  );
+}
+
+export function AppRouter() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

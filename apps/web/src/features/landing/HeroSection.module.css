@@ -36,6 +36,24 @@
   border: 1px solid var(--sage-300);
   border-radius: var(--r-md);
   background: var(--bg-alt);
+
+  /*
+   * §18.2, CLS abaixo de 0,1.
+   *
+   * A consulta da agenda chega depois do primeiro desenho, e sem esta altura o
+   * "Consultando a agenda…" (uma linha) seria substituído por duas fileiras de
+   * datas, empurrando a landing inteira para baixo. Reservar o espaço troca um
+   * pouco de vazio por nenhum salto.
+   *
+   * A conta está escrita em tokens de propósito: se o alvo de toque ou o respiro
+   * mudar, a altura acompanha em vez de virar número órfão.
+   */
+  min-height: calc(
+    /* padding de cima e de baixo */ 2 * var(--space-16) +
+      /* título, em --text-lg com line-height 1.15 */ 1.44rem + /* duas fileiras de datas */
+      var(--space-12) + 2 * var(--touch-target) + var(--space-8) +
+      /* link "ver todas as datas livres", em --text-sm */ var(--space-12) + 1.36rem
+  );
 }
 
 .datePickerTitle {

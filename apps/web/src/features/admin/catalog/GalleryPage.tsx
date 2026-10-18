@@ -190,7 +190,9 @@ export function GalleryPage() {
       {gallery.isPending ? <Skeleton rows={6} /> : null}
 
       {gallery.isError ? (
-        <p className={styles.formError}>{formErrorMessage(gallery.error)}</p>
+        <p className={styles.formError} role="alert">
+          {formErrorMessage(gallery.error)}
+        </p>
       ) : null}
 
       {gallery.data

@@ -193,17 +193,23 @@
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * O `<label>` envolve o input, então esticá-lo para 44 px faz a linha inteira
+ * valer como alvo de toque (§18.1) sem inflar a caixa de marcação.
+ */
 .checkbox {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-12);
+  min-height: var(--touch-target);
+  padding: var(--space-4) 0;
   font-size: var(--text-sm);
+  cursor: pointer;
 }
 
 .checkbox input {
   width: 20px;
   height: 20px;
-  margin-top: 2px;
   flex: none;
 }
 

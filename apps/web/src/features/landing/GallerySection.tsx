@@ -72,7 +72,12 @@ function Lightbox({
       aria-label={`Foto ${index + 1} de ${images.length}`}
     >
       <div className={styles.lightboxBar}>
-        <p className={styles.lightboxCount}>
+        {/*
+          `aria-live` porque as setas trocam a foto sem mudar mais nada que seja
+          anunciado: sem isto, quem usa leitor de tela aperta a seta e não ouve
+          diferença nenhuma (§18.1).
+        */}
+        <p className={styles.lightboxCount} aria-live="polite">
           {index + 1} de {images.length}
         </p>
 
@@ -145,6 +150,17 @@ export function GallerySection({ images }: GallerySectionProps) {
                 .join(' ')}
             >
               <button type="button" className={styles.thumb} onClick={() => setOpen(index)}>
+                {/*
+                  A §18.2 pede `srcset`, e aqui não há o que oferecer: o painel
+                  guarda **uma** URL por foto (§8, `GalleryImage.url`), então não
+                  existem variantes de largura para o navegador escolher. Escrever
+                  `srcset` com a mesma URL em vários tamanhos seria mentira para o
+                  navegador — ele baixaria o arquivo grande achando que é o médio.
+                  O que dá para fazer sem variantes está feito: proporção reservada
+                  no CSS (sem salto de layout), `loading="lazy"` fora da primeira
+                  tela e decodificação assíncrona. Variantes de verdade exigem
+                  processar a imagem no envio, o que a §22 deixa para depois.
+                */}
                 <img src={image.url} alt={image.alt} loading="lazy" decoding="async" />
 
                 {image.caption ? <span className={styles.caption}>{image.caption}</span> : null}

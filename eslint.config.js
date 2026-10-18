@@ -54,5 +54,27 @@ export default tseslint.config(
     files: ['apps/web/**/*.{ts,tsx}'],
   },
 
+  /*
+   * Scripts de build rodam no Node, não no navegador.
+   *
+   * Os globais estão listados à mão em vez de trazer o pacote `globals` só para
+   * isto (§2.3): são cinco nomes, e a lista explícita mostra de que o script
+   * realmente depende. `console` é liberado porque aqui ele é a saída do build —
+   * não existe `request.log` num script.
+   */
+  {
+    files: ['**/scripts/*.mjs'],
+    languageOptions: {
+      globals: {
+        AbortSignal: 'readonly',
+        URL: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
+      },
+    },
+    rules: { 'no-console': 'off' },
+  },
+
   prettier,
 );

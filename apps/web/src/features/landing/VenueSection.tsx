@@ -69,9 +69,15 @@ export function VenueSection({ venue, areas }: VenueSectionProps) {
           <ul className={styles.areas}>
             {areas.map((area) => (
               <li key={area.id} className={styles.area}>
+                {/*
+                  `alt=""` de propósito: o `alt` cadastrado é o nome da área, e
+                  ele já aparece no `h3` logo abaixo. Repeti-lo na foto faria o
+                  leitor de tela anunciar o mesmo nome duas vezes (§18.1) — aqui
+                  a imagem ilustra o bloco que o título nomeia.
+                */}
                 <div className={styles.areaPhoto}>
                   {area.url ? (
-                    <img src={area.url} alt={area.alt} loading="lazy" decoding="async" />
+                    <img src={area.url} alt="" loading="lazy" decoding="async" />
                   ) : (
                     <ImageIcon size={32} />
                   )}

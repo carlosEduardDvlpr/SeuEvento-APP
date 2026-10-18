@@ -20,7 +20,31 @@ import { generateToken, hashToken } from '../../lib/tokens.js';
  * revoga a família inteira, mora no fluxo de refresh.
  */
 
-export function toSessionUser(user: UserModel): SessionUser {
+/**
+ * Colunas de `User` que uma sessão precisa — e nenhuma além delas.
+ *
+ * Existe para ser usada como `select` nas consultas (§18.2): com `UserModel`
+ * inteiro, toda renovação de token trazia `passwordHash` do banco para a memória
+ * do processo sem nenhum uso. O hash só deve circular no login, onde é
+ * comparado (§10.1).
+ */
+export const sessionUserSelect = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  role: true,
+  emailVerifiedAt: true,
+} as const;
+
+export type SessionUserRow = Pick<UserModel, keyof typeof sessionUserSelect>;
+
+/*
+ * O parâmetro é a fatia, não `UserModel`: assim o tipo aceita o resultado de um
+ * `select` enxuto e continua aceitando a linha completa (que é um supertipo),
+ * sem obrigar quem já tem a linha inteira a mudar.
+ */
+export function toSessionUser(user: SessionUserRow): SessionUser {
   return {
     id: user.id,
     name: user.name,
@@ -34,7 +58,7 @@ export function toSessionUser(user: UserModel): SessionUser {
 export type IssueSessionInput = {
   app: FastifyInstance;
   reply: FastifyReply;
-  user: UserModel;
+  user: SessionUserRow;
   /** Continua uma sessão existente ao rotacionar; ausente começa uma nova. */
   familyId?: string;
   now?: Date;
@@ -102,12 +126,14 @@ export async function rotateRefreshToken(
   prisma: PrismaClient,
   presentedToken: string,
   now = new Date(),
-): Promise<{ user: UserModel; familyId: string }> {
+): Promise<{ user: SessionUserRow; familyId: string }> {
   const tokenHash = hashToken(presentedToken);
 
   const stored = await prisma.refreshToken.findUnique({
     where: { tokenHash },
-    include: { user: true },
+    // §18.2: este é o caminho mais quente da API — o SPA passa por aqui em toda
+    // carga de página e em todo 401 (§10.4). Nada aqui precisa do hash da senha.
+    select: { familyId: true, user: { select: sessionUserSelect } },
   });
 
   // Token que nunca existiu não tem família para revogar.

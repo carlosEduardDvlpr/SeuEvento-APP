@@ -70,25 +70,37 @@ export function useCombos(filters: { themeId?: string } = {}) {
   });
 }
 
-export function useGallery(kind?: GalleryKind) {
+/**
+ * `enabled` existe por causa do SEO: o módulo de `og:image` só precisa da
+ * galeria nas páginas que alguém compartilha, e sem o interruptor a tela de
+ * login passaria a baixar a galeria inteira para nada. Nas telas que já pedem a
+ * galeria, a chave é a mesma e as duas leituras viram uma requisição.
+ */
+export function useGallery(kind?: GalleryKind, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['gallery', kind ?? 'all'],
     queryFn: () => apiFetch<GalleryImage[]>(`/gallery${toSearch({ kind })}`),
     staleTime: CATALOG_STALE_MS,
+    enabled: options.enabled ?? true,
   });
 }
 
 /**
  * Estado dos dias de um período (§11.3).
  *
- * Sem `staleTime`: o resultado depende do que está reservado agora, e mostrar
- * um dia livre que acabou de ser tomado é o pior engano possível no calendário.
- * A resposta já tem cache curto de HTTP do lado do servidor.
+ * `staleTime` de 30 s, como a §18.2 determina — e não os 5 min do catálogo: o
+ * resultado depende do que está reservado agora, e mostrar um dia livre que
+ * acabou de ser tomado é o pior engano possível no calendário.
+ *
+ * O número combina de propósito com o `Cache-Control: max-age=30` que a rota
+ * devolve: as duas camadas expiram juntas, em vez de o Query insistir num dado
+ * que o navegador já descartou.
  */
 export function useAvailability(range: { from: string; to: string } | null) {
   return useQuery({
     queryKey: ['availability', range],
     queryFn: () => apiFetch<Availability>(`/availability?from=${range?.from}&to=${range?.to}`),
     enabled: range !== null,
+    staleTime: 30 * 1000,
   });
 }

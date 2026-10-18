@@ -1,7 +1,7 @@
 import { sessionUserSchema, updateMeBodySchema } from '@chacara/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { AppError } from '../../lib/errors.js';
-import { toSessionUser } from '../auth/session.js';
+import { sessionUserSelect, toSessionUser } from '../auth/session.js';
 
 /**
  * Perfil do próprio cliente (§11.2).
@@ -17,7 +17,10 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
       schema: { response: { 200: sessionUserSchema } },
     },
     async (request) => {
-      const user = await app.prisma.user.findUnique({ where: { id: request.auth?.userId } });
+      const user = await app.prisma.user.findUnique({
+        where: { id: request.auth?.userId },
+        select: sessionUserSelect,
+      });
 
       // Token válido de uma conta que não existe mais (anonimização da §10.8).
       if (!user) {
@@ -50,6 +53,7 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
           ...(request.body.name === undefined ? {} : { name: request.body.name }),
           ...(request.body.phone === undefined ? {} : { phone: request.body.phone }),
         },
+        select: sessionUserSelect,
       });
 
       return toSessionUser(user);

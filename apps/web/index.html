@@ -3,12 +3,76 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!--
+      §18.3, camada 1. Estes valores são o piso: servem a quem lê o HTML sem
+      executar JavaScript, e a `features/seo` os substitui em tempo de execução
+      pelos dados reais da chácara (nome, endereço, telefone cadastrados).
+    -->
     <title>Chácara para festas e decoração pegue e monte</title>
     <meta
       name="description"
       content="Alugue a chácara por dia para aniversário, chá de bebê, casamento no campo e confraternização, e monte a decoração você mesmo."
     />
+
+    <!--
+      Sem `canonical` e sem `og:url` fixos aqui, de propósito.
+      
+      Os dois precisam do domínio real, que este arquivo não tem como saber. Um
+      `canonical` apontando para o domínio errado é capaz de tirar o site do
+      índice inteiro — bem pior que não ter nenhum, caso em que a própria URL
+      vale como canônica. Quem os escreve é `features/seo` (a partir de
+      `window.location`) e o pré-renderizador (a partir de `SITE_URL`).
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Chácara para festas" />
+    <meta property="og:title" content="Chácara para festas e decoração pegue e monte" />
+    <meta
+      property="og:description"
+      content="Alugue a chácara por dia e monte a decoração você mesmo, escolhendo os itens do estilo que combina com a sua festa."
+    />
+    <meta property="og:locale" content="pt_BR" />
+
+    <!--
+      `summary_large_image` sem imagem declarada aqui: a foto de destaque vem do
+      banco, e a `features/seo` acrescenta `og:image` quando ela existe. Apontar
+      para um arquivo que talvez não exista deixaria o cartão quebrado.
+    -->
+    <meta name="twitter:card" content="summary_large_image" />
+
     <meta name="theme-color" content="#1F4A38" />
+
+    <!--
+      §18.2: fonte com `preload`.
+      
+      Só a de texto, e por uma razão: ela desenha o primeiro parágrafo e entra no
+      caminho do LCP. A serifada aparece no título, que o navegador já descobre
+      cedo no CSS. Pré-carregar as duas competiria por banda no momento mais
+      crítico.
+      
+      `crossorigin` é obrigatório mesmo sendo mesma origem — sem ele o navegador
+      baixa a fonte duas vezes.
+    -->
+    <link
+      rel="preload"
+      href="/fonts/figtree-variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <!--
+      JSON-LD `LocalBusiness` (§18.3). Este é o esqueleto; a `features/seo`
+      reescreve o bloco com endereço e telefone reais quando a API responde.
+    -->
+    <script type="application/ld+json" data-seo="local-business">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "Chácara para festas",
+        "description": "Aluguel de chácara por dia para festas, com decoração pegue e monte."
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

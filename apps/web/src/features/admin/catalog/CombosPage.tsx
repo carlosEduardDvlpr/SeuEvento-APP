@@ -235,7 +235,11 @@ export function CombosPage() {
 
       {combos.isPending ? <Skeleton rows={4} /> : null}
 
-      {combos.isError ? <p className={styles.formError}>{formErrorMessage(combos.error)}</p> : null}
+      {combos.isError ? (
+        <p className={styles.formError} role="alert">
+          {formErrorMessage(combos.error)}
+        </p>
+      ) : null}
 
       {combos.data?.length === 0 && !noItems ? (
         <EmptyState

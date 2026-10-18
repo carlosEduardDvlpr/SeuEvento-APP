@@ -21,7 +21,8 @@
     "db:migrate": "pnpm --filter api exec prisma migrate dev",
     "db:seed": "pnpm --filter api exec prisma db seed",
     "db:reset": "pnpm --filter api exec prisma migrate reset",
-    "db:studio": "pnpm --filter api exec prisma studio"
+    "db:studio": "pnpm --filter api exec prisma studio",
+    "test:e2e": "pnpm --filter e2e test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

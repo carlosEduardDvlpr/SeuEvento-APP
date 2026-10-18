@@ -1,6 +1,9 @@
 packages:
   - apps/*
   - packages/*
+  # O E2E da §19 atravessa API e SPA, então não pertence a nenhum dos dois.
+  # Como pacote próprio, o Playwright fica fora das dependências do `web`.
+  - e2e
 
 # pnpm 10 não roda script de build de dependência sem autorização explícita.
 # Estes precisam compilar ou baixar binário na instalação.

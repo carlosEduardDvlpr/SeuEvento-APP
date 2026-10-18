@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  §18.3: sitemap estático com as páginas públicas.
+
+  São três, e é proposital: a landing é o conteúdo, e termos e privacidade
+  existem porque a §10.8 exige que estejam acessíveis. O wizard e as telas de
+  conta ficam fora — estão no robots.txt como `Disallow`, e listar aqui o que
+  se pede para não rastrear seria contraditório.
+
+  O domínio é de exemplo. Troque-o aqui e no robots.txt ao publicar.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://chacara.exemplo.com.br/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://chacara.exemplo.com.br/termos</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://chacara.exemplo.com.br/privacidade</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

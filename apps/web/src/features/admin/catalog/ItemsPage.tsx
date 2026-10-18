@@ -257,7 +257,11 @@ export function ItemsPage() {
 
       {items.isPending ? <Skeleton rows={6} /> : null}
 
-      {items.isError ? <p className={styles.formError}>{formErrorMessage(items.error)}</p> : null}
+      {items.isError ? (
+        <p className={styles.formError} role="alert">
+          {formErrorMessage(items.error)}
+        </p>
+      ) : null}
 
       {items.data && items.data.items.length === 0 && !noCategories ? (
         <EmptyState

@@ -123,6 +123,27 @@ textarea {
   border: 0;
 }
 
+/*
+ * §14.8 e §18.1: quem pede menos movimento recebe menos movimento.
+ *
+ * O token `--transition` já vira zero em `tokens.css`, e é por lá que passa
+ * quase tudo. Esta regra é a rede: pega `animation` e `transition` escritos com
+ * valor literal, inclusive de dependência — o `react-day-picker` traz as suas.
+ *
+ * `0.01ms` em vez de `none` de propósito: a transição ainda **termina**, então
+ * código que espera `transitionend` continua funcionando.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Atalho de teclado para pular a navegação (§18.1). */
 .skip-link {
   position: absolute;

@@ -72,6 +72,12 @@ model User {
   bookings      Booking[]
   authTokens    AuthToken[]
   refreshTokens RefreshToken[]
+
+  /// §18.2: `role` é coluna de filtro em duas consultas, e uma delas roda em
+  /// todo pedido de reserva (a busca dos admins que recebem o aviso). São
+  /// pouquíssimos admins no meio dos clientes, então o índice vale justamente
+  /// nesse lado; para `CLIENT` o Postgres vai preferir varredura, e está certo.
+  @@index([role])
 }
 
 /// Confirmação de e-mail e redefinição de senha. Guarda apenas o HASH do token.
@@ -201,6 +207,10 @@ model Combo {
 
   theme Theme?      @relation(fields: [themeId], references: [id])
   items ComboItem[]
+
+  /// O Postgres não indexa chave estrangeira sozinho, e `GET /combos?themeId=`
+  /// é rota pública: filtrar por estilo é o caminho normal da landing (§18.2).
+  @@index([themeId])
 }
 
 model ComboItem {

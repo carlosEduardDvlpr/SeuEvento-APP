@@ -215,7 +215,20 @@
   min-height: var(--touch-target);
 }
 
+/*
+ * A linha tem 44 px, mas o alvo útil é o `<label>`: aqui ele é irmão do input
+ * (ligado por `htmlFor`), não o envolve. Esticá-lo para a altura da linha faz o
+ * texto inteiro valer como clique (§18.1).
+ */
+.checkRow label {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  cursor: pointer;
+}
+
 .checkRow input {
   width: 20px;
   height: 20px;
+  flex: none;
 }

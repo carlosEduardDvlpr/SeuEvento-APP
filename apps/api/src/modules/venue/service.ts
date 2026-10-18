@@ -10,7 +10,30 @@ import { AppError } from '../../lib/errors.js';
  * período (§9.4).
  */
 export async function getPublicVenue(prisma: PrismaClient) {
-  const settings = await prisma.venueSettings.findUnique({ where: { id: 1 } });
+  const settings = await prisma.venueSettings.findUnique({
+    where: { id: 1 },
+    /*
+     * O `select` repete o que o retorno já monta, e é de propósito: esta rota é
+     * pública, e `baseDailyPriceCents` está na mesma linha. Deixar a intenção na
+     * consulta é mais barato que confiar em ninguém acrescentar um campo no
+     * objeto de retorno sem pensar (§18.2).
+     */
+    select: {
+      name: true,
+      maxGuests: true,
+      checkInTime: true,
+      checkOutTime: true,
+      whatsapp: true,
+      address: true,
+      mapsUrl: true,
+      houseRules: true,
+      minDays: true,
+      maxDays: true,
+      minLeadDays: true,
+      freeCancelUntilDays: true,
+      holdHours: true,
+    },
+  });
 
   if (!settings) {
     // Banco sem a linha de configuração significa seed não executado.

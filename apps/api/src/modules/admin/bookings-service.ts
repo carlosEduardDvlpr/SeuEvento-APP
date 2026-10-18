@@ -63,6 +63,28 @@ const detailInclude = {
   user: { select: { id: true, name: true, email: true, phone: true } },
 } as const;
 
+/**
+ * Colunas da **lista**, que é bem menos que as do detalhe (§18.2).
+ *
+ * `Booking` tem duas colunas JSON (`dailyBreakdown`, `appliedCombos`), três de
+ * texto livre e a relação de itens. O cartão da lista não mostra nenhuma delas,
+ * e com `detailInclude` tudo isso era lido e jogado fora a cada página — mais
+ * uma consulta em `BookingItem` que ninguém usava.
+ */
+const summarySelect = {
+  id: true,
+  startDate: true,
+  endDate: true,
+  status: true,
+  eventType: true,
+  guestCount: true,
+  totalCents: true,
+  holdExpiresAt: true,
+  createdByAdmin: true,
+  createdAt: true,
+  user: { select: { id: true, name: true, email: true, phone: true } },
+} as const;
+
 function toAdminBooking(row: BookingRow): AdminBooking {
   /*
    * `dailyBreakdown` e `appliedCombos` são `Json` no banco. Foram gravados pelo
@@ -147,7 +169,7 @@ export async function listAdminBookings(
   const [rows, total] = await Promise.all([
     prisma.booking.findMany({
       where,
-      include: detailInclude,
+      select: summarySelect,
       /*
        * Mais recente primeiro, pela data da festa. O id desempata para a lista
        * não dançar entre páginas — sem segundo critério, duas reservas no mesmo

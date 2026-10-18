@@ -42,7 +42,7 @@
 }
 
 .quantity {
-  min-height: 36px;
+  min-height: var(--touch-target);
   padding: var(--space-4) var(--space-8);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);

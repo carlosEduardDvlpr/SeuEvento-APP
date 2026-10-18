@@ -121,7 +121,9 @@ export function CategoriesPage() {
       {categories.isPending ? <Skeleton rows={4} /> : null}
 
       {categories.isError ? (
-        <p className={styles.formError}>{formErrorMessage(categories.error)}</p>
+        <p className={styles.formError} role="alert">
+          {formErrorMessage(categories.error)}
+        </p>
       ) : null}
 
       {categories.data?.length === 0 ? (

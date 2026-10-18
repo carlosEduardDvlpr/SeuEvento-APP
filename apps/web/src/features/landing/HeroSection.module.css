@@ -87,8 +87,6 @@
   font-size: var(--text-sm);
   font-weight: 600;
   text-decoration: none;
-  /* Nome de dia da semana vem minúsculo do Intl. */
-  text-transform: capitalize;
 }
 
 .date:hover {

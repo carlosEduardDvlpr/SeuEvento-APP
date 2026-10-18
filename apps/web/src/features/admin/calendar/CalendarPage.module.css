@@ -10,8 +10,6 @@
   margin: 0;
   font-family: var(--font-display);
   font-size: var(--text-lg);
-  /* Nome de mês em pt-BR vem minúsculo do Intl; no título a maiúscula é melhor. */
-  text-transform: capitalize;
 }
 
 .grid {
@@ -27,7 +25,6 @@
   color: var(--fg-soft);
   font-size: var(--text-sm);
   text-align: left;
-  text-transform: capitalize;
 }
 
 .weekday {
@@ -100,31 +97,6 @@
   outline-offset: -2px;
 }
 
-/*
- * Cores de status. Cada uma acompanha o rótulo em texto dentro da célula, porque
- * a §14.2 não aceita cor como único portador de informação.
- */
-.free {
-  background: var(--bg);
-}
-
-.booked {
-  background: var(--st-confirmed-bg);
-  border-color: var(--st-confirmed-fg);
-  color: var(--st-confirmed-fg);
-}
-
-.blocked {
-  background: var(--st-cancelled-bg);
-  border-color: var(--st-cancelled-fg);
-  color: var(--st-cancelled-fg);
-}
-
-.past {
-  background: var(--bg-alt);
-  color: var(--fg-soft);
-}
-
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -147,6 +119,39 @@
   flex: none;
   border: 1px solid var(--line);
   border-radius: 4px;
+}
+
+/*
+ * Cores de status. Cada uma acompanha o rótulo em texto dentro da célula, porque
+ * a §14.2 não aceita cor como único portador de informação.
+ *
+ * Vêm **depois** do `.swatch` de propósito. A legenda usa as mesmas classes nos
+ * quadradinhos, e com elas declaradas antes o `border` do `.swatch` ganhava e
+ * apagava a borda de status: "Reservado" (#dcebdd) e "Fora do prazo" (#e4ecdf)
+ * ficavam indistinguíveis na legenda, que é justamente quem deveria
+ * desambiguá-los no celular — onde o rótulo dentro da célula não cabe. Achado da
+ * revisão da T30, olhando a tela.
+ */
+.free {
+  background: var(--bg);
+}
+
+.booked {
+  background: var(--st-confirmed-bg);
+  border-color: var(--st-confirmed-fg);
+  color: var(--st-confirmed-fg);
+}
+
+.blocked {
+  background: var(--st-cancelled-bg);
+  border-color: var(--st-cancelled-fg);
+  color: var(--st-cancelled-fg);
+}
+
+.past {
+  background: var(--bg-alt);
+  border-color: var(--sage-300);
+  color: var(--fg-soft);
 }
 
 /* ------------------------------------------------------------------ gaveta */
@@ -275,8 +280,14 @@
     padding: var(--space-4);
   }
 
-  /* No celular o rótulo de status não cabe; a legenda abaixo da grade cobre. */
-  .dayStatus {
+  /*
+   * No celular a célula tem uns 45 px: nem o rótulo de status nem a palavra
+   * "reserva" cabem, e a segunda saía cortada no meio. Os dois continuam no DOM
+   * para o leitor de tela, a legenda abaixo da grade cobre o status, e o número
+   * de reservas segue visível — o detalhe vem ao tocar no dia.
+   */
+  .dayStatus,
+  .countWord {
     position: absolute;
     width: 1px;
     height: 1px;

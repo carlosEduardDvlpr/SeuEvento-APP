@@ -7,6 +7,7 @@
     "test": "tsx prepare.ts && playwright test",
     "test:headed": "tsx prepare.ts && playwright test --headed",
     "prepare:db": "tsx prepare.ts",
+    "screens": "tsx prepare.ts && playwright test --config playwright.screens.config.ts",
     "report": "playwright show-report",
     "typecheck": "tsc --noEmit"
   },

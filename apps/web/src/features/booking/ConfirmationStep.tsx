@@ -5,7 +5,7 @@ import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { CheckIcon } from '@/components/icons';
-import { formatDateRange, formatDeadline } from '@/lib/format';
+import { describeItems, formatDateRange, formatDeadline } from '@/lib/format';
 import { formErrorMessage } from '@/lib/form';
 import { whatsappUrl } from '@/lib/whatsapp';
 import styles from './ConfirmationStep.module.css';
@@ -94,7 +94,7 @@ export function ConfirmationStep({ booking, venue, isLoading, error }: Confirmat
           </div>
           <div>
             <dt>Itens</dt>
-            <dd>{booking.items.length === 0 ? 'só a chácara' : `${booking.items.length} itens`}</dd>
+            <dd>{describeItems(booking.items.length)}</dd>
           </div>
         </dl>
 

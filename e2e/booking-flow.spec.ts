@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+﻿import { expect, test, type Page } from '@playwright/test';
 import { ADMIN, CUSTOMER, ITEMS_TOTAL_CENTS, ORDERED_ITEMS, WEB_URL } from './support/env.js';
 import { waitForMailLink } from './support/mail-log.js';
 
@@ -184,7 +184,7 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
 
   // Confirmar já abre a sessão (§10.2, passo 5) e leva para a landing.
   await expect(page).toHaveURL(`${WEB_URL}/`);
-  await expect(page.getByRole('link', { name: 'Minhas reservas' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Reservas' })).toBeVisible();
 
   // ----------------------------------------------------------------------
   // 5. Volta ao pedido e envia
@@ -235,7 +235,7 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
      * uma falha que parecia credencial errada e não era.
      */
     await expect(adminPage).toHaveURL(`${WEB_URL}/`);
-    await expect(adminPage.getByRole('link', { name: 'Minhas reservas' })).toBeVisible();
+    await expect(adminPage.getByRole('link', { name: 'Reservas' })).toBeVisible();
 
     await adminPage.goto('/admin/reservas');
     await expect(adminPage.getByRole('heading', { level: 1, name: 'Reservas' })).toBeVisible();

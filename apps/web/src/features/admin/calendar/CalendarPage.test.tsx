@@ -1,4 +1,4 @@
-import type { AdminBookingSummary, AdminCalendar, AdminCalendarDay } from '@chacara/shared';
+﻿import type { AdminBookingSummary, AdminCalendar, AdminCalendarDay } from '@chacara/shared';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -143,7 +143,7 @@ describe('CalendarPage', () => {
     const calls = stubFetch();
     renderCalendar();
 
-    expect(await screen.findByRole('heading', { name: 'novembro de 2026' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Novembro de 2026' })).toBeVisible();
     expect(calls.some((call) => call.url === '/api/admin/calendar?month=2026-11')).toBe(true);
   });
 
@@ -155,7 +155,7 @@ describe('CalendarPage', () => {
     });
     renderCalendar();
 
-    await screen.findByRole('heading', { name: 'novembro de 2026' });
+    await screen.findByRole('heading', { name: 'Novembro de 2026' });
 
     await user.click(screen.getByRole('button', { name: 'Mês seguinte' }));
     await waitFor(() => {
@@ -173,7 +173,7 @@ describe('CalendarPage', () => {
     stubFetch({ '2026-12': { ...novemberCalendar(), month: '2026-12' } });
     renderCalendar();
 
-    await screen.findByRole('heading', { name: 'novembro de 2026' });
+    await screen.findByRole('heading', { name: 'Novembro de 2026' });
     expect(screen.queryByRole('button', { name: 'Voltar para hoje' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Mês seguinte' }));
@@ -185,7 +185,7 @@ describe('CalendarPage', () => {
     stubFetch();
     renderCalendar();
 
-    await screen.findByRole('heading', { name: 'novembro de 2026' });
+    await screen.findByRole('heading', { name: 'Novembro de 2026' });
 
     for (const label of ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']) {
       expect(screen.getByRole('columnheader', { name: label })).toBeVisible();
@@ -197,7 +197,7 @@ describe('CalendarPage', () => {
     stubFetch({ '2026-11': novemberCalendar({ bookings: [RESERVA] }) });
     renderCalendar();
 
-    await screen.findByRole('heading', { name: 'novembro de 2026' });
+    await screen.findByRole('heading', { name: 'Novembro de 2026' });
 
     expect(dayButton(20)).toHaveTextContent('Reservado');
     expect(dayButton(25)).toHaveTextContent('Livre');
@@ -207,7 +207,7 @@ describe('CalendarPage', () => {
     stubFetch({ '2026-11': novemberCalendar({ bookings: [RESERVA] }) });
     renderCalendar();
 
-    await screen.findByRole('heading', { name: 'novembro de 2026' });
+    await screen.findByRole('heading', { name: 'Novembro de 2026' });
 
     expect(dayButton(20)).toHaveTextContent('1 reserva');
   });
@@ -234,7 +234,7 @@ describe('CalendarPage', () => {
       stubFetch({ '2026-11': novemberCalendar({ bookings: [RESERVA] }) });
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(20)!);
 
       const dialog = within(await screen.findByRole('dialog'));
@@ -251,7 +251,7 @@ describe('CalendarPage', () => {
       stubFetch({ '2026-11': novemberCalendar({ bookings: [PEDIDO] }) });
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(28)!);
 
       // De 15/11 15:00 UTC até 17/11 18:00 UTC são 2 dias e 3 horas.
@@ -263,7 +263,7 @@ describe('CalendarPage', () => {
       stubFetch({ '2026-11': novemberCalendar({ bookings: [RESERVA] }) });
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(20)!);
 
       expect(await screen.findByRole('link', { name: 'WhatsApp' })).toHaveAttribute(
@@ -277,7 +277,7 @@ describe('CalendarPage', () => {
       stubFetch({ '2026-11': novemberCalendar({ bookings: [PEDIDO] }) });
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(28)!);
 
       await screen.findByText('Bia Costa');
@@ -289,7 +289,7 @@ describe('CalendarPage', () => {
       stubFetch({ '2026-11': novemberCalendar({ bookings: [RESERVA] }) });
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(20)!);
 
       expect(await screen.findByRole('link', { name: 'Abrir reserva' })).toHaveAttribute(
@@ -303,7 +303,7 @@ describe('CalendarPage', () => {
       stubFetch();
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(25)!);
 
       expect(await screen.findByText('Nenhuma reserva neste dia.')).toBeVisible();
@@ -316,7 +316,7 @@ describe('CalendarPage', () => {
       });
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(20)!);
 
       expect(await screen.findByText('lançada por você')).toBeVisible();
@@ -329,7 +329,7 @@ describe('CalendarPage', () => {
       const calls = stubFetch();
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(25)!);
 
       await user.type(await screen.findByLabelText('Motivo do bloqueio'), 'Manutenção');
@@ -348,7 +348,7 @@ describe('CalendarPage', () => {
       const calls = stubFetch();
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(25)!);
       await user.click(await screen.findByRole('button', { name: 'Bloquear este dia' }));
 
@@ -365,7 +365,7 @@ describe('CalendarPage', () => {
       stubFetch();
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(25)!);
       await user.click(await screen.findByRole('button', { name: 'Bloquear este dia' }));
 
@@ -383,7 +383,7 @@ describe('CalendarPage', () => {
       stubFetch({ '2026-11': novemberCalendar({ bookings: [RESERVA] }) });
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(20)!);
 
       expect(await screen.findByText(/Bloquear não cancela as reservas acima/)).toBeVisible();
@@ -394,7 +394,7 @@ describe('CalendarPage', () => {
       stubFetch();
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(25)!);
 
       await screen.findByText('Nenhuma reserva neste dia.');
@@ -410,7 +410,7 @@ describe('CalendarPage', () => {
       });
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(25)!);
 
       expect(await screen.findByText(/Dia bloqueado: Uso da família/)).toBeVisible();
@@ -426,7 +426,7 @@ describe('CalendarPage', () => {
       });
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(25)!);
       await user.click(await screen.findByRole('button', { name: 'Liberar este dia' }));
 
@@ -458,7 +458,7 @@ describe('CalendarPage', () => {
       );
       renderCalendar();
 
-      await screen.findByRole('heading', { name: 'novembro de 2026' });
+      await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(25)!);
       await user.click(await screen.findByRole('button', { name: 'Bloquear este dia' }));
 

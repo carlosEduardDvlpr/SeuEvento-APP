@@ -42,6 +42,7 @@
   color: var(--paper);
   font-weight: 600;
   font-size: var(--text-sm);
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -57,6 +58,8 @@
   align-items: center;
   min-height: var(--touch-target);
   padding: 0 var(--space-12);
+  /* "Ver o site" não pode quebrar em três linhas quando o espaço aperta. */
+  white-space: nowrap;
   border: none;
   border-radius: var(--r-sm);
   background: none;
@@ -130,6 +133,16 @@
 @media (max-width: 860px) {
   .menuButton {
     display: inline-flex;
+  }
+
+  /*
+   * Com o botão de menu ocupando a esquerda, o nome do painel é repetição: são
+   * quatro controles para 375 px, e o resultado era "Ver o site" quebrando em
+   * três linhas e a topbar virando um bloco de 145 px de altura. O ícone
+   * continua sendo o caminho para a visão geral.
+   */
+  .brand span {
+    display: none;
   }
 
   .body {

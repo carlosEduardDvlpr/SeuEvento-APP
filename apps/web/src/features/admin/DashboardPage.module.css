@@ -1,7 +1,13 @@
 /* Números do topo: as quatro respostas que o dono procura ao abrir o painel. */
+/*
+ * 150 px, não 170: com o mínimo anterior os quatro cartões caíam numa coluna só
+ * em 375 px (2 × 170 + respiro passa de 343), e 380 px de números empurravam
+ * "Aguardando sua resposta" — o que o dono veio fazer — para baixo da dobra. Em
+ * duas colunas eles ocupam a metade disso. Achado da revisão da T30.
+ */
 .numbers {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-12);
   margin: 0;
   padding: 0;

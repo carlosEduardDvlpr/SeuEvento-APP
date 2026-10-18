@@ -6,6 +6,8 @@
  * componentes continuam importando daqui para não precisarem saber disso.
  */
 export {
+  capitalizeFirst,
+  describeItems,
   formatBRL,
   formatDateLong,
   formatDateRange,

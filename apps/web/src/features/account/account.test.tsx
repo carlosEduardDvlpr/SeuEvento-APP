@@ -160,7 +160,8 @@ describe('MyBookingsPage', () => {
     expect(await screen.findByText('Confirmada')).toBeVisible();
     expect(screen.getByText('5 a 6 de dezembro de 2026')).toBeVisible();
     expect(screen.getByText('R$ 3.500,00')).toBeVisible();
-    expect(screen.getByText(/Chá de bebê · 60 pessoas · 1 itens/)).toBeVisible();
+    // Singular: a tela mostrava "1 itens" antes da revisão da T30.
+    expect(screen.getByText(/Chá de bebê · 60 pessoas · 1 item/)).toBeVisible();
   });
 
   /* §13.3: pedido pendente mostra quando as datas deixam de ficar seguras. */

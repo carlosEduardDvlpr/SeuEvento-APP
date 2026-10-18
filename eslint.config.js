@@ -55,15 +55,16 @@ export default tseslint.config(
   },
 
   /*
-   * Scripts de build rodam no Node, não no navegador.
+   * Ferramentas de linha de comando: script de build e captura de telas.
    *
    * Os globais estão listados à mão em vez de trazer o pacote `globals` só para
    * isto (§2.3): são cinco nomes, e a lista explícita mostra de que o script
-   * realmente depende. `console` é liberado porque aqui ele é a saída do build —
-   * não existe `request.log` num script.
+   * realmente depende. `console` é liberado porque nestes arquivos ele **é** a
+   * saída da ferramenta — não existe `request.log` num script, e um relatório
+   * que ninguém lê no terminal não serve para nada.
    */
   {
-    files: ['**/scripts/*.mjs'],
+    files: ['**/scripts/*.mjs', 'e2e/screens/*.capture.ts'],
     languageOptions: {
       globals: {
         AbortSignal: 'readonly',

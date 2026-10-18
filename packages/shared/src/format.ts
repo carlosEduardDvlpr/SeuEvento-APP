@@ -77,6 +77,37 @@ export function formatWeekdayAndDay(isoDate: string): string {
 }
 
 /**
+ * Primeira letra em maiúscula, para rótulo que começa uma linha.
+ *
+ * Existe porque `text-transform: capitalize` do CSS maiúscula **toda** palavra,
+ * e em português isso produz "Outubro De 2026" e "Terça-feira, 20 De Outubro".
+ * Era o que aparecia no calendário do painel e nos atalhos de data da landing.
+ *
+ * Fica aqui, e não nos formatadores, porque a mesma frase às vezes cai no meio
+ * de outra ("as datas ficam seguras até terça-feira…"), onde a maiúscula estaria
+ * errada. Quem decide é o rótulo, não o formato.
+ */
+export function capitalizeFirst(text: string): string {
+  if (text.length === 0) return text;
+
+  return text[0]!.toUpperCase() + text.slice(1);
+}
+
+/**
+ * Resumo dos itens de uma reserva: "só a chácara", "1 item", "3 itens".
+ *
+ * Existe porque a mesma frase aparece na confirmação do pedido e na lista de
+ * reservas do cliente, e as duas mostravam "1 itens" — plural que a revisão da
+ * T30 pegou. Uma função só também evita que as duas telas descrevam a mesma
+ * reserva com palavras diferentes.
+ */
+export function describeItems(count: number): string {
+  if (count === 0) return 'só a chácara';
+
+  return `${count} ${count === 1 ? 'item' : 'itens'}`;
+}
+
+/**
  * Prazo em linguagem natural, no horário da chácara (§13.2).
  *
  * "sexta-feira, 16 de outubro às 15:30". O dia da semana entra de propósito: quem

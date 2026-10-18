@@ -43,8 +43,16 @@ export function PublicLayout() {
             */}
             {status === 'authenticated' ? (
               <>
+                {/*
+                  "Reservas", não "Minhas reservas": em 375 px os quatro
+                  controles não cabem numa linha com o rótulo comprido, e o
+                  cabeçalho virava um bloco de 115 px porque o nome quebrava no
+                  meio. O título da página continua "Minhas reservas", que é onde
+                  a frase inteira tem valor; no cabeçalho de quem já está logado
+                  ela é repetição. Achado da revisão da T30.
+                */}
                 <NavLink to="/minhas-reservas" className={styles.navLink}>
-                  Minhas reservas
+                  Reservas
                 </NavLink>
                 <button type="button" className={styles.navLink} onClick={handleSignOut}>
                   Sair

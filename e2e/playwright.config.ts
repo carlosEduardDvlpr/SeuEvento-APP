@@ -1,14 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
-import {
-  API_DIR,
-  API_LOG_FILE,
-  API_PORT,
-  API_URL,
-  DATABASE_URL,
-  WEB_DIR,
-  WEB_PORT,
-  WEB_URL,
-} from './support/env.js';
+import { WEB_URL } from './support/env.js';
+import { webServers } from './support/servers.js';
 
 /**
  * E2E da §19: **um** caminho feliz, da landing até o admin confirmar.
@@ -21,6 +13,10 @@ import {
  *
  * Só Chromium. Compatibilidade entre navegadores não é o que este teste
  * investiga, e baixar três motores custaria quase 1 GB para a mesma resposta.
+ *
+ * A captura de telas da revisão responsiva usa `playwright.screens.config.ts`,
+ * com os mesmos servidores e um `testMatch` próprio: ela é ferramenta de
+ * inspeção, não teste, e não deve rodar junto com o caminho feliz.
  */
 export default defineConfig({
   testDir: '.',
@@ -65,45 +61,5 @@ export default defineConfig({
 
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 
-  webServer: [
-    {
-      /*
-       * A saída vai para arquivo porque o teste precisa ler o link de
-       * confirmação de e-mail dali (§10.2: o token só existe em hash no banco).
-       * O `url` de prontidão resolve a espera: o `/api/health` responde 503
-       * enquanto o banco não está pronto, então o Playwright aguarda a
-       * preparação terminar sem precisar de ordem explícita.
-       */
-      command: `node --import tsx src/server.ts >> "${API_LOG_FILE}" 2>&1`,
-      cwd: API_DIR,
-      url: `${API_URL}/api/health`,
-      timeout: 120_000,
-      reuseExistingServer: false,
-      env: {
-        /*
-         * `development`, não `test`: com `NODE_ENV=test` o logger fica em
-         * `silent` (app.ts) e o link de confirmação de e-mail nunca apareceria
-         * no arquivo. O efeito colateral é o rate limit ligado, que é o
-         * comportamento real — e o E2E faz menos requisições que o teto de
-         * 100/min.
-         */
-        NODE_ENV: 'development',
-        PORT: String(API_PORT),
-        DATABASE_URL,
-        // Os links do e-mail precisam apontar para o SPA do E2E, não para o de
-        // desenvolvimento.
-        APP_URL: WEB_URL,
-        CORS_ORIGIN: WEB_URL,
-        MAIL_TRANSPORT: 'log',
-      },
-    },
-    {
-      command: `pnpm exec vite --port ${WEB_PORT} --strictPort`,
-      cwd: WEB_DIR,
-      url: WEB_URL,
-      timeout: 120_000,
-      reuseExistingServer: false,
-      env: { API_PROXY_TARGET: API_URL },
-    },
-  ],
+  webServer: webServers,
 });

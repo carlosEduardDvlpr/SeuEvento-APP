@@ -100,7 +100,12 @@ export function AdminLayout() {
 
         <Link to="/admin" className={styles.brand}>
           <ArchMarkIcon size={20} />
-          Painel da chácara
+          {/*
+            O rótulo some no celular (ver o CSS): com o botão de menu na tela,
+            quatro controles não cabem em 375 px e o "Ver o site" quebrava em
+            três linhas. O ícone continua levando para a visão geral.
+          */}
+          <span>Painel da chácara</span>
         </Link>
 
         <div className={styles.topbarEnd}>

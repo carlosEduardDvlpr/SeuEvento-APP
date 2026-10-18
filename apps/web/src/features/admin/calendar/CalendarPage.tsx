@@ -12,7 +12,7 @@ import { Textarea } from '@/components/Textarea';
 import { ArrowLeftIcon, ArrowRightIcon } from '@/components/icons';
 import { useToast } from '@/components/Toast';
 import { formErrorMessage } from '@/lib/form';
-import { formatDateLong, formatDateRange, formatTimeUntil } from '@/lib/format';
+import { capitalizeFirst, formatDateLong, formatDateRange, formatTimeUntil } from '@/lib/format';
 import { whatsappUrl } from '@/lib/whatsapp';
 import adminStyles from '../admin.module.css';
 import { WEEKDAY_LABELS, formatMonth, monthGrid, monthOf, shiftMonth } from './monthGrid';
@@ -181,7 +181,7 @@ export function CalendarPage() {
           <ArrowLeftIcon size={20} />
         </Button>
 
-        <h2 className={styles.monthName}>{formatMonth(month)}</h2>
+        <h2 className={styles.monthName}>{capitalizeFirst(formatMonth(month))}</h2>
 
         <Button
           variant="ghost"
@@ -206,7 +206,7 @@ export function CalendarPage() {
         <>
           <table className={styles.grid}>
             <caption className={styles.caption}>
-              {formatMonth(month)}: {calendar.data?.bookings.length ?? 0}{' '}
+              {capitalizeFirst(formatMonth(month))}: {calendar.data?.bookings.length ?? 0}{' '}
               {calendar.data?.bookings.length === 1 ? 'reserva ativa' : 'reservas ativas'}
             </caption>
 
@@ -250,7 +250,16 @@ export function CalendarPage() {
 
                           {count > 0 ? (
                             <span className={styles.dayCount}>
-                              {count} {count === 1 ? 'reserva' : 'reservas'}
+                              {count}{' '}
+                              {/*
+                                A palavra se esconde no celular (ver o CSS): ela
+                                não cabe numa célula de 45 px e saía cortada. O
+                                número fica, e o leitor de tela continua ouvindo
+                                a frase inteira.
+                              */}
+                              <span className={styles.countWord}>
+                                {count === 1 ? 'reserva' : 'reservas'}
+                              </span>
                             </span>
                           ) : null}
                         </button>

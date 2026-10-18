@@ -7,7 +7,7 @@ import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formErrorMessage } from '@/lib/form';
-import { formatDateRange, formatTimeUntil } from '@/lib/format';
+import { describeItems, formatDateRange, formatTimeUntil } from '@/lib/format';
 import { DeleteAccountSection } from './DeleteAccountSection';
 import { groupBookings } from './groupBookings';
 import styles from './MyBookingsPage.module.css';
@@ -35,7 +35,7 @@ function BookingCard({ booking }: { booking: Booking }) {
 
         <span className={styles.meta}>
           {EVENT_TYPE_LABELS[booking.eventType]} · {booking.guestCount} pessoas ·{' '}
-          {booking.items.length === 0 ? 'só a chácara' : `${booking.items.length} itens`}
+          {describeItems(booking.items.length)}
         </span>
 
         {/*

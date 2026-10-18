@@ -26,6 +26,12 @@
    * justamente no celular, que é o aparelho da maior parte do público (§1.3).
    */
   min-height: var(--touch-target);
+  /*
+   * `flex: none` porque o logo é um item flexível ao lado de uma navegação que
+   * não quebra linha: sem isto ele era comprimido até o ícone virar um risco de
+   * 2 px em 375 px — e ele é o caminho de volta ao início.
+   */
+  flex: none;
   padding-inline: var(--space-4);
   color: var(--brand);
   font-family: var(--font-display);
@@ -51,6 +57,12 @@
   font-weight: 600;
   font-size: var(--text-base);
   text-decoration: none;
+  /*
+   * "Minhas reservas" quebrava em duas linhas em 375 px e o cabeçalho virava um
+   * bloco de 115 px de altura. Com o nome da chácara escondido abaixo de 480 px,
+   * os quatro controles cabem numa linha. Achado da revisão da T30.
+   */
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -111,5 +123,18 @@
   .logo span {
     /* No celular o espaço é do botão de reservar. */
     display: none;
+  }
+
+  /* Com quatro controles na mesma linha, cada pixel de respiro conta. */
+  .nav {
+    gap: var(--space-4);
+  }
+
+  .navLink {
+    padding-inline: var(--space-8);
+  }
+
+  .navLink:first-child {
+    padding-inline: var(--space-16);
   }
 }

@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { useAvailability } from '@/api/storefront';
 import { ArchFrame } from '@/components/ArchFrame';
 import { addDays, todayInSaoPaulo } from '@chacara/shared';
-import { formatWeekdayAndDay } from '@/lib/format';
+import { capitalizeFirst, formatWeekdayAndDay } from '@/lib/format';
 import styles from './HeroSection.module.css';
 
 /**
@@ -71,7 +71,7 @@ export function HeroSection({ venue, hero }: HeroSectionProps) {
                       a §13.1 pede com "leva ao wizard já preenchido".
                     */}
                     <Link className={styles.date} to={`/reservar?data=${day.date}`}>
-                      {formatWeekdayAndDay(day.date)}
+                      {capitalizeFirst(formatWeekdayAndDay(day.date))}
                     </Link>
                   </li>
                 ))}

@@ -24,6 +24,11 @@ import dashboardStyles from './DashboardPage.module.css';
  * primeiro é o que se perde se ninguém responder.
  */
 
+/** "1 dia" e não "1 dias", que é o que a tela mostrava antes da revisão da T30. */
+function inDays(count: number): string {
+  return `${count} ${count === 1 ? 'dia' : 'dias'}`;
+}
+
 function BookingRow({ booking }: { booking: AdminBookingSummary }) {
   const dates = formatDateRange(booking.startDate, booking.endDate);
 
@@ -174,15 +179,15 @@ export function DashboardPage() {
             <dl className={dashboardStyles.occupancy}>
               <div>
                 <dt>Reservados</dt>
-                <dd>{dashboard.data.occupancy.bookedDays} dias</dd>
+                <dd>{inDays(dashboard.data.occupancy.bookedDays)}</dd>
               </div>
               <div>
                 <dt>Bloqueados por você</dt>
-                <dd>{dashboard.data.occupancy.blockedDays} dias</dd>
+                <dd>{inDays(dashboard.data.occupancy.blockedDays)}</dd>
               </div>
               <div>
                 <dt>Ainda livres</dt>
-                <dd>{dashboard.data.occupancy.freeDays} dias</dd>
+                <dd>{inDays(dashboard.data.occupancy.freeDays)}</dd>
               </div>
             </dl>
           </section>

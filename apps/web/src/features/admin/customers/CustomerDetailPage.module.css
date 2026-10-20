@@ -26,7 +26,7 @@
 
 .cardTitle {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: var(--text-base);
 }
 
@@ -95,7 +95,7 @@
 }
 
 .rowLink:hover {
-  border-color: var(--sage-300);
+  border-color: var(--line-strong);
   background: var(--bg-alt);
 }
 

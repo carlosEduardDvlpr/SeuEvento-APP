@@ -57,7 +57,7 @@
 }
 
 .cardLink:hover {
-  border-color: var(--sage-300);
+  border-color: var(--line-strong);
   background: var(--bg-alt);
 }
 
@@ -110,7 +110,7 @@
   border: 1px solid var(--brand);
   border-radius: var(--r-sm);
   background: var(--brand);
-  color: var(--paper);
+  color: var(--on-brand);
   font-size: var(--text-sm);
   font-weight: 700;
   text-decoration: none;

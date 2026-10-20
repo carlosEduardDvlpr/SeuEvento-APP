@@ -1,0 +1,49 @@
+/*
+ * Moldura de foto: a forma-assinatura depois da troca de identidade.
+ *
+ * Era um arco (topo em semicírculo). Virou **passe-partout com fio dourado**,
+ * que é o que o material da Donna Belle faz: cartão de canto arredondado,
+ * linha fina dourada, miolo branco.
+ *
+ * O hexágono do logo **não** vira recorte de foto de propósito. Mascarar foto
+ * em hexágono corta cabeça de gente e, no celular, joga fora um terço da área
+ * útil da imagem — e a foto da chácara em uso é o que vende. O hexágono aparece
+ * como marca (no cabeçalho, no rodapé e no miolo da moldura sem foto), e a
+ * moldura fica retangular para a foto caber inteira.
+ *
+ * Usar no hero, nos cartões de estilo, no combo em destaque e na ilustração de
+ * estado vazio. Não usar em botão, campo, tabela nem no painel: a graça é ser
+ * raro.
+ */
+.frame {
+  overflow: hidden;
+  padding: 4px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  aspect-ratio: 4 / 5;
+}
+
+.tall {
+  aspect-ratio: 3 / 4;
+}
+
+.frame > img {
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--r-md) - 4px);
+  object-fit: cover;
+}
+
+/*
+ * Sem foto, bloco de cor chapada — nunca gradiente nem imagem de banco. A cor
+ * vem por `--fill`, que o componente do estilo preenche com a paleta do tema.
+ */
+.placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  border-radius: calc(var(--r-md) - 4px);
+  background: var(--fill, var(--bg-alt));
+  color: var(--brand);
+}

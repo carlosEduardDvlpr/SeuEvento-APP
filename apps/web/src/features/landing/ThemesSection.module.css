@@ -51,13 +51,15 @@
 .swatch {
   width: 20px;
   height: 20px;
-  border: 1px solid rgb(0 0 0 / 0.12);
+  border: 1px solid var(--swatch-line);
   border-radius: 50%;
 }
 
+/* Magenta, a cor da Decoração na identidade da cliente: estilo é assunto de
+   decoração, não do espaço (que usa o rosa, em `VenueSection`). */
 .cta {
   margin-top: var(--space-4);
-  color: var(--brand);
+  color: var(--decor-ink);
   font-size: var(--text-sm);
   font-weight: 600;
 }

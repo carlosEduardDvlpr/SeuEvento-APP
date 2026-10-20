@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router';
 import { useAuth } from '@/features/auth/AuthProvider';
 import {
-  ArchMarkIcon,
   BoxIcon,
   CalendarIcon,
   GearIcon,
   GridIcon,
+  HexMarkIcon,
   ImageIcon,
+  ListIcon,
   MenuIcon,
   MoneyIcon,
   PaletteIcon,
@@ -35,7 +36,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { to: '/admin', label: 'Visão geral', Icon: GridIcon },
   { to: '/admin/calendario', label: 'Calendário', Icon: CalendarIcon },
-  { to: '/admin/reservas', label: 'Reservas', Icon: ArchMarkIcon },
+  { to: '/admin/reservas', label: 'Reservas', Icon: ListIcon },
   { to: '/admin/itens', label: 'Itens', Icon: BoxIcon },
   { to: '/admin/categorias', label: 'Categorias', Icon: GridIcon },
   { to: '/admin/combos', label: 'Combos', Icon: TagIcon },
@@ -99,7 +100,7 @@ export function AdminLayout() {
         </button>
 
         <Link to="/admin" className={styles.brand}>
-          <ArchMarkIcon size={20} />
+          <HexMarkIcon size={20} />
           {/*
             O rótulo some no celular (ver o CSS): com o botão de menu na tela,
             quatro controles não cabem em 375 px e o "Ver o site" quebrava em

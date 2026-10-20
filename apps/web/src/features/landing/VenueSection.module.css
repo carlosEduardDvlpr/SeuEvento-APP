@@ -11,8 +11,14 @@
   column-gap: var(--space-12);
   align-items: center;
   padding-bottom: var(--space-16);
-  border-bottom: 1px solid var(--sage-300);
-  color: var(--brand);
+  border-bottom: 1px solid var(--line-strong);
+  /*
+   * Rosa, não ameixa: esta seção fala do **espaço**, e o rosa é a cor que a
+   * identidade da cliente usa no material do Espaço. A decoração usa magenta
+   * (ver `ThemesSection` e `CombosSection`), e é esse par que diz, sem legenda,
+   * de qual dos dois produtos a seção está falando.
+   */
+  color: var(--venue-ink);
 }
 
 .fact svg {
@@ -20,7 +26,7 @@
 }
 
 .fact dt {
-  color: var(--ink-soft);
+  color: var(--fg-soft);
   font-size: var(--text-sm);
 }
 
@@ -54,9 +60,12 @@
   /* Proporção reservada para a troca por foto real não saltar (§14.9). */
   aspect-ratio: 4 / 3;
   overflow: hidden;
+  /* Mesmo fio dourado da moldura-assinatura, para a grade de áreas não ficar
+     com cara de bloco solto no meio das seções emolduradas. */
+  border: 1px solid var(--hairline);
   border-radius: var(--r-md);
   background: var(--bg);
-  color: var(--wood-600);
+  color: var(--fg-muted);
 }
 
 .areaPhoto img {

@@ -39,7 +39,7 @@
 }
 
 .card:hover {
-  border-color: var(--sage-300);
+  border-color: var(--line-strong);
   background: var(--bg-alt);
 }
 

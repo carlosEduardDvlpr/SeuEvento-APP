@@ -20,9 +20,17 @@
   opacity: 0.55;
 }
 
-/* Ação principal: ipê com texto tinta (§14.2). */
+/*
+ * Ação principal: dourado com texto tinta.
+ *
+ * O contorno não é enfeite. O dourado tem 7.29 de contraste com o texto, mas só
+ * 2.06 com o fundo rosado da página — sozinho, ele perde a borda, e o critério
+ * 1.4.11 cobra 3:1 no limite do componente. `--action-line` resolve com 6.9:1
+ * sem escurecer o preenchimento.
+ */
 .primary {
   background: var(--action);
+  border-color: var(--action-line);
   color: var(--action-fg);
 }
 

@@ -46,9 +46,9 @@
   --rdp-day_button-height: var(--touch-target);
   --rdp-day_button-width: var(--touch-target);
   --rdp-day_button-border-radius: var(--r-sm);
-  --rdp-range_start-color: var(--paper);
-  --rdp-range_end-color: var(--paper);
-  --rdp-today-color: var(--ipe-800);
+  --rdp-range_start-color: var(--on-brand);
+  --rdp-range_end-color: var(--on-brand);
+  --rdp-today-color: var(--action-line);
   --rdp-outside-opacity: 0.35;
   --rdp-disabled-opacity: 1;
   --rdp-font-family: inherit;
@@ -96,7 +96,7 @@
 }
 
 .swatchFree {
-  background: var(--paper);
+  background: var(--surface);
 }
 
 .swatchSelected {

@@ -51,7 +51,7 @@
 }
 
 .cardLink:hover {
-  border-color: var(--sage-300);
+  border-color: var(--line-strong);
   background: var(--bg-alt);
 }
 
@@ -74,8 +74,9 @@
 }
 
 .dates {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: var(--text-lg);
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -137,7 +138,7 @@
   border: 1px solid var(--brand);
   border-radius: var(--r-sm);
   background: var(--brand);
-  color: var(--paper);
+  color: var(--on-brand);
   font-size: var(--text-sm);
   font-weight: 700;
   text-decoration: none;

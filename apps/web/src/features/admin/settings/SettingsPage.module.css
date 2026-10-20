@@ -21,7 +21,7 @@
 
 .legend {
   padding: 0 var(--space-8);
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: var(--text-base);
 }
 

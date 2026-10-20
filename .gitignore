@@ -21,3 +21,8 @@ e2e/.artifacts
 
 # Nota de trabalho local (o guia versionado do projeto é o agents.md).
 PROGRESSO.md
+
+# Material de identidade visual enviado pela cliente (logo, convites, folheto).
+# Fica fora do repositório: é arte dela, e o que o código precisa saber sobre
+# essas peças já está em `apps/web/src/styles/tokens.css`.
+referencias/

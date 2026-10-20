@@ -12,7 +12,7 @@
   flex-direction: column;
   gap: var(--space-8);
   padding: var(--space-24);
-  border: 1px solid var(--sage-300);
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-md);
   background: var(--bg);
 }
@@ -57,9 +57,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Magenta: combo é decoração, e magenta é a cor da Decoração na identidade da
+   cliente. O par com o rosa do Espaço é o que separa os dois produtos. */
 .saving {
   margin: 0;
-  color: var(--brand);
+  color: var(--decor-ink);
   font-size: var(--text-sm);
   font-weight: 700;
 }

@@ -25,9 +25,9 @@
   display: inline-flex;
   align-items: center;
   padding: 2px var(--space-8);
-  border: 1px solid var(--sage-300);
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-sm);
-  background: var(--sage-100);
+  background: var(--bg-alt);
   font-size: var(--text-xs);
   white-space: nowrap;
 }

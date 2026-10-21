@@ -1,4 +1,4 @@
-import type { AdminBooking, BookingStatus } from '@chacara/shared';
+import type { AdminBooking, BookingKind, BookingStatus } from '@chacara/shared';
 import { BOOKING_STATUS_LABELS, EVENT_TYPE_LABELS } from '@chacara/shared';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
@@ -17,6 +17,7 @@ import { useToast } from '@/components/Toast';
 import { ArrowLeftIcon } from '@/components/icons';
 import { formErrorMessage } from '@/lib/form';
 import {
+  describeGuests,
   formatDateLong,
   formatDateRange,
   formatDeadline,
@@ -37,6 +38,9 @@ import styles from './BookingDetailPage.module.css';
  * O histórico é derivado do que a reserva guarda — criada em, prazo, quem
  * cancelou e por quê. Registrar cada transição exigiria uma tabela que a §8 não
  * prevê; o que está aqui cobre as perguntas que o dono faz.
+ *
+ * Reserva só de decoração (T32) usa a mesma tela: a máquina de estados é a
+ * mesma, e o que muda é o que cada decisão libera — itens, não datas.
  */
 
 /** Rótulo do botão de cada transição. Nomeia a ação, não o estado de destino. */
@@ -56,6 +60,22 @@ const ACTION_EFFECT: Record<BookingStatus, string> = {
     'As datas voltam a ficar livres no site e o cliente recebe um e-mail com o motivo que você escrever.',
   COMPLETED: 'A reserva sai das próximas e passa a contar como realizada.',
 };
+
+/**
+ * Na decoração o efeito é outro (T32): o que se libera são os itens, e o e-mail
+ * de confirmação não leva horário nem endereço — a retirada é combinada direto.
+ */
+const DECORATION_ACTION_EFFECT: Partial<Record<BookingStatus, string>> = {
+  CONFIRMED:
+    'O cliente recebe um e-mail de confirmação e os itens deixam de ter prazo. A retirada vocês combinam direto.',
+  CANCELLED:
+    'Os itens voltam a ficar livres e o cliente recebe um e-mail com o motivo que você escrever.',
+};
+
+function actionEffect(target: BookingStatus, kind: BookingKind): string {
+  const decoration = kind === 'DECORATION' ? DECORATION_ACTION_EFFECT[target] : undefined;
+  return decoration ?? ACTION_EFFECT[target];
+}
 
 export function BookingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -100,6 +120,7 @@ export function BookingDetailPage() {
 
   const data: AdminBooking = booking.data;
   const dates = formatDateRange(data.startDate, data.endDate);
+  const decoration = data.kind === 'DECORATION';
   const needsReason = pendingAction === 'CANCELLED';
   const notes = draftNotes ?? data.adminNotes ?? '';
 
@@ -147,8 +168,9 @@ export function BookingDetailPage() {
           <StatusBadge status={data.status} />
           <h1 className={adminStyles.title}>{dates}</h1>
           <p className={styles.lead}>
-            {EVENT_TYPE_LABELS[data.eventType]} para {data.guestCount}{' '}
-            {data.guestCount === 1 ? 'pessoa' : 'pessoas'}
+            {decoration
+              ? `${EVENT_TYPE_LABELS[data.eventType]} · só a decoração, sem a chácara`
+              : `${EVENT_TYPE_LABELS[data.eventType]} para ${describeGuests(data.kind, data.guestCount)}`}
           </p>
         </div>
 
@@ -159,7 +181,8 @@ export function BookingDetailPage() {
 
       {data.status === 'PENDING' && data.holdExpiresAt ? (
         <p className={styles.hold}>
-          As datas ficam seguras <strong>{formatTimeUntil(data.holdExpiresAt)}</strong>, até{' '}
+          {decoration ? 'Os itens ficam separados' : 'As datas ficam seguras'}{' '}
+          <strong>{formatTimeUntil(data.holdExpiresAt)}</strong>, até{' '}
           {formatDeadline(data.holdExpiresAt)}. Depois disso o pedido se encerra sozinho.
         </p>
       ) : null}
@@ -220,28 +243,31 @@ export function BookingDetailPage() {
       <section className={styles.card}>
         <h2 className={styles.cardTitle}>Valores</h2>
 
-        <ul className={styles.lines}>
-          {data.days.map((day) => (
-            <li key={day.date} className={styles.line}>
+        {/* Decoração não tem diária: o bloco some em vez de mostrar R$ 0,00 (T32). */}
+        {data.days.length > 0 ? (
+          <ul className={styles.lines}>
+            {data.days.map((day) => (
+              <li key={day.date} className={styles.line}>
+                <span className={styles.lineName}>
+                  {formatWeekdayAndDay(day.date)}
+                  {day.ruleName ? <span className={styles.rule}>{day.ruleName}</span> : null}
+                </span>
+                <span className={styles.lineValue}>
+                  <Money cents={day.priceCents} />
+                </span>
+              </li>
+            ))}
+
+            <li className={[styles.line, styles.subtotal].join(' ')}>
               <span className={styles.lineName}>
-                {formatWeekdayAndDay(day.date)}
-                {day.ruleName ? <span className={styles.rule}>{day.ruleName}</span> : null}
+                {data.days.length === 1 ? 'Diária' : `Diárias (${data.days.length} dias)`}
               </span>
               <span className={styles.lineValue}>
-                <Money cents={day.priceCents} />
+                <Money cents={data.dailyTotalCents} />
               </span>
             </li>
-          ))}
-
-          <li className={[styles.line, styles.subtotal].join(' ')}>
-            <span className={styles.lineName}>
-              {data.days.length === 1 ? 'Diária' : `Diárias (${data.days.length} dias)`}
-            </span>
-            <span className={styles.lineValue}>
-              <Money cents={data.dailyTotalCents} />
-            </span>
-          </li>
-        </ul>
+          </ul>
+        ) : null}
 
         {data.items.length > 0 ? (
           <ul className={styles.lines}>
@@ -385,7 +411,7 @@ export function BookingDetailPage() {
         </p>
 
         {pendingAction ? (
-          <p className={styles.confirmDetail}>{ACTION_EFFECT[pendingAction]}</p>
+          <p className={styles.confirmDetail}>{actionEffect(pendingAction, data.kind)}</p>
         ) : null}
 
         {/* §11.3: o motivo é obrigatório para cancelar — vai no e-mail do cliente. */}

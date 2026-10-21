@@ -11,6 +11,7 @@ function booking(
 ): Booking {
   return {
     id,
+    kind: 'VENUE',
     status,
     startDate,
     endDate,

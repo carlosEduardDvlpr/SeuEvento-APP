@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { PlusIcon } from '@/components/icons';
 import { useDebouncedValue } from '@/features/booking/useDebouncedValue';
 import { formErrorMessage } from '@/lib/form';
-import { formatDateRange, formatDateShort, formatTimeUntil } from '@/lib/format';
+import { describeGuests, formatDateRange, formatDateShort, formatTimeUntil } from '@/lib/format';
 import adminStyles from '../admin.module.css';
 import styles from './BookingsPage.module.css';
 
@@ -64,7 +64,8 @@ function BookingCard({ booking }: { booking: AdminBookingSummary }) {
         </span>
 
         <span className={styles.meta}>
-          {EVENT_TYPE_LABELS[booking.eventType]} · {booking.guestCount} pessoas · pedido de{' '}
+          {EVENT_TYPE_LABELS[booking.eventType]} ·{' '}
+          {describeGuests(booking.kind, booking.guestCount)} · pedido de{' '}
           {formatDateShort(booking.createdAt.slice(0, 10))}
         </span>
 

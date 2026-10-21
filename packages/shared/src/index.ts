@@ -5,6 +5,7 @@ export * from './admin-settings.js';
 export * from './auth.js';
 export * from './availability.js';
 export * from './booking.js';
+export * from './booking-kind.js';
 export * from './catalog.js';
 export * from './dates.js';
 export * from './enums.js';

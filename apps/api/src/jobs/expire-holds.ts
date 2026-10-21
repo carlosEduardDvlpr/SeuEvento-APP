@@ -40,6 +40,7 @@ export async function runExpireHolds({
     where: { status: 'PENDING', holdExpiresAt: { lt: now } },
     select: {
       id: true,
+      kind: true,
       startDate: true,
       endDate: true,
       user: { select: { name: true, email: true } },
@@ -92,6 +93,7 @@ export async function runExpireHolds({
         dates: formatDateRange(toISODate(booking.startDate), toISODate(booking.endDate)),
         holdHours: settings?.holdHours ?? 48,
         bookingUrl: `${env.APP_URL}/reservar`,
+        kind: booking.kind,
       }),
     });
 

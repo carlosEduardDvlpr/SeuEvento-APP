@@ -570,6 +570,10 @@ Fonte: `apps/api/prisma/schema.prisma`. Regras gerais: dinheiro em `Int` (centav
 
 
 
+> \*\*Registro da T32 (outubro de 2026).\*\* A reserva só de decoração acrescentou `Booking.kind` (`VENUE` | `DECORATION`, padrão `VENUE`), `BlockedDate.scope` (`VENUE` | `DECORATION` | `BOTH`, padrão `VENUE`) e tornou `Booking.guestCount` opcional (nulo só na decoração). O bloco abaixo é o da especificação original; a fonte da verdade é o `schema.prisma`, e as regras estão na 9.10.
+
+
+
 ```prisma
 
 generator client {
@@ -1104,6 +1108,10 @@ Ao capturar o erro do Postgres (`23P01`, exclusion\_violation), o service conver
 
 
 
+> \*\*Desde a T32\*\* o predicado também exige `kind = 'VENUE'`: reserva só de decoração não ocupa a data da chácara (9.10). A troca está na migration `20261021110945_booking_kind`, com drop e create na mesma transação.
+
+
+
 \### 8.2 Seed
 
 
@@ -1397,6 +1405,48 @@ Scripts em `apps/api/src/jobs/`, executados por \*\*Cron Job da Render\*\* (não
 
 
 Os dois são idempotentes e seguros para rodar duas vezes.
+
+
+
+\### 9.10 Reserva só de decoração (T32)
+
+
+
+A dona aluga a chácara e também só a decoração (pegue e monte), para festa em outro lugar. `Booking.kind` diz o que a reserva contrata: `VENUE` (a chácara, com ou sem itens) ou `DECORATION` (só os itens). A regra central é que \*\*a decoração não mexe na agenda da chácara\*\*, nos dois sentidos.
+
+
+
+| Regra | Chácara (`VENUE`) | Só decoração (`DECORATION`) |
+
+|---|---|---|
+
+| Ocupa a data no site | Sim (constraint da 8.1) | Não |
+
+| Dias | `minDays` a `maxDays` | Um dia de uso (`startDate === endDate`) |
+
+| Convidados | Obrigatório, até `maxGuests` | Não existe (`guestCount` nulo) |
+
+| Diária | Pela regra de preço (9.4) | Não cobra (`days: []`, `dailyTotalCents: 0`) |
+
+| Itens | Opcionais | Pelo menos um |
+
+| Combos, antecedência, prazo e cancelamento | Iguais | Iguais |
+
+
+
+\*\*O estoque conta os dois produtos.\*\* O painel que saiu para a chácara e o que saiu sozinho são o mesmo painel (9.3). Como a decoração não passa pela constraint de datas, a trava das linhas de `Item` na transação é o que decide a corrida pelo último item.
+
+
+
+\*\*O bloqueio tem escopo\*\* (`BlockedDate.scope`): `VENUE` é o padrão e o bloqueio de sempre (fecha só a chácara); `DECORATION` fecha a saída de decoração, e nenhum item sai naquele dia, nem junto com a chácara (o estoque do dia vira zero); `BOTH` fecha os dois. `GET /availability` aceita `?kind=` e devolve a agenda de cada produto; a da decoração nunca fica `booked`.
+
+
+
+O calendário do painel mostra a agenda da chácara e, por cima, as decorações que saem no dia e a decoração fechada. A ocupação do mês conta só dias de chácara. A reserva manual (9.8) lança os dois tipos, com as mesmas regras.
+
+
+
+Decisões da dona: o bloqueio de data é só da chácara; a antecedência mínima é a mesma; a decoração é de um dia de uso; não há convidados.
 
 
 

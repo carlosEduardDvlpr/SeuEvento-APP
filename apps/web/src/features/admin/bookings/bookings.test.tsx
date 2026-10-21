@@ -17,6 +17,7 @@ import { BookingsPage } from './BookingsPage';
 
 const RESUMO: AdminBookingSummary = {
   id: 'b-1',
+  kind: 'VENUE',
   startDate: '2026-12-05',
   endDate: '2026-12-06',
   status: 'PENDING',
@@ -41,6 +42,7 @@ function page(items: AdminBookingSummary[], overrides: Partial<AdminBookingsPage
 
 const DETALHE: AdminBooking = {
   id: 'b-1',
+  kind: 'VENUE',
   startDate: '2026-12-05',
   endDate: '2026-12-06',
   eventType: 'BABY_SHOWER',

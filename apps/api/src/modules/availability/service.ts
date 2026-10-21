@@ -2,10 +2,13 @@ import {
   AVAILABILITY_MAX_DAYS,
   type Availability,
   type AvailabilityQuery,
+  type BlockScope,
   type BlockedDate,
   type BlockedDatesQuery,
+  type BookingKind,
   type CreateBlockedDateBody,
   type DayStatus,
+  SCOPES_BLOCKING,
 } from '@chacara/shared';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import {
@@ -26,6 +29,19 @@ import { AppError } from '../../lib/errors.js';
  * Um dia é `blocked`, `booked`, `past` ou `free`, nessa ordem de precedência. A
  * ordem é a da §9.1 e importa: um dia pode cair em mais de um caso, e é o
  * primeiro que a interface mostra.
+ *
+ * **Cada produto tem a sua agenda (T32).** A chácara e a decoração respondem a
+ * perguntas diferentes:
+ *
+ * - **Chácara:** o dia é dela ou não é. Ocupa quem tem reserva de chácara ativa,
+ *   e fecha o bloqueio de escopo `VENUE` ou `BOTH`.
+ * - **Decoração:** nunca fica `booked`. Duas pessoas podem levar decoração no
+ *   mesmo dia, e uma festa na chácara não impede ninguém de levar um kit para
+ *   outro lugar — o que a decoração disputa é **estoque**, item a item, e isso é
+ *   o orçamento que conta (`items/stock.ts`). Fecha só o bloqueio de escopo
+ *   `DECORATION` ou `BOTH`.
+ *
+ * A antecedência mínima vale para os dois: é o tempo de a dona se organizar.
  *
  * Nada aqui expõe quem reservou — a resposta pública diz apenas que o dia está
  * ocupado (§2.3).
@@ -78,26 +94,45 @@ async function loadMinLeadDays(prisma: PrismaClient): Promise<number> {
   return settings?.minLeadDays ?? 2;
 }
 
+/** Filtro dos bloqueios que fecham um produto (T32). */
+function blockingScopes(kind: BookingKind): { in: BlockScope[] } {
+  return { in: [...SCOPES_BLOCKING[kind]] };
+}
+
 /**
  * Conjunto de dias tomados por reserva ativa ou bloqueio, no intervalo pedido.
  *
  * Uma consulta para reservas e uma para bloqueios, e a expansão dia a dia é feita
  * em memória: o intervalo é sempre curto (a rota limita o período), e deixar o
  * Postgres gerar a série exigiria SQL manual sem ganho.
+ *
+ * Na agenda da decoração não há consulta de reservas: nenhuma reserva tira o dia
+ * da decoração, só o estoque de cada item — e esse é outro cálculo.
  */
 async function loadTakenDays(
   prisma: PrismaClient,
   from: ISODate,
   to: ISODate,
   now: Date,
+  kind: BookingKind,
 ): Promise<{ booked: Set<ISODate>; blocked: Set<ISODate> }> {
   const [bookings, blocks] = await Promise.all([
-    prisma.booking.findMany({
-      where: { ...activeBookingsFilter(now), ...overlappingRangeFilter(from, to) },
-      select: { startDate: true, endDate: true },
-    }),
+    kind === 'VENUE'
+      ? prisma.booking.findMany({
+          // Reserva de decoração não ocupa a chácara (T32).
+          where: {
+            kind: 'VENUE',
+            ...activeBookingsFilter(now),
+            ...overlappingRangeFilter(from, to),
+          },
+          select: { startDate: true, endDate: true },
+        })
+      : Promise.resolve([]),
     prisma.blockedDate.findMany({
-      where: { date: { gte: parseISODate(from), lte: parseISODate(to) } },
+      where: {
+        date: { gte: parseISODate(from), lte: parseISODate(to) },
+        scope: blockingScopes(kind),
+      },
       select: { date: true },
     }),
   ]);
@@ -116,15 +151,17 @@ export type DayStatusesInput = {
   from: ISODate;
   to: ISODate;
   now?: Date;
+  /** De qual produto é a agenda. O padrão é a chácara (T32). */
+  kind?: BookingKind;
 };
 
 /** Estado de cada dia do intervalo, para o calendário (§11.3). */
 export async function getDayStatuses(
   prisma: PrismaClient,
-  { from, to, now = new Date() }: DayStatusesInput,
+  { from, to, now = new Date(), kind = 'VENUE' }: DayStatusesInput,
 ): Promise<DayAvailability[]> {
   const [{ booked, blocked }, minLeadDays] = await Promise.all([
-    loadTakenDays(prisma, from, to, now),
+    loadTakenDays(prisma, from, to, now, kind),
     loadMinLeadDays(prisma),
   ]);
 
@@ -150,9 +187,9 @@ export async function getDayStatuses(
  */
 export async function findUnavailableDates(
   prisma: PrismaClient,
-  { from, to, now = new Date() }: DayStatusesInput,
+  { from, to, now = new Date(), kind = 'VENUE' }: DayStatusesInput,
 ): Promise<ISODate[]> {
-  const days = await getDayStatuses(prisma, { from, to, now });
+  const days = await getDayStatuses(prisma, { from, to, now, kind });
 
   return days.filter((day) => day.status !== 'free').map((day) => day.date);
 }
@@ -166,7 +203,7 @@ export async function findUnavailableDates(
  */
 export async function getAvailability(
   prisma: PrismaClient,
-  { from, to }: AvailabilityQuery,
+  { from, to, kind }: AvailabilityQuery,
   now: Date = new Date(),
 ): Promise<Availability> {
   const span = daysBetweenInclusive(from, to);
@@ -180,15 +217,15 @@ export async function getAvailability(
     );
   }
 
-  return { days: await getDayStatuses(prisma, { from, to, now }) };
+  return { days: await getDayStatuses(prisma, { from, to, now, kind }) };
 }
 
 // ---------------------------------------------------------------------------
 // Bloqueios do admin (§11.2)
 // ---------------------------------------------------------------------------
 
-function toBlockedDate(row: { date: Date; reason: string | null }): BlockedDate {
-  return { date: toISODate(row.date), reason: row.reason };
+function toBlockedDate(row: { date: Date; reason: string | null; scope: BlockScope }): BlockedDate {
+  return { date: toISODate(row.date), reason: row.reason, scope: row.scope };
 }
 
 export async function listBlockedDates(
@@ -214,11 +251,11 @@ export async function listBlockedDates(
 }
 
 /**
- * Bloqueia um dia, ou atualiza o motivo se ele já estava bloqueado.
+ * Bloqueia um dia, ou atualiza o motivo e o escopo se ele já estava bloqueado.
  *
  * `upsert` em vez de erro de duplicidade: bloquear um dia já bloqueado é o que o
- * dono faz quando quer **corrigir o motivo**, e recusar com "já existe" o
- * obrigaria a desbloquear e bloquear de novo.
+ * dono faz quando quer **corrigir o motivo** ou mudar o que o bloqueio fecha, e
+ * recusar com "já existe" o obrigaria a desbloquear e bloquear de novo.
  *
  * Bloquear um dia que tem reserva ativa é permitido de propósito: é exatamente o
  * que se faz quando a chácara fica indisponível de verdade e as reservas ainda
@@ -226,29 +263,39 @@ export async function listBlockedDates(
  */
 export async function blockDate(
   prisma: PrismaClient,
-  { date, reason }: CreateBlockedDateBody,
+  { date, reason, scope }: CreateBlockedDateBody,
 ): Promise<BlockedDate> {
   const day = parseISODate(date);
 
   const row = await prisma.blockedDate.upsert({
     where: { date: day },
-    create: { date: day, reason },
-    update: { reason },
+    create: { date: day, reason, scope },
+    update: { reason, scope },
   });
 
   return toBlockedDate(row);
 }
 
 /**
- * Dias bloqueados dentro de um intervalo.
+ * Dias bloqueados para um produto, dentro de um intervalo.
  *
  * Aceita o cliente de transação porque a criação da reserva confere bloqueio
  * **dentro** da transação: a constraint da §8.1 protege contra reserva
  * concorrente, mas não sabe nada de `BlockedDate`.
+ *
+ * O padrão é a chácara, que era o único significado de bloqueio antes da T32.
  */
-export async function findBlockedDaysIn(db: Db, from: ISODate, to: ISODate): Promise<ISODate[]> {
+export async function findBlockedDaysIn(
+  db: Db,
+  from: ISODate,
+  to: ISODate,
+  kind: BookingKind = 'VENUE',
+): Promise<ISODate[]> {
   const rows = await db.blockedDate.findMany({
-    where: { date: { gte: parseISODate(from), lte: parseISODate(to) } },
+    where: {
+      date: { gte: parseISODate(from), lte: parseISODate(to) },
+      scope: blockingScopes(kind),
+    },
     select: { date: true },
     orderBy: { date: 'asc' },
   });

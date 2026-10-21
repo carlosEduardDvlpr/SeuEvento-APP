@@ -18,6 +18,17 @@ export type DiscountType = (typeof DISCOUNT_TYPES)[number];
 export const GALLERY_KINDS = ['HERO', 'VENUE', 'EVENTS'] as const;
 export type GalleryKind = (typeof GALLERY_KINDS)[number];
 
+/**
+ * O que a reserva contrata (T32): a chácara (com ou sem decoração) ou só a
+ * decoração, para festa em outro lugar. Só `VENUE` ocupa a data da chácara.
+ */
+export const BOOKING_KINDS = ['VENUE', 'DECORATION'] as const;
+export type BookingKind = (typeof BOOKING_KINDS)[number];
+
+/** O que um bloqueio do dono fecha naquele dia (T32). */
+export const BLOCK_SCOPES = ['VENUE', 'DECORATION', 'BOTH'] as const;
+export type BlockScope = (typeof BLOCK_SCOPES)[number];
+
 export const EVENT_TYPES = [
   'BIRTHDAY_KIDS',
   'BIRTHDAY_ADULT',

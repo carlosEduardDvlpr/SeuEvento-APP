@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BLOCK_SCOPES,
+  BLOCK_SCOPE_LABELS,
+  BOOKING_KINDS,
+  BOOKING_KIND_LABELS,
   BOOKING_STATUSES,
   BOOKING_STATUS_LABELS,
   DISCOUNT_TYPES,
@@ -10,6 +14,8 @@ import {
   ROLES,
 } from '@chacara/shared';
 import {
+  BlockScope,
+  BookingKind,
   BookingStatus,
   DiscountType,
   EventType,
@@ -34,6 +40,8 @@ describe('enums compartilhados x schema do Prisma', () => {
     ['DiscountType', DISCOUNT_TYPES, DiscountType],
     ['GalleryKind', GALLERY_KINDS, GalleryKind],
     ['EventType', EVENT_TYPES, EventType],
+    ['BookingKind', BOOKING_KINDS, BookingKind],
+    ['BlockScope', BLOCK_SCOPES, BlockScope],
   ];
 
   it.each(cases)('%s tem os mesmos valores nas duas pontas', (_name, shared, prisma) => {
@@ -57,6 +65,16 @@ describe('rótulos pt-BR', () => {
   it('tem rótulo para toda seção da galeria', () => {
     for (const kind of GALLERY_KINDS) {
       expect(GALLERY_KIND_LABELS[kind]).toBeTruthy();
+    }
+  });
+
+  it('tem rótulo para todo tipo de reserva e todo escopo de bloqueio', () => {
+    for (const kind of BOOKING_KINDS) {
+      expect(BOOKING_KIND_LABELS[kind]).toBeTruthy();
+    }
+
+    for (const scope of BLOCK_SCOPES) {
+      expect(BLOCK_SCOPE_LABELS[scope]).toBeTruthy();
     }
   });
 

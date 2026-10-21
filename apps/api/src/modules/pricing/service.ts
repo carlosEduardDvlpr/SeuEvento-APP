@@ -1,4 +1,4 @@
-import type { Quote, QuoteIssue, QuoteRequest } from '@chacara/shared';
+import type { BookingKind, Quote, QuoteIssue, QuoteRequest } from '@chacara/shared';
 import type { PrismaClient } from '../../generated/prisma/client.js';
 import { type ISODate, daysBetweenInclusive, eachDay } from '../../lib/dates.js';
 import { AppError, fieldError } from '../../lib/errors.js';
@@ -130,10 +130,17 @@ async function loadActiveCombos(prisma: PrismaClient): Promise<ComboDef[]> {
 /** Problemas que dependem do estado do banco neste instante (§11.3). */
 async function collectIssues(
   prisma: PrismaClient,
-  { from, to, lines, now }: { from: ISODate; to: ISODate; lines: CartLine[]; now: Date },
+  {
+    from,
+    to,
+    lines,
+    now,
+    kind,
+  }: { from: ISODate; to: ISODate; lines: CartLine[]; now: Date; kind: BookingKind },
 ): Promise<QuoteIssue[]> {
   const [dates, shortages] = await Promise.all([
-    findUnavailableDates(prisma, { from, to, now }),
+    // A agenda do produto pedido: decoração não esbarra em reserva de chácara (T32).
+    findUnavailableDates(prisma, { from, to, now, kind }),
     findStockShortages(prisma, { from, to, lines, now }),
   ]);
 
@@ -157,10 +164,15 @@ export async function quoteFromDatabase(
   request: QuoteRequest,
   now: Date = new Date(),
 ): Promise<Quote> {
-  const { startDate, endDate } = request;
+  const { kind, startDate, endDate } = request;
 
   const limits = await loadVenueLimits(prisma);
-  assertDayCount(daysBetweenInclusive(startDate, endDate), limits);
+
+  /*
+   * `minDays` e `maxDays` são regra da chácara. A decoração é um dia de uso, e
+   * isso o schema já garantiu antes de chegar aqui (T32).
+   */
+  if (kind === 'VENUE') assertDayCount(daysBetweenInclusive(startDate, endDate), limits);
 
   const [lines, rules, combos] = await Promise.all([
     loadCartLines(prisma, request.items),
@@ -169,14 +181,19 @@ export async function quoteFromDatabase(
   ]);
 
   const quote = computeQuote({
-    days: eachDay(startDate, endDate),
+    /*
+     * Decoração não paga diária: sem a chácara, não há dia de chácara a cobrar.
+     * Sem dias, o `computeQuote` devolve `days: []` e `dailyTotalCents: 0`, e o
+     * total vira só itens menos combos — o mesmo cálculo, sem caminho paralelo.
+     */
+    days: kind === 'VENUE' ? eachDay(startDate, endDate) : [],
     rules,
     baseDailyPriceCents: limits.baseDailyPriceCents,
     lines,
     combos,
   });
 
-  const issues = await collectIssues(prisma, { from: startDate, to: endDate, lines, now });
+  const issues = await collectIssues(prisma, { from: startDate, to: endDate, lines, now, kind });
 
   return {
     available: issues.length === 0,

@@ -5,7 +5,7 @@ import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { CheckIcon } from '@/components/icons';
-import { describeItems, formatDateRange, formatDeadline } from '@/lib/format';
+import { describeGuests, describeItems, formatDateRange, formatDeadline } from '@/lib/format';
 import { formErrorMessage } from '@/lib/form';
 import { whatsappUrl } from '@/lib/whatsapp';
 import styles from './ConfirmationStep.module.css';
@@ -55,8 +55,12 @@ export function ConfirmationStep({ booking, venue, isLoading, error }: Confirmat
   }
 
   const dates = formatDateRange(booking.startDate, booking.endDate);
+  /** Só a decoração (T32): itens separados, não datas seguras. */
+  const decoration = booking.kind === 'DECORATION';
 
-  const message = `Olá! Acabei de enviar um pedido de reserva para ${dates} (${EVENT_TYPE_LABELS[booking.eventType]}, ${booking.guestCount} pessoas). Pode confirmar?`;
+  const message = decoration
+    ? `Olá! Acabei de enviar um pedido de decoração para ${dates} (${EVENT_TYPE_LABELS[booking.eventType]}). Pode confirmar?`
+    : `Olá! Acabei de enviar um pedido de reserva para ${dates} (${EVENT_TYPE_LABELS[booking.eventType]}, ${describeGuests(booking.kind, booking.guestCount)}). Pode confirmar?`;
 
   return (
     <div className={styles.step}>
@@ -67,8 +71,9 @@ export function ConfirmationStep({ booking, venue, isLoading, error }: Confirmat
       <h1 className={styles.title}>Pedido enviado</h1>
 
       <p className={styles.lead}>
-        Recebemos seu pedido para <strong>{dates}</strong>. A chácara responde por e-mail, e você
-        também pode acompanhar aqui pelo site.
+        Recebemos seu pedido {decoration ? 'de decoração ' : ''}para <strong>{dates}</strong>.{' '}
+        {decoration ? 'A gente' : 'A chácara'} responde por e-mail, e você também pode acompanhar
+        aqui pelo site.
       </p>
 
       <section className={styles.card}>
@@ -81,17 +86,19 @@ export function ConfirmationStep({ booking, venue, isLoading, error }: Confirmat
 
         <dl className={styles.facts}>
           <div>
-            <dt>Datas</dt>
+            <dt>{decoration ? 'Dia da festa' : 'Datas'}</dt>
             <dd>{dates}</dd>
           </div>
           <div>
             <dt>Tipo</dt>
             <dd>{EVENT_TYPE_LABELS[booking.eventType]}</dd>
           </div>
-          <div>
-            <dt>Convidados</dt>
-            <dd>{booking.guestCount}</dd>
-          </div>
+          {decoration ? null : (
+            <div>
+              <dt>Convidados</dt>
+              <dd>{booking.guestCount}</dd>
+            </div>
+          )}
           <div>
             <dt>Itens</dt>
             <dd>{describeItems(booking.items.length)}</dd>
@@ -99,18 +106,31 @@ export function ConfirmationStep({ booking, venue, isLoading, error }: Confirmat
         </dl>
 
         {booking.holdExpiresAt ? (
-          <p className={styles.hold}>
-            Suas datas estão <strong>seguras até {formatDeadline(booking.holdExpiresAt)}</strong>.
-            Se a chácara não responder até lá, o pedido se encerra e as datas voltam a ficar livres
-            — e aí basta pedir de novo.
-          </p>
+          decoration ? (
+            <p className={styles.hold}>
+              Os itens estão{' '}
+              <strong>separados para você até {formatDeadline(booking.holdExpiresAt)}</strong>. Se a
+              gente não responder até lá, o pedido se encerra e os itens voltam a ficar livres — e
+              aí basta pedir de novo.
+            </p>
+          ) : (
+            <p className={styles.hold}>
+              Suas datas estão <strong>seguras até {formatDeadline(booking.holdExpiresAt)}</strong>.
+              Se a chácara não responder até lá, o pedido se encerra e as datas voltam a ficar
+              livres — e aí basta pedir de novo.
+            </p>
+          )
         ) : null}
       </section>
 
       <section className={styles.next}>
         <h2 className={styles.nextTitle}>O que acontece agora</h2>
         <ol className={styles.steps}>
-          <li>A chácara confere a agenda e responde ao seu pedido.</li>
+          <li>
+            {decoration
+              ? 'A gente confere os itens e responde ao seu pedido.'
+              : 'A chácara confere a agenda e responde ao seu pedido.'}
+          </li>
           <li>Você recebe um e-mail assim que a reserva for confirmada.</li>
           <li>Aí vocês combinam o pagamento e a retirada dos itens.</li>
         </ol>

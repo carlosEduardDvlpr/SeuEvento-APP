@@ -1,4 +1,11 @@
-import type { BookingStatus, DayStatus, EventType, GalleryKind } from './enums.js';
+import type {
+  BlockScope,
+  BookingKind,
+  BookingStatus,
+  DayStatus,
+  EventType,
+  GalleryKind,
+} from './enums.js';
 
 /**
  * Rótulos em pt-BR (§16). Ficam aqui para que a mesma palavra apareça na tela,
@@ -39,4 +46,17 @@ export const GALLERY_KIND_LABELS: Record<GalleryKind, string> = {
   HERO: 'Destaque',
   VENUE: 'A chácara',
   EVENTS: 'Eventos',
+};
+
+/** O que a reserva contrata, como aparece em selo e lista (T32). */
+export const BOOKING_KIND_LABELS: Record<BookingKind, string> = {
+  VENUE: 'Chácara',
+  DECORATION: 'Só decoração',
+};
+
+/** O que o bloqueio fecha, como o dono escolhe no calendário do painel (T32). */
+export const BLOCK_SCOPE_LABELS: Record<BlockScope, string> = {
+  VENUE: 'Só a chácara',
+  DECORATION: 'Só a decoração',
+  BOTH: 'Chácara e decoração',
 };

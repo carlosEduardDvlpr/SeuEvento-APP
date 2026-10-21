@@ -1,5 +1,12 @@
-import type { AdminBookingSummary, AdminCalendarDay, DayStatus } from '@chacara/shared';
-import { DAY_STATUS_LABELS, EVENT_TYPE_LABELS, todayInSaoPaulo } from '@chacara/shared';
+import type { AdminBookingSummary, AdminCalendarDay, BlockScope, DayStatus } from '@chacara/shared';
+import {
+  BLOCK_SCOPES,
+  BLOCK_SCOPE_LABELS,
+  DAY_STATUS_LABELS,
+  EVENT_TYPE_LABELS,
+  blocksKind,
+  todayInSaoPaulo,
+} from '@chacara/shared';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useAdminCalendar, useBlockDate, useUnblockDate } from '@/api/overview';
@@ -9,10 +16,16 @@ import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Textarea } from '@/components/Textarea';
-import { ArrowLeftIcon, ArrowRightIcon } from '@/components/icons';
+import { ArrowLeftIcon, ArrowRightIcon, BalloonIcon } from '@/components/icons';
 import { useToast } from '@/components/Toast';
 import { formErrorMessage } from '@/lib/form';
-import { capitalizeFirst, formatDateLong, formatDateRange, formatTimeUntil } from '@/lib/format';
+import {
+  capitalizeFirst,
+  describeGuests,
+  formatDateLong,
+  formatDateRange,
+  formatTimeUntil,
+} from '@/lib/format';
 import { whatsappUrl } from '@/lib/whatsapp';
 import adminStyles from '../admin.module.css';
 import { WEEKDAY_LABELS, formatMonth, monthGrid, monthOf, shiftMonth } from './monthGrid';
@@ -28,6 +41,11 @@ import styles from './CalendarPage.module.css';
  * quase a tela toda, e a §12.6 pede para não criar componente antes de duas telas
  * precisarem dele. O que importa aqui é o `<dialog>` nativo entregar foco preso e
  * Escape de graça (§18.1).
+ *
+ * **Duas agendas na mesma grade (T32).** O estado do dia é o da chácara, que é o
+ * que o site vende. A decoração aparece por cima, sem mudar esse estado: os kits
+ * que saem no dia (com o balão, na cor da Decoração) e a borda tracejada quando a
+ * dona fechou a decoração naquele dia.
  */
 
 /**
@@ -41,6 +59,29 @@ const STATUS_CLASS: Record<DayStatus, string | undefined> = {
   booked: styles.booked,
   blocked: styles.blocked,
   past: styles.past,
+};
+
+/** O que o bloqueio de um dia faz, dito para a dona (§16.4). */
+const BLOCK_NOTE: Record<BlockScope, { lead: string; effect: string }> = {
+  VENUE: {
+    lead: 'A chácara está fechada neste dia',
+    effect: 'A data não aparece como livre no site. A decoração continua podendo sair.',
+  },
+  DECORATION: {
+    lead: 'A decoração está fechada neste dia',
+    effect: 'Nenhum item sai, nem junto com a chácara. A chácara continua reservável.',
+  },
+  BOTH: {
+    lead: 'Chácara e decoração estão fechadas neste dia',
+    effect: 'Nada é reservável no site para esta data.',
+  },
+};
+
+/** O que o aviso diz depois de bloquear, para o resultado ficar explícito. */
+const BLOCKED_TOAST: Record<BlockScope, string> = {
+  VENUE: 'ficou indisponível para a chácara',
+  DECORATION: 'ficou sem saída de decoração',
+  BOTH: 'ficou indisponível para a chácara e para a decoração',
 };
 
 function BookingCard({ booking }: { booking: AdminBookingSummary }) {
@@ -60,7 +101,7 @@ function BookingCard({ booking }: { booking: AdminBookingSummary }) {
 
       <p className={styles.bookingMeta}>
         {formatDateRange(booking.startDate, booking.endDate)} ·{' '}
-        {EVENT_TYPE_LABELS[booking.eventType]} · {booking.guestCount} pessoas
+        {EVENT_TYPE_LABELS[booking.eventType]} · {describeGuests(booking.kind, booking.guestCount)}
       </p>
 
       {/* O prazo é o que decide a ordem de atenção do dono (§13.4). */}
@@ -96,6 +137,7 @@ export function CalendarPage() {
   const [month, setMonth] = useState(() => monthOf(today));
   const [openDate, setOpenDate] = useState<string | null>(null);
   const [reason, setReason] = useState('');
+  const [scope, setScope] = useState<BlockScope>('VENUE');
 
   const calendar = useAdminCalendar(month);
   const block = useBlockDate();
@@ -116,22 +158,41 @@ export function CalendarPage() {
     return map;
   }, [calendar.data]);
 
-  const selected = openDate ? byDate.get(openDate) : undefined;
+  /** Reservas do dia, separadas por produto: a contagem da célula mostra as duas. */
+  function bookingsOf(day: AdminCalendarDay | undefined) {
+    const list = (day?.bookingIds ?? [])
+      .map((id) => bookingsById.get(id))
+      .filter((booking): booking is AdminBookingSummary => booking !== undefined);
 
-  const selectedBookings = (selected?.bookingIds ?? [])
-    .map((id) => bookingsById.get(id))
-    .filter((booking): booking is AdminBookingSummary => booking !== undefined);
+    return {
+      all: list,
+      venue: list.filter((booking) => booking.kind === 'VENUE').length,
+      kits: list.filter((booking) => booking.kind === 'DECORATION').length,
+    };
+  }
+
+  const selected = openDate ? byDate.get(openDate) : undefined;
+  const selectedBookings = bookingsOf(selected).all;
+  const selectedScope = selected?.blockScope ?? null;
+
+  const monthBookings = calendar.data?.bookings ?? [];
+  const monthVenue = monthBookings.filter((booking) => booking.kind === 'VENUE').length;
+  const monthKits = monthBookings.length - monthVenue;
 
   function openDay(date: string) {
+    const day = byDate.get(date);
+
     setOpenDate(date);
-    // O motivo começa com o que já estava gravado: bloquear de novo é como o dono
-    // corrige o texto, e apresentar o campo vazio faria parecer que não havia.
-    setReason(byDate.get(date)?.blockReason ?? '');
+    // O motivo e o escopo começam com o que já estava gravado: bloquear de novo é
+    // como a dona corrige o texto, e o campo vazio faria parecer que não havia.
+    setReason(day?.blockReason ?? '');
+    setScope(day?.blockScope ?? 'VENUE');
   }
 
   function closeDay() {
     setOpenDate(null);
     setReason('');
+    setScope('VENUE');
   }
 
   async function handleBlock() {
@@ -141,8 +202,9 @@ export function CalendarPage() {
       await block.mutateAsync({
         date: openDate,
         reason: reason.trim() === '' ? null : reason.trim(),
+        scope,
       });
-      showToast(`${formatDateLong(openDate)} ficou indisponível.`);
+      showToast(`${formatDateLong(openDate)} ${BLOCKED_TOAST[scope]}.`);
       closeDay();
     } catch (error) {
       showToast(formErrorMessage(error) ?? 'Não conseguimos bloquear o dia.', 'error');
@@ -206,8 +268,11 @@ export function CalendarPage() {
         <>
           <table className={styles.grid}>
             <caption className={styles.caption}>
-              {capitalizeFirst(formatMonth(month))}: {calendar.data?.bookings.length ?? 0}{' '}
-              {calendar.data?.bookings.length === 1 ? 'reserva ativa' : 'reservas ativas'}
+              {capitalizeFirst(formatMonth(month))}: {monthVenue}{' '}
+              {monthVenue === 1 ? 'reserva ativa' : 'reservas ativas'}
+              {monthKits > 0
+                ? ` e ${monthKits} ${monthKits === 1 ? 'decoração saindo' : 'decorações saindo'}`
+                : ''}
             </caption>
 
             <thead>
@@ -228,7 +293,9 @@ export function CalendarPage() {
 
                     const day = byDate.get(date);
                     const status = day?.status ?? 'free';
-                    const count = day?.bookingIds.length ?? 0;
+                    const { venue, kits } = bookingsOf(day);
+                    const decorClosed =
+                      day?.blockScope != null && blocksKind(day.blockScope, 'DECORATION');
 
                     return (
                       <td key={date} className={styles.cell}>
@@ -237,6 +304,7 @@ export function CalendarPage() {
                           className={[
                             styles.day,
                             STATUS_CLASS[status],
+                            decorClosed ? styles.dayDecorClosed : null,
                             date === today ? styles.today : null,
                           ]
                             .filter(Boolean)
@@ -248,9 +316,9 @@ export function CalendarPage() {
                           {/* Texto, não só cor: a §14.2 vale também para a grade. */}
                           <span className={styles.dayStatus}>{DAY_STATUS_LABELS[status]}</span>
 
-                          {count > 0 ? (
+                          {venue > 0 ? (
                             <span className={styles.dayCount}>
-                              {count}{' '}
+                              {venue}{' '}
                               {/*
                                 A palavra se esconde no celular (ver o CSS): ela
                                 não cabe numa célula de 45 px e saía cortada. O
@@ -258,9 +326,29 @@ export function CalendarPage() {
                                 a frase inteira.
                               */}
                               <span className={styles.countWord}>
-                                {count === 1 ? 'reserva' : 'reservas'}
+                                {venue === 1 ? 'reserva' : 'reservas'}
                               </span>
                             </span>
+                          ) : null}
+
+                          {/*
+                            Kit saindo não muda o estado do dia — a chácara
+                            continua livre —, mas a dona precisa saber. O balão
+                            distingue este número do de reservas quando, no
+                            celular, a palavra some.
+                          */}
+                          {kits > 0 ? (
+                            <span className={styles.kitCount}>
+                              <BalloonIcon size={12} />
+                              {kits}{' '}
+                              <span className={styles.countWord}>
+                                {kits === 1 ? 'decoração' : 'decorações'}
+                              </span>
+                            </span>
+                          ) : null}
+
+                          {decorClosed ? (
+                            <span className={styles.decorClosedText}>sem decoração</span>
                           ) : null}
                         </button>
                       </td>
@@ -278,6 +366,16 @@ export function CalendarPage() {
                 {DAY_STATUS_LABELS[status]}
               </li>
             ))}
+            <li className={styles.legendItem}>
+              <span className={styles.kitCount}>
+                <BalloonIcon size={12} />
+              </span>
+              Decoração saindo
+            </li>
+            <li className={styles.legendItem}>
+              <span className={[styles.swatch, styles.dayDecorClosed].join(' ')} />
+              Decoração fechada
+            </li>
           </ul>
         </>
       )}
@@ -287,7 +385,7 @@ export function CalendarPage() {
         title={openDate ? formatDateLong(openDate) : ''}
         onClose={closeDay}
         footer={
-          selected?.status === 'blocked' ? (
+          selectedScope ? (
             <Button
               variant="primary"
               loading={unblock.isPending}
@@ -308,10 +406,11 @@ export function CalendarPage() {
           )
         }
       >
-        {selected?.status === 'blocked' ? (
+        {selectedScope ? (
           <p className={styles.blockedNote}>
-            Dia bloqueado{selected.blockReason ? `: ${selected.blockReason}` : '.'} Ele não aparece
-            como livre no site.
+            {BLOCK_NOTE[selectedScope].lead}
+            {selected?.blockReason ? `: ${selected.blockReason}.` : '.'}{' '}
+            {BLOCK_NOTE[selectedScope].effect}
           </p>
         ) : null}
 
@@ -335,22 +434,45 @@ export function CalendarPage() {
           quando a chácara fica indisponível de verdade, e as reservas ainda
           precisam ser canceladas uma a uma. O aviso diz isso.
         */}
-        {selected?.status !== 'blocked' && selectedBookings.length > 0 ? (
+        {!selectedScope && selectedBookings.length > 0 ? (
           <p className={styles.warning}>
             Bloquear não cancela as reservas acima: elas continuam valendo até você cancelar cada
             uma.
           </p>
         ) : null}
 
-        {selected?.status === 'blocked' ? null : (
-          <Textarea
-            label="Motivo do bloqueio"
-            help="Opcional, e só você vê. Serve para lembrar por que o dia está fechado."
-            rows={2}
-            maxLength={200}
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-          />
+        {selectedScope ? null : (
+          <>
+            {/*
+              O que fechar (T32). Um grupo de rádio de verdade, para o teclado e o
+              leitor de tela funcionarem sem código nosso (§18.1).
+            */}
+            <fieldset className={styles.scopes}>
+              <legend className={styles.scopesLegend}>O que fechar neste dia</legend>
+
+              {BLOCK_SCOPES.map((option) => (
+                <label key={option} className={styles.scopeOption}>
+                  <input
+                    type="radio"
+                    name="block-scope"
+                    value={option}
+                    checked={scope === option}
+                    onChange={() => setScope(option)}
+                  />
+                  {BLOCK_SCOPE_LABELS[option]}
+                </label>
+              ))}
+            </fieldset>
+
+            <Textarea
+              label="Motivo do bloqueio"
+              help="Opcional, e só você vê. Serve para lembrar por que o dia está fechado."
+              rows={2}
+              maxLength={200}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </>
         )}
       </Dialog>
     </div>

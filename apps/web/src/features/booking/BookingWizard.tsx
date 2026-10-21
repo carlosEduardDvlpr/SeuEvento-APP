@@ -1,4 +1,5 @@
 import type { QuoteRequest } from '@chacara/shared';
+import { DECORATION_NEEDS_ITEMS_ERROR } from '@chacara/shared';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { ApiError } from '@/api/client';
@@ -21,6 +22,7 @@ import {
   clearDraft,
   draftReducer,
   hasDates,
+  isItemsStepComplete,
   isStepOneComplete,
   loadDraft,
   saveDraft,
@@ -58,6 +60,10 @@ function estimateItemsCents(draft: BookingDraft, prices: Map<string, number>): n
  *
  * A data preenche as duas pontas, porque um clique é uma festa de um dia (§7.3) —
  * e ela fica editável no calendário, que é o passo onde a pessoa cai.
+ *
+ * A data também escolhe a **chácara** (T32): as datas livres do hero são as da
+ * agenda da chácara, e abrir o wizard na decoração com uma delas trocaria a
+ * pergunta que a pessoa respondeu ao clicar.
  */
 function withLandingChoice(
   draft: BookingDraft,
@@ -67,7 +73,7 @@ function withLandingChoice(
 
   return {
     ...draft,
-    ...(isDate ? { startDate: choice.date, endDate: choice.date } : {}),
+    ...(isDate ? { kind: 'VENUE' as const, startDate: choice.date, endDate: choice.date } : {}),
     ...(choice.themeId ? { themeId: choice.themeId } : {}),
   };
 }
@@ -109,6 +115,9 @@ export function BookingWizard() {
   );
   const [showErrors, setShowErrors] = useState(false);
   const [blocker, setBlocker] = useState<{ step: WizardStep; message: string } | null>(null);
+
+  /** Só a decoração, sem a chácara (T32). Muda texto e exigência, não o fluxo. */
+  const decoration = draft.kind === 'DECORATION';
 
   const venue = useVenue();
   const catalog = useItems();
@@ -161,8 +170,16 @@ export function BookingWizard() {
   const quoteRequest = useMemo<QuoteRequest | null>(() => {
     if (step !== 'revisao' || !draft.startDate || !draft.endDate) return null;
 
-    return { startDate: draft.startDate, endDate: draft.endDate, items: draft.items };
-  }, [step, draft.startDate, draft.endDate, draft.items]);
+    // Decoração sem item a API recusaria com 400: não há o que orçar ainda.
+    if (draft.kind === 'DECORATION' && draft.items.length === 0) return null;
+
+    return {
+      kind: draft.kind,
+      startDate: draft.startDate,
+      endDate: draft.endDate,
+      items: draft.items,
+    };
+  }, [step, draft.kind, draft.startDate, draft.endDate, draft.items]);
 
   const debouncedRequest = useDebouncedValue(quoteRequest);
   const quote = useQuote(debouncedRequest);
@@ -180,14 +197,31 @@ export function BookingWizard() {
       return;
     }
 
+    // Na decoração, os itens são o pedido: sem eles, a revisão não teria o que mostrar.
+    if (step === 'itens' && !isItemsStepComplete(draft)) {
+      setShowErrors(true);
+      return;
+    }
+
     const next = WIZARD_STEPS[stepIndex(step) + 1];
     if (next) goTo(next);
   }
 
   async function handleSubmit() {
-    if (!draft.startDate || !draft.endDate || !draft.eventType || !draft.guestCount) {
-      setBlocker({ step: 'datas', message: 'Confira as datas, o tipo de festa e os convidados.' });
+    if (!draft.startDate || !draft.endDate || !draft.eventType || !isStepOneComplete(draft)) {
+      setBlocker({
+        step: 'datas',
+        message: decoration
+          ? 'Confira o dia e o tipo de festa.'
+          : 'Confira as datas, o tipo de festa e os convidados.',
+      });
       goTo('datas');
+      return;
+    }
+
+    if (!isItemsStepComplete(draft)) {
+      setBlocker({ step: 'itens', message: DECORATION_NEEDS_ITEMS_ERROR });
+      goTo('itens');
       return;
     }
 
@@ -205,10 +239,12 @@ export function BookingWizard() {
 
     try {
       const booking = await createBooking.mutateAsync({
+        kind: draft.kind,
         startDate: draft.startDate,
         endDate: draft.endDate,
         eventType: draft.eventType,
-        guestCount: draft.guestCount,
+        // O número fica no rascunho para quem volta à chácara, mas não vai no pedido.
+        guestCount: decoration ? null : draft.guestCount,
         items: draft.items,
         customerNotes: draft.customerNotes.trim() === '' ? null : draft.customerNotes.trim(),
         expectedTotalCents: quote.data.totalCents,
@@ -274,11 +310,20 @@ export function BookingWizard() {
 
   const errors = showErrors
     ? {
-        range: hasDates(draft) ? undefined : 'Escolha as datas da festa.',
+        range: hasDates(draft)
+          ? undefined
+          : decoration
+            ? 'Escolha o dia da festa.'
+            : 'Escolha as datas da festa.',
         eventType: draft.eventType ? undefined : 'Escolha o tipo de festa.',
-        guestCount: draft.guestCount ? undefined : 'Informe quantas pessoas são esperadas.',
+        guestCount:
+          decoration || draft.guestCount ? undefined : 'Informe quantas pessoas são esperadas.',
       }
     : {};
+
+  // Some sozinho quando a pessoa escolhe o primeiro item: a condição é recalculada.
+  const itemsError =
+    showErrors && !isItemsStepComplete(draft) ? DECORATION_NEEDS_ITEMS_ERROR : undefined;
 
   const notice = blocker?.step === step ? blocker.message : undefined;
   const itemsEstimate = estimateItemsCents(draft, itemPrices);
@@ -296,9 +341,13 @@ export function BookingWizard() {
               const done = index < stepIndex(step);
               /*
                * Pular para a frente só depois de o passo 1 estar completo: sem
-               * datas, o passo de itens não sabe o que está disponível.
+               * datas, o passo de itens não sabe o que está disponível. Na
+               * decoração, a revisão também espera o primeiro item.
                */
-              const reachable = index === 0 || isStepOneComplete(draft);
+              const reachable =
+                index === 0 ||
+                (isStepOneComplete(draft) &&
+                  (candidate !== 'revisao' || isItemsStepComplete(draft)));
 
               return (
                 <li key={candidate} className={styles.stepItem}>
@@ -335,7 +384,14 @@ export function BookingWizard() {
         />
       ) : null}
 
-      {step === 'itens' ? <ItemsStep draft={draft} dispatch={dispatch} notice={notice} /> : null}
+      {step === 'itens' ? (
+        <ItemsStep
+          draft={draft}
+          dispatch={dispatch}
+          {...(notice ? { notice } : {})}
+          {...(itemsError ? { error: itemsError } : {})}
+        />
+      ) : null}
 
       {step === 'revisao' ? (
         <>
@@ -375,14 +431,20 @@ export function BookingWizard() {
             */
             <p className={styles.estimate}>
               <span className={styles.estimateLabel}>
-                {draft.items.length === 0
-                  ? 'Só a chácara, sem itens'
-                  : `Itens escolhidos (${draft.items.length})`}
+                {draft.items.length > 0
+                  ? `Itens escolhidos (${draft.items.length})`
+                  : decoration
+                    ? 'Nenhum item escolhido'
+                    : 'Só a chácara, sem itens'}
               </span>
               <span className={styles.estimateValue}>
                 <Money cents={itemsEstimate} />
               </span>
-              <span className={styles.estimateLabel}>As diárias entram no total na revisão.</span>
+              <span className={styles.estimateLabel}>
+                {decoration
+                  ? 'O total, com os combos, sai na revisão.'
+                  : 'As diárias entram no total na revisão.'}
+              </span>
             </p>
           )}
 

@@ -1,6 +1,12 @@
 import { z } from 'zod';
+import {
+  DECORATION_NEEDS_ITEMS_ERROR,
+  DECORATION_ONE_DAY_ERROR,
+  hasItemsWhenDecoration,
+  isOneDayWhenDecoration,
+} from './booking-kind.js';
 import { dailyPriceSchema } from './pricing.js';
-import { centsSchema, isoDateSchema } from './schemas.js';
+import { bookingKindSchema, centsSchema, isoDateSchema } from './schemas.js';
 
 /**
  * Contrato de `POST /pricing/quote` (§11.3).
@@ -41,8 +47,15 @@ export const quoteItemsSchema = z
     error: 'Cada item aparece uma vez, com a quantidade na mesma linha.',
   });
 
+/**
+ * Pedido de orçamento.
+ *
+ * `kind` tem padrão `VENUE` para quem pedia orçamento antes de existir a
+ * reserva de decoração continuar recebendo o mesmo número (T32).
+ */
 export const quoteRequestSchema = z
   .object({
+    kind: bookingKindSchema.default('VENUE'),
     startDate: isoDateSchema,
     endDate: isoDateSchema,
     items: quoteItemsSchema.default([]),
@@ -50,7 +63,9 @@ export const quoteRequestSchema = z
   .refine(({ startDate, endDate }) => startDate <= endDate, {
     error: 'A data de saída não pode ser anterior à de entrada.',
     path: ['endDate'],
-  });
+  })
+  .refine(isOneDayWhenDecoration, { error: DECORATION_ONE_DAY_ERROR, path: ['endDate'] })
+  .refine(hasItemsWhenDecoration, { error: DECORATION_NEEDS_ITEMS_ERROR, path: ['items'] });
 
 /**
  * Problema que não impede o orçamento de ser calculado (§11.3).

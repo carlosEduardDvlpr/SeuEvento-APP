@@ -5,6 +5,7 @@ import {
   clearDraft,
   draftReducer,
   hasDates,
+  isItemsStepComplete,
   isStepOneComplete,
   loadDraft,
   quantityOf,
@@ -14,6 +15,7 @@ import {
 const STORAGE_KEY = 'chacara:booking-draft';
 
 const FILLED: BookingDraft = {
+  kind: 'VENUE',
   startDate: '2026-12-05',
   endDate: '2026-12-06',
   eventType: 'BABY_SHOWER',
@@ -200,5 +202,51 @@ describe('loadDraft', () => {
     window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ items: { i1: 2 } }));
 
     expect(loadDraft().items).toEqual([]);
+  });
+});
+
+describe('reserva só de decoração (T32)', () => {
+  it('trocar para decoração encolhe o intervalo para o primeiro dia e mantém o resto', () => {
+    const next = draftReducer(FILLED, { type: 'setKind', kind: 'DECORATION' });
+
+    expect(next).toMatchObject({
+      kind: 'DECORATION',
+      startDate: '2026-12-05',
+      endDate: '2026-12-05',
+      eventType: 'BABY_SHOWER',
+    });
+    expect(next.items).toEqual(FILLED.items);
+  });
+
+  it('voltar para a chácara mantém o dia escolhido', () => {
+    const decoration = draftReducer(FILLED, { type: 'setKind', kind: 'DECORATION' });
+    const venue = draftReducer(decoration, { type: 'setKind', kind: 'VENUE' });
+
+    expect(venue).toMatchObject({ kind: 'VENUE', startDate: '2026-12-05', endDate: '2026-12-05' });
+  });
+
+  it('libera o primeiro passo sem convidados, e a revisão só com item', () => {
+    const decoration: BookingDraft = {
+      ...FILLED,
+      kind: 'DECORATION',
+      endDate: FILLED.startDate,
+      guestCount: null,
+    };
+
+    expect(isStepOneComplete(decoration)).toBe(true);
+    expect(isItemsStepComplete(decoration)).toBe(true);
+    expect(isItemsStepComplete({ ...decoration, items: [] })).toBe(false);
+
+    // Na chácara, os itens continuam opcionais.
+    expect(isItemsStepComplete({ ...FILLED, items: [] })).toBe(true);
+  });
+
+  it('rascunho de antes da T32, sem tipo, volta como chácara', () => {
+    window.sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ startDate: '2026-12-05', endDate: '2026-12-06', guestCount: 60 }),
+    );
+
+    expect(loadDraft().kind).toBe('VENUE');
   });
 });

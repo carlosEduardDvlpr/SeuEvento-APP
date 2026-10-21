@@ -69,6 +69,7 @@ const QUOTE: Quote = {
 
 const BOOKING: Booking = {
   id: 'b-1',
+  kind: 'VENUE',
   startDate: '2026-12-05',
   endDate: '2026-12-06',
   eventType: 'BABY_SHOWER',
@@ -215,6 +216,7 @@ describe('ReviewStep', () => {
 
     const quoteCall = calls.find((call) => call.url === '/api/pricing/quote');
     expect(quoteCall?.body).toEqual({
+      kind: 'VENUE',
       startDate: '2026-12-05',
       endDate: '2026-12-06',
       items: [{ itemId: PAINEL.id, quantity: 2 }],
@@ -423,6 +425,7 @@ describe('envio do pedido', () => {
 
     await waitFor(() => {
       expect(calls.find((call) => call.url === '/api/bookings')?.body).toEqual({
+        kind: 'VENUE',
         startDate: '2026-12-05',
         endDate: '2026-12-06',
         eventType: 'BABY_SHOWER',
@@ -551,5 +554,62 @@ describe('envio do pedido', () => {
     // O orçamento é refeito, então o novo total aparece no resumo e no rodapé.
     expect(await screen.findAllByText('R$ 3.950,00')).toHaveLength(2);
     expect(screen.getByText('Confira seu pedido')).toBeVisible();
+  });
+});
+
+/*
+ * T32: o mesmo wizard manda o pedido só de decoração. O que o teste garante é o
+ * contrato com a API — o tipo vai no orçamento e no pedido, e convidados vai
+ * nulo mesmo que o rascunho guarde um número de quando a pessoa olhou a chácara.
+ */
+describe('reserva só de decoração', () => {
+  const DECORATION_QUOTE: Quote = {
+    ...QUOTE,
+    days: [],
+    dailyTotalCents: 0,
+    totalCents: QUOTE.itemsTotalCents - QUOTE.discountTotalCents,
+  };
+
+  it('manda o pedido com o tipo, um dia e sem convidados', async () => {
+    const user = userEvent.setup();
+    seedDraft({ kind: 'DECORATION', endDate: '2026-12-05', guestCount: 60 });
+    const calls = stubFetch({
+      'POST /api/pricing/quote': () => jsonResponse(DECORATION_QUOTE),
+      'POST /api/bookings': () =>
+        jsonResponse(
+          {
+            ...BOOKING,
+            kind: 'DECORATION',
+            endDate: '2026-12-05',
+            guestCount: null,
+            days: [],
+            dailyTotalCents: 0,
+          },
+          201,
+        ),
+    });
+    renderReview();
+
+    // Sem diária na decoração: o bloco some, em vez de mostrar R$ 0,00.
+    expect(await screen.findByText('Valores')).toBeVisible();
+    expect(screen.queryByText(/Diária/)).not.toBeInTheDocument();
+    expect(calls.find((call) => call.url === '/api/pricing/quote')?.body).toMatchObject({
+      kind: 'DECORATION',
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Solicitar reserva' }));
+
+    await waitFor(() => {
+      expect(calls.find((call) => call.url === '/api/bookings')?.body).toEqual({
+        kind: 'DECORATION',
+        startDate: '2026-12-05',
+        endDate: '2026-12-05',
+        eventType: 'BABY_SHOWER',
+        guestCount: null,
+        items: [{ itemId: PAINEL.id, quantity: 2 }],
+        customerNotes: null,
+        expectedTotalCents: DECORATION_QUOTE.totalCents,
+      });
+    });
   });
 });

@@ -73,6 +73,7 @@ const detailInclude = {
  */
 const summarySelect = {
   id: true,
+  kind: true,
   startDate: true,
   endDate: true,
   status: true,
@@ -96,6 +97,7 @@ function toAdminBooking(row: BookingRow): AdminBooking {
 
   return {
     id: row.id,
+    kind: row.kind,
     startDate: toISODate(row.startDate),
     endDate: toISODate(row.endDate),
     eventType: row.eventType,
@@ -185,6 +187,7 @@ export async function listAdminBookings(
   return {
     items: rows.map((row) => ({
       id: row.id,
+      kind: row.kind,
       startDate: toISODate(row.startDate),
       endDate: toISODate(row.endDate),
       status: row.status,
@@ -331,6 +334,7 @@ async function notifyCustomer(
         houseRules: settings.houseRules,
         whatsapp: settings.whatsapp,
         bookingUrl: `${env.APP_URL}/reservas/${row.id}`,
+        kind: row.kind,
       }),
     });
     return;
@@ -344,6 +348,7 @@ async function notifyCustomer(
         dates,
         reason,
         whatsapp: settings?.whatsapp ?? null,
+        kind: row.kind,
       }),
     });
   }
@@ -380,6 +385,7 @@ export async function createManualBooking(
     prisma,
     userId,
     body: {
+      kind: body.kind,
       startDate: body.startDate,
       endDate: body.endDate,
       eventType: body.eventType,

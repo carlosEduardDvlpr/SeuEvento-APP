@@ -2,7 +2,7 @@ import type { GalleryImage, PublicVenue } from '@chacara/shared';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { useAvailability } from '@/api/storefront';
-import { ArchFrame } from '@/components/ArchFrame';
+import { PhotoFrame } from '@/components/PhotoFrame';
 import { addDays, todayInSaoPaulo } from '@chacara/shared';
 import { capitalizeFirst, formatWeekdayAndDay } from '@/lib/format';
 import styles from './HeroSection.module.css';
@@ -102,13 +102,13 @@ export function HeroSection({ venue, hero }: HeroSectionProps) {
       </div>
 
       {/*
-        Com foto do dono, ela entra na moldura em arco (§14.6). Sem foto, o arco
+        Com foto do dono, ela entra na moldura-assinatura. Sem foto, a moldura
         vira bloco de cor: a §14.9 proíbe banco de imagens genérico.
       */}
       {hero ? (
-        <ArchFrame className={styles.image} src={hero.url} alt={hero.alt} />
+        <PhotoFrame className={styles.image} src={hero.url} alt={hero.alt} />
       ) : (
-        <ArchFrame className={styles.image} />
+        <PhotoFrame className={styles.image} />
       )}
     </section>
   );

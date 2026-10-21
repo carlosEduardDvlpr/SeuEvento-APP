@@ -4,7 +4,7 @@
   align-items: flex-start;
   gap: var(--space-12);
   padding: var(--space-16);
-  border: 1px solid var(--sage-300);
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-md);
   background: var(--bg-alt);
 }
@@ -55,7 +55,7 @@
 .primaryLink {
   border: 1px solid var(--brand);
   background: var(--brand);
-  color: var(--paper);
+  color: var(--on-brand);
 }
 
 .secondaryLink {

@@ -33,7 +33,7 @@
 .datePicker {
   margin-top: var(--space-32);
   padding: var(--space-16);
-  border: 1px solid var(--sage-300);
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-md);
   background: var(--bg-alt);
 
@@ -91,7 +91,7 @@
 
 .date:hover {
   background: var(--brand);
-  color: var(--paper);
+  color: var(--on-brand);
 }
 
 .allDates {

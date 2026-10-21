@@ -93,12 +93,26 @@ export function UsersIcon(props: IconProps) {
   );
 }
 
-/** Marca: o arco, forma-assinatura do projeto (§14.6). */
-export function ArchMarkIcon(props: IconProps) {
+/**
+ * Marca: o hexágono do logo da Donna Belle.
+ *
+ * Era um arco até a identidade real entrar no projeto. O hexágono é o que
+ * aparece no logo dela, em dourado, e por isso passou a ser a forma-assinatura.
+ */
+export function HexMarkIcon(props: IconProps) {
   return (
     <Icon {...props}>
-      <path d="M5 20V11a7 7 0 0 1 14 0v9" />
-      <path d="M3.5 20h17" />
+      <path d="M12 2.5 20.5 7.25v9.5L12 21.5 3.5 16.75v-9.5Z" />
+    </Icon>
+  );
+}
+
+/** Lista de reservas no painel. Não usa a marca: hexágono ali é o logo. */
+export function ListIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8.5 7h11M8.5 12h11M8.5 17h11" />
+      <path d="M4.5 7h.01M4.5 12h.01M4.5 17h.01" />
     </Icon>
   );
 }

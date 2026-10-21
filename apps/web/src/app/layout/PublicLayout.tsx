@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
 import { useVenue } from '@/api/venue';
-import { ArchMarkIcon } from '@/components/icons';
+import { HexMarkIcon } from '@/components/icons';
 import { useAuth } from '@/features/auth/AuthProvider';
 import styles from './PublicLayout.module.css';
 
@@ -27,7 +27,7 @@ export function PublicLayout() {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <Link to="/" className={styles.logo}>
-            <ArchMarkIcon size={28} />
+            <HexMarkIcon size={28} />
             <span>{venue?.name ?? 'Chácara'}</span>
           </Link>
 

@@ -40,22 +40,22 @@
     -->
     <meta name="twitter:card" content="summary_large_image" />
 
-    <meta name="theme-color" content="#1F4A38" />
+    <meta name="theme-color" content="#913271" />
 
     <!--
       §18.2: fonte com `preload`.
       
       Só a de texto, e por uma razão: ela desenha o primeiro parágrafo e entra no
-      caminho do LCP. A serifada aparece no título, que o navegador já descobre
-      cedo no CSS. Pré-carregar as duas competiria por banda no momento mais
-      crítico.
+      caminho do LCP. A serifada e a manuscrita aparecem em título, que o
+      navegador já descobre cedo no CSS. Pré-carregar as três competiria por
+      banda no momento mais crítico.
       
       `crossorigin` é obrigatório mesmo sendo mesma origem — sem ele o navegador
       baixa a fonte duas vezes.
     -->
     <link
       rel="preload"
-      href="/fonts/figtree-variable.woff2"
+      href="/fonts/montserrat-variable.woff2"
       as="font"
       type="font/woff2"
       crossorigin

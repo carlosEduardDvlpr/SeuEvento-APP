@@ -62,11 +62,11 @@
 .stepLinkCurrent {
   border-color: var(--brand);
   background: var(--brand);
-  color: var(--paper);
+  color: var(--on-brand);
 }
 
 .stepLinkDone {
-  border-color: var(--sage-300);
+  border-color: var(--line-strong);
   color: var(--brand);
 }
 
@@ -85,7 +85,7 @@
 }
 
 .stepLinkCurrent .stepNumber {
-  background: var(--paper);
+  background: var(--surface);
   color: var(--brand);
 }
 

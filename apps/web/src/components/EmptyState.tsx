@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArchFrame } from './ArchFrame';
+import { PhotoFrame } from './PhotoFrame';
 import styles from './EmptyState.module.css';
 
 /**
@@ -9,7 +9,7 @@ import styles from './EmptyState.module.css';
  * mostrar "Nenhum resultado". Para quem abre o painel pela primeira vez, é esta
  * tela que ensina o sistema.
  *
- * Usa o arco (§14.6), que a §14.9 lista como um dos lugares da forma-assinatura.
+ * Usa a moldura-assinatura, que a §14.9 lista como um dos lugares dela.
  */
 export type EmptyStateProps = {
   title: string;
@@ -20,7 +20,7 @@ export type EmptyStateProps = {
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
     <div className={styles.empty}>
-      <ArchFrame className={styles.frame} />
+      <PhotoFrame className={styles.frame} />
 
       <h3 className={styles.title}>{title}</h3>
       <p className={styles.description}>{description}</p>

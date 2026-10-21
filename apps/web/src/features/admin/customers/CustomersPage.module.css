@@ -44,8 +44,9 @@
 }
 
 .name {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: var(--text-lg);
+  font-weight: 600;
   line-height: 1.2;
   color: var(--fg);
   text-decoration: none;

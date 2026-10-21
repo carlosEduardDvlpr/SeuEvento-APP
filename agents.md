@@ -2118,6 +2118,12 @@ Toda ação destrutiva pede confirmação em diálogo com o resultado explicado 
 
 
 
+> \*\*Registro da troca de identidade (outubro de 2026).\*\* O que esta seção descreve — paleta verde de mata, papel claro, amarelo de ipê, Young Serif + Figtree, moldura em \*\*arco\*\* — foi a identidade provisória do MVP, feita antes de haver cliente. Com a chácara real contratada, o site passou a usar a \*\*identidade da Donna Belle\*\*: ameixa `#913271` como marca, dourado `#D9A441` na ação, rosa seco `#B5656F` no que é chácara, magenta `#D14BA8` no que é decoração, fundo rosado `#FDF3F0`, Parisienne (marca) + Cormorant Garamond (títulos) + Montserrat (texto), e \*\*passe-partout com fio dourado\*\* no lugar do arco (o hexágono do logo é a marca, não recorte de foto).
+>
+> O texto abaixo fica como registro do que foi decidido e por quê. \*\*A fonte da verdade da paleta, da tipografia e da forma-assinatura é `apps/web/src/styles/tokens.css`\*\*, que documenta de onde cada cor vem e quais pares de contraste foram conferidos. As \*\*regras\*\* desta seção continuam valendo todas: componente nunca usa hex direto, a cor da festa vem de `Theme.palette` e não dos tokens, status nunca depende só de cor, o painel é seco.
+
+
+
 \### 14.1 Ponto de partida
 
 

@@ -41,13 +41,20 @@ type FormState = {
   active: boolean;
 };
 
-/** Ponto de partida neutro: o dono troca cor por cor, sem campo vazio. */
+/**
+ * Ponto de partida neutro: o dono troca cor por cor, sem campo vazio.
+ *
+ * Neutro de verdade, numa escala de cinza-quente. Antes eram bege e sálvia, que
+ * vinham da identidade antiga do site — e um padrão com cara de rústico empurra
+ * todo estilo novo para o rústico. A cor do site não tem nada a ver com a cor da
+ * festa (§14.3): esta paleta é da festa, e quem a escolhe é o dono.
+ */
 const STARTER_PALETTE: PaletteColor[] = [
-  { name: 'Clara', hex: '#f2eee6' },
-  { name: 'Média', hex: '#d8c7a3' },
-  { name: 'Destaque', hex: '#a7b8a1' },
-  { name: 'Contraste', hex: '#8c6a4f' },
-  { name: 'Escura', hex: '#3a3632' },
+  { name: 'Clara', hex: '#f7f3f1' },
+  { name: 'Média', hex: '#dcd3cf' },
+  { name: 'Destaque', hex: '#b9a7a3' },
+  { name: 'Contraste', hex: '#7a6b67' },
+  { name: 'Escura', hex: '#332d2b' },
 ];
 
 const EMPTY_FORM: FormState = {

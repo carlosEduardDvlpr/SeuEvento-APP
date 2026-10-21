@@ -1,8 +1,18 @@
+/*
+ * O contorno existe por causa do fundo rosado da identidade.
+ *
+ * O fundo do selo de "Cancelada" (`#f8dddf`) e o fundo alternado de seção
+ * (`#f8e4e4`) têm 1.05 de contraste entre si: lado a lado, o selo simplesmente
+ * desaparece. Em vez de inventar um rosa diferente para o selo, a borda vem do
+ * próprio texto dele, a 30% — então cada status ganha um contorno da sua
+ * família de cor, e nenhum selo depende do fundo da seção para existir.
+ */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-8);
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
   border-radius: var(--r-sm);
   font-size: var(--text-sm);
   font-weight: 600;

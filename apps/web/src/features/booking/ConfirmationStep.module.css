@@ -127,7 +127,7 @@
 .primaryLink {
   border: 1px solid var(--brand);
   background: var(--brand);
-  color: var(--paper);
+  color: var(--on-brand);
 }
 
 .secondaryLink {

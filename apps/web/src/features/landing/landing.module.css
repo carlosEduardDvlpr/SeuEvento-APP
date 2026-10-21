@@ -41,13 +41,16 @@
   margin-top: var(--space-32);
 }
 
-/* Link de ação dentro de uma seção: leva ao wizard com algo já escolhido. */
+/* Link de ação dentro de uma seção: leva ao wizard com algo já escolhido.
+   O contorno dourado escuro é o que dá borda ao botão sobre o fundo rosado —
+   mesmo motivo explicado em `Button.module.css`. */
 .action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: var(--touch-target);
   padding: 0 var(--space-32);
+  border: 1px solid var(--action-line);
   border-radius: var(--r-sm);
   background: var(--action);
   color: var(--action-fg);

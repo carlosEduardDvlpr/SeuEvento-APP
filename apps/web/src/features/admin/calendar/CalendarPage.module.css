@@ -8,7 +8,7 @@
 .monthName {
   flex: 1;
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: var(--text-lg);
 }
 
@@ -127,8 +127,8 @@
  *
  * Vêm **depois** do `.swatch` de propósito. A legenda usa as mesmas classes nos
  * quadradinhos, e com elas declaradas antes o `border` do `.swatch` ganhava e
- * apagava a borda de status: "Reservado" (#dcebdd) e "Fora do prazo" (#e4ecdf)
- * ficavam indistinguíveis na legenda, que é justamente quem deveria
+ * apagava a borda de status: "Reservado" e "Fora do prazo" têm fundos claros
+ * parecidos e ficavam indistinguíveis na legenda, que é justamente quem deveria
  * desambiguá-los no celular — onde o rótulo dentro da célula não cabe. Achado da
  * revisão da T30, olhando a tela.
  */
@@ -150,7 +150,7 @@
 
 .past {
   background: var(--bg-alt);
-  border-color: var(--sage-300);
+  border-color: var(--line-strong);
   color: var(--fg-soft);
 }
 
@@ -158,7 +158,7 @@
 
 .drawerTitle {
   margin: 0 0 var(--space-12);
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: var(--text-base);
 }
 

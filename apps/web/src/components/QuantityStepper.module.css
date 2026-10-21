@@ -19,7 +19,7 @@
 }
 
 .button:hover:not(:disabled) {
-  border-color: var(--sage-300);
+  border-color: var(--line-strong);
   background: var(--bg-alt);
 }
 
@@ -34,7 +34,7 @@
   padding: var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  background: var(--paper);
+  background: var(--surface);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   text-align: center;

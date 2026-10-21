@@ -61,7 +61,7 @@
 .houseRules {
   margin: 0;
   padding: var(--space-16);
-  border-left: 3px solid var(--sage-300);
+  border-left: 3px solid var(--line-strong);
   background: var(--bg-alt);
   white-space: pre-line;
 }

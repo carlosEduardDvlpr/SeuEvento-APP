@@ -1,6 +1,6 @@
 import type { Theme } from '@chacara/shared';
 import { Link } from 'react-router';
-import { ArchFrame } from '@/components/ArchFrame';
+import { PhotoFrame } from '@/components/PhotoFrame';
 import landing from './landing.module.css';
 import styles from './ThemesSection.module.css';
 
@@ -38,7 +38,7 @@ export function ThemesSection({ themes }: ThemesSectionProps) {
           {themes.map((theme) => (
             <li key={theme.id} className={styles.card}>
               <Link className={styles.link} to={`/reservar?estilo=${theme.id}`}>
-                <ArchFrame
+                <PhotoFrame
                   variant="tall"
                   src={theme.coverImageUrl}
                   alt={theme.coverImageUrl ? `Decoração no estilo ${theme.name}` : ''}

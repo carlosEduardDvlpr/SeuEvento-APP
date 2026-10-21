@@ -34,8 +34,14 @@
   flex: none;
   padding-inline: var(--space-4);
   color: var(--brand);
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
+  /*
+   * O nome da marca é um dos dois lugares onde a manuscrita entra. Vem um grau
+   * acima na escala porque a Parisienne tem altura-x baixa: no mesmo tamanho da
+   * serifada ela parece miúda ao lado do hexágono.
+   */
+  font-family: var(--font-script);
+  font-size: var(--text-xl);
+  line-height: 1.2;
   text-decoration: none;
 }
 
@@ -70,9 +76,11 @@
   background: var(--bg-alt);
 }
 
-/* O primeiro link da navegação é a ação principal da página (§14.2). */
+/* O primeiro link da navegação é a ação principal da página (§14.2). O contorno
+   dourado escuro dá a borda que o dourado chapado não dá sobre o fundo rosado. */
 .navLink:first-child {
   background: var(--action);
+  border: 1px solid var(--action-line);
   color: var(--action-fg);
   padding-inline: var(--space-24);
 }
@@ -84,7 +92,7 @@
 .footer {
   margin-top: var(--space-96);
   background: var(--bg-dark);
-  color: var(--paper);
+  color: var(--on-brand);
 }
 
 .footerInner {
@@ -99,8 +107,9 @@
 }
 
 .footerBrand {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-family: var(--font-script);
+  font-size: var(--text-xl);
+  line-height: 1.2;
 }
 
 .footerNav {
@@ -110,12 +119,12 @@
 }
 
 .footerNav a {
-  color: var(--sage-100);
+  color: var(--on-brand);
 }
 
 .footerUser {
   width: 100%;
-  color: var(--sage-300);
+  color: var(--on-brand-soft);
   font-size: var(--text-sm);
 }
 

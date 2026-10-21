@@ -13,8 +13,8 @@
   align-items: center;
   gap: var(--space-12);
   padding: var(--space-8) var(--space-16);
-  background: var(--forest-900);
-  color: var(--paper);
+  background: var(--bg-dark);
+  color: var(--on-brand);
 }
 
 .brand {
@@ -24,8 +24,8 @@
   /* Mesmo piso de 44 px dos outros controles da topbar (§18.1). */
   min-height: var(--touch-target);
   padding-inline: var(--space-4);
-  color: var(--paper);
-  font-family: var(--font-display);
+  color: var(--on-brand);
+  font-family: var(--font-body);
   font-size: var(--text-base);
   text-decoration: none;
 }
@@ -36,10 +36,10 @@
   gap: var(--space-8);
   min-height: var(--touch-target);
   padding: 0 var(--space-12);
-  border: 1px solid var(--sage-300);
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-sm);
   background: none;
-  color: var(--paper);
+  color: var(--on-brand);
   font-weight: 600;
   font-size: var(--text-sm);
   white-space: nowrap;
@@ -63,7 +63,7 @@
   border: none;
   border-radius: var(--r-sm);
   background: none;
-  color: var(--sage-100);
+  color: var(--on-brand-soft);
   font: inherit;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -72,8 +72,8 @@
 }
 
 .topbarLink:hover {
-  background: var(--forest-700);
-  color: var(--paper);
+  background: var(--brand);
+  color: var(--on-brand);
 }
 
 .body {
@@ -111,12 +111,12 @@
 }
 
 .navLink:hover {
-  background: var(--paper);
+  background: var(--surface);
 }
 
 .navLinkActive {
   background: var(--brand);
-  color: var(--paper);
+  color: var(--on-brand);
 }
 
 .navUser {

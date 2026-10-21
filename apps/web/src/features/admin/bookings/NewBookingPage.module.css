@@ -33,7 +33,7 @@
 
 .legend {
   padding: 0 var(--space-8);
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: var(--text-base);
 }
 
@@ -73,7 +73,7 @@
 .switchOptionActive {
   border-color: var(--brand);
   background: var(--brand);
-  color: var(--paper);
+  color: var(--on-brand);
 }
 
 /* Resultado da busca de cliente: lista curta, clicável. */
@@ -108,7 +108,7 @@
 }
 
 .resultButton:hover {
-  border-color: var(--sage-300);
+  border-color: var(--line-strong);
   background: var(--bg-alt);
 }
 
@@ -116,9 +116,23 @@
   font-weight: 600;
 }
 
+/*
+ * `overflow-wrap: anywhere` por causa do e-mail.
+ *
+ * "maria.aparecida.goncalves@exemplo.com.br" é uma palavra única de 40
+ * caracteres: sem permissão para quebrar no meio, ela define a largura mínima do
+ * `fieldset`, que então empurra a página inteira para o lado. Em 375 px isso dava
+ * 389 px de rolagem horizontal — apareceu na captura quando a troca de
+ * identidade colocou uma fonte mais larga no painel, mas o defeito já morava
+ * aqui e bastava um cliente de e-mail comprido para aparecer.
+ *
+ * `anywhere`, e não `break-word`: só o primeiro conta a palavra quebrada no
+ * cálculo da largura mínima intrínseca, que é exatamente o que precisa mudar.
+ */
 .resultMeta {
   color: var(--fg-soft);
   font-size: var(--text-sm);
+  overflow-wrap: anywhere;
 }
 
 /* Cliente escolhido: confirma a escolha e oferece trocar. */
@@ -129,7 +143,7 @@
   justify-content: space-between;
   gap: var(--space-12);
   padding: var(--space-12);
-  border: 1px solid var(--sage-300);
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-sm);
   background: var(--bg-alt);
 }

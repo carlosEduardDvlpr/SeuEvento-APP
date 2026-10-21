@@ -9,7 +9,7 @@
   width: 100%;
   max-width: 420px;
   padding: var(--space-32);
-  background: var(--paper);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
 }

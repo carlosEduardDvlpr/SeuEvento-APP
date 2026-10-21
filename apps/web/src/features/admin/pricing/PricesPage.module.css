@@ -10,7 +10,7 @@
 
 .simulatorTitle {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: var(--text-lg);
 }
 
@@ -37,7 +37,7 @@
   gap: var(--space-12);
   padding: var(--space-8) var(--space-12);
   border-radius: var(--r-sm);
-  background: var(--paper);
+  background: var(--surface);
   font-size: var(--text-sm);
 }
 

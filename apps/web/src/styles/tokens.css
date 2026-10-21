@@ -1,60 +1,131 @@
 /*
- * Tokens de design (§14.2 e §14.5).
+ * Tokens de design.
  *
- * Componente nunca usa hex direto (§2.2): usa os tokens semânticos da segunda
- * metade deste arquivo. Os tokens de marca (`--forest-700`, `--ipe-400`) existem
- * para serem referenciados aqui, não espalhados pelo CSS.
+ * ## De onde vêm estas cores
+ *
+ * Da identidade real da cliente, não de uma paleta inventada. O material dela
+ * tem duas assinaturas, e elas correspondem exatamente aos dois produtos:
+ *
+ * - **Espaço (chácara):** rosa seco `#b5656f` sobre fundo rosado `#f8e4e4`.
+ * - **Decoração (pegue e monte):** magenta `#d14ba8` com fecho em `#8e2c8c`.
+ * - **Logo:** ameixa chapada `#913271`, hexágono dourado, nome em serifada.
+ *
+ * A ameixa é a cor de marca (aparece no logo, serve aos dois produtos), o
+ * dourado é a ação, e rosa e magenta ficam reservados para **marcar de que
+ * produto a tela está falando** — o que a reserva só de decoração vai usar.
+ *
+ * ## Como usar
+ *
+ * Componente nunca usa hex direto: usa os tokens semânticos da segunda metade
+ * deste arquivo. Os tokens de marca (`--plum-700`, `--gold-400`) existem para
+ * serem referenciados **aqui**, não espalhados pelo CSS — quem espalha
+ * transforma a próxima troca de identidade em caça ao tesouro.
  *
  * A cor da festa não vive aqui: ela vem do banco, em `Theme.palette`, e é
- * aplicada como variável local no componente do estilo (§14.3).
+ * aplicada como variável local no componente do estilo.
+ *
+ * ## Contraste
+ *
+ * Todo par de texto/fundo abaixo foi conferido contra o mínimo AA (4.5:1), e os
+ * acentos usados como preenchimento contra 3:1. Os pares apertados estão
+ * comentados onde importam. Rosa e magenta puros **não** passam com texto
+ * branco (4.02 e 3.84): é por isso que existem `--venue-ink` e `--decor-ink`,
+ * e é por isso que preenchimento com texto claro usa sempre a versão `-ink`.
  */
 :root {
   /* Marca */
-  --forest-900: #12291f; /* Mata profunda: rodapé, superfícies escuras */
-  --forest-700: #1f4a38; /* Mata: cor de marca, títulos de destaque */
-  --sage-300: #a9bfa5; /* Sálvia: bordas de destaque, ilustrações */
-  --sage-100: #e4ecdf; /* Sálvia clara: fundos de seção alternados */
-  --paper: #fcfcf9; /* Papel: fundo padrão */
-  --ipe-400: #f2b71f; /* Ipê: ação principal */
-  --ipe-500: #e0a80f; /* Ipê um tom abaixo: hover da ação principal */
-  --ipe-800: #8a5f00; /* Ipê escuro: texto/ícone amarelo sobre fundo claro */
-  --guava-500: #e0606b; /* Goiaba: selo de desconto, avisos leves */
-  --ink: #1d2a24; /* Tinta: texto principal */
-  --ink-soft: #5f6b63; /* Texto secundário (AA sobre --paper) */
-  --wood-600: #7b5b45; /* Madeira: ícones e detalhes neutros */
-  --line: #dde3da; /* Bordas e divisórias */
+  --plum-900: #3d1430; /* Ameixa profunda: rodapé, barra do painel */
+  --plum-800: #6b2153; /* Ameixa escura: hover da marca */
+  --plum-700: #913271; /* Ameixa do logo: cor de marca */
+  --rose-700: #8e3f49; /* Rosa escuro: texto e preenchimento do Espaço */
+  --rose-500: #b5656f; /* Rosa seco do Espaço: acento decorativo */
+  --rose-100: #f8e4e4; /* Rosa claro: fundo de seção alternado */
+  --blush-50: #fdf3f0; /* Fundo padrão */
+  --magenta-800: #8e2c8c; /* Magenta profundo: texto e preenchimento da Decoração */
+  --magenta-500: #d14ba8; /* Magenta da Decoração: acento decorativo */
+  --gold-800: #6e4f0e; /* Dourado escuro: contorno e texto sobre fundo claro */
+  --gold-500: #c28e2c; /* Dourado um tom abaixo: hover da ação */
+  --gold-400: #d9a441; /* Dourado do hexágono: ação principal */
+  --white-warm: #fffdfc; /* Superfície de cartão, campo e diálogo */
+  --white-soft: #fffafa; /* Texto e ícone sobre superfície escura ou de marca */
+  --ink: #2a1b24; /* Tinta: texto principal */
+  --ink-soft: #6b5560; /* Texto secundário (AA sobre fundo e fundo alternado) */
+  --ink-muted: #7a4f5e; /* Detalhe e ícone neutro, com um fio de rosa */
+  --line-300: #d9b0b6; /* Borda de destaque, divisória forte */
+  --line-100: #ead7d7; /* Borda e divisória padrão */
 
   /* Semânticos: use estes nos componentes */
-  --bg: var(--paper);
-  --bg-alt: var(--sage-100);
-  --bg-dark: var(--forest-900);
+  --bg: var(--blush-50);
+  --bg-alt: var(--rose-100);
+  --bg-dark: var(--plum-900);
+  --surface: var(--white-warm);
   --fg: var(--ink);
   --fg-soft: var(--ink-soft);
-  --brand: var(--forest-700);
-  --action: var(--ipe-400);
-  --action-fg: var(--ink); /* texto sobre o botão de ação */
+  --fg-muted: var(--ink-muted);
+  --on-brand: var(--white-soft); /* texto sobre --brand, --bg-dark e os `-ink` */
+  --on-brand-soft: #e9d5da; /* texto secundário sobre superfície escura */
+  --brand: var(--plum-700);
+  --brand-hover: var(--plum-800);
+
   /*
-   * §24 pegou isto: o mesmo hex de hover estava escrito à mão em três CSS
-   * Modules, o que a §2.2 proíbe. Três cópias de uma cor são três lugares para
-   * esquecer quando a paleta mudar.
+   * Ação principal: dourado com texto tinta.
+   *
+   * O dourado chapado tem só 2.06 de contraste com o fundo rosado — ou seja, o
+   * botão some de borda, o que o critério 1.4.11 cobra. `--action-line` é o
+   * contorno que devolve a borda (6.9:1) sem escurecer o preenchimento e sem
+   * tirar do dourado o papel de chamar o clique.
    */
-  --action-hover: var(--ipe-500);
-  --danger: #a32e3a;
+  --action: var(--gold-400);
+  --action-fg: var(--ink);
+  --action-hover: var(--gold-500);
+  --action-line: var(--gold-800);
+
+  /* Fio dourado: a linha fina do hexágono e das molduras. Decorativo. */
+  --hairline: var(--gold-400);
+
+  /* De que produto a tela fala. `-ink` quando houver texto claro em cima. */
+  --venue: var(--rose-500);
+  --venue-ink: var(--rose-700);
+  --decor: var(--magenta-500);
+  --decor-ink: var(--magenta-800);
+
+  --line: var(--line-100);
+  --line-strong: var(--line-300);
+  --danger: #a32015; /* vermelho puxado para o laranja, para não virar "rosa" */
   --focus: #1b6fd1; /* anel de foco visível, distinto da marca */
 
-  /* Status de reserva. Sempre acompanhados de texto ou ícone (§14.2) */
+  /* Véus e sobreposições, em cima de foto ou de diálogo. */
+  --scrim: rgb(61 20 48 / 0.5);
+  --scrim-strong: rgb(61 20 48 / 0.82);
+  --scrim-gradient: rgb(61 20 48 / 0.78);
+  --surface-veil: rgb(253 243 240 / 0.9);
+  --swatch-line: rgb(0 0 0 / 0.12); /* contorno de amostra de cor, neutro de propósito */
+
+  /* Status de reserva. Sempre acompanhados de texto ou ícone */
   --st-pending-bg: #fcefc7;
   --st-pending-fg: #7a5500;
   --st-confirmed-bg: #dcebdd;
-  --st-confirmed-fg: #1f4a38;
+  --st-confirmed-fg: #1f5b3a;
   --st-cancelled-bg: #f8dddf;
   --st-cancelled-fg: #8e2b35;
   --st-completed-bg: #e4e9ee;
   --st-completed-fg: #3e4b58;
 
-  /* Tipografia (§14.4) */
-  --font-display: 'Young Serif', Georgia, 'Times New Roman', serif;
-  --font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /*
+   * Tipografia.
+   *
+   * Três famílias, com papéis que não se misturam:
+   *
+   * - **Script** só no nome da marca e no título do hero. Manuscrita em
+   *   subtítulo, rótulo de campo ou lista é o jeito mais rápido de tornar um
+   *   site bonito ilegível, e a §18.1 não abre essa exceção.
+   * - **Serifada** nos títulos de seção: é a letra do logo, dá o tom de festa.
+   * - **Sem serifa** em texto corrido, lista, tabela e formulário. O painel usa
+   *   só ela, inclusive nos títulos.
+   */
+  --font-script: 'Parisienne', 'Segoe Script', cursive;
+  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-body: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   /* Escala modular 1.25 sobre 16 px */
   --text-xs: 0.8rem;
@@ -66,7 +137,7 @@
   --text-3xl: 2.441rem;
   --text-4xl: 3.052rem;
 
-  /* Espaçamento em múltiplos de 4 px (§14.5) */
+  /* Espaçamento em múltiplos de 4 px */
   --space-4: 0.25rem;
   --space-8: 0.5rem;
   --space-12: 0.75rem;
@@ -78,18 +149,18 @@
   --space-96: 6rem;
   --space-128: 8rem;
 
-  /* Raio por hierarquia, não um raio único em tudo (§14.5) */
+  /* Raio por hierarquia, não um raio único em tudo */
   --r-sm: 6px; /* campos, selos, botões */
   --r-md: 12px; /* cartões de item, diálogos */
 
   /* Sem sombra por padrão: separação vem de borda e fundo alternado.
      Elevação só em diálogo, gaveta e barra fixa. */
-  --elevation: 0 8px 24px rgb(29 42 36 / 0.14);
+  --elevation: 0 8px 24px rgb(61 20 48 / 0.14);
 
   --container: 1200px;
   --measure: 65ch; /* largura máxima de texto corrido */
 
-  /* Movimento curto, em resposta à ação (§14.8) */
+  /* Movimento curto, em resposta à ação */
   --transition: 160ms ease-out;
 
   /* Alvo de toque mínimo (§18.1) */

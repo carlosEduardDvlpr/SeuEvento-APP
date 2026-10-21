@@ -45,14 +45,14 @@
 }
 
 .themeChip:hover {
-  border-color: var(--sage-300);
+  border-color: var(--line-strong);
   background: var(--bg-alt);
 }
 
 .themeChipActive {
   border-color: var(--brand);
   background: var(--brand);
-  color: var(--paper);
+  color: var(--on-brand);
 }
 
 /* Bolinhas da paleta do estilo (§14.3): dado, não enfeite. */
@@ -65,7 +65,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 1px solid rgb(0 0 0 / 0.12);
+  border: 1px solid var(--swatch-line);
 }
 
 .tabs {
@@ -165,7 +165,7 @@
   overflow: hidden;
   border-radius: var(--r-sm);
   background: var(--bg-alt);
-  color: var(--wood-600);
+  color: var(--fg-muted);
 }
 
 .photo img {

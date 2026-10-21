@@ -2,7 +2,6 @@ import type { GalleryImage, PublicVenue } from '@chacara/shared';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { useAvailability } from '@/api/storefront';
-import { PhotoFrame } from '@/components/PhotoFrame';
 import { addDays, todayInSaoPaulo } from '@chacara/shared';
 import { capitalizeFirst, formatWeekdayAndDay } from '@/lib/format';
 import styles from './HeroSection.module.css';
@@ -46,13 +45,30 @@ export function HeroSection({ venue, hero }: HeroSectionProps) {
 
   return (
     <section className={styles.hero}>
-      <div className={styles.text}>
-        <h1 className={styles.title}>Sua festa no nosso quintal</h1>
+      {hero ? (
+        <img
+          className={styles.image}
+          src={hero.url}
+          alt={hero.alt}
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+        />
+      ) : (
+        <div className={styles.imageFallback} aria-hidden="true" />
+      )}
 
-        <p className={styles.lead}>
-          Alugue a chácara por dia e monte a decoração você mesmo, escolhendo os itens do estilo que
-          combina com a sua festa.
-        </p>
+      <div className={styles.scrim} aria-hidden="true" />
+
+      <div className={styles.content}>
+        <div className={styles.text}>
+          <h1 className={styles.title}>Sua festa no nosso quintal</h1>
+
+          <p className={styles.lead}>
+            Alugue a chácara por dia e monte a decoração você mesmo, escolhendo os itens do estilo
+            que combina com a sua festa.
+          </p>
+        </div>
 
         <div className={styles.datePicker}>
           <h2 className={styles.datePickerTitle}>Quando é a festa?</h2>
@@ -100,16 +116,6 @@ export function HeroSection({ venue, hero }: HeroSectionProps) {
           chácara confirma. Nada é cobrado nesse momento.
         </p>
       </div>
-
-      {/*
-        Com foto do dono, ela entra na moldura-assinatura. Sem foto, a moldura
-        vira bloco de cor: a §14.9 proíbe banco de imagens genérico.
-      */}
-      {hero ? (
-        <PhotoFrame className={styles.image} src={hero.url} alt={hero.alt} />
-      ) : (
-        <PhotoFrame className={styles.image} />
-      )}
     </section>
   );
 }

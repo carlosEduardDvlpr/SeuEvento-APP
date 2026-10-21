@@ -19,6 +19,7 @@ export type PhotoFrameProps = {
   variant?: 'hero' | 'tall';
   /** Cor do bloco quando não há foto, normalmente vinda da paleta do estilo. */
   fillColor?: string;
+  loading?: 'eager' | 'lazy';
   children?: ReactNode;
   className?: string;
 };
@@ -28,6 +29,7 @@ export function PhotoFrame({
   alt = '',
   variant = 'hero',
   fillColor,
+  loading = 'lazy',
   children,
   className,
 }: PhotoFrameProps) {
@@ -40,7 +42,7 @@ export function PhotoFrame({
   return (
     <div className={classes} style={style}>
       {src ? (
-        <img src={src} alt={alt} loading="eager" decoding="async" />
+        <img src={src} alt={alt} loading={loading} decoding="async" />
       ) : (
         <div className={styles.placeholder}>{children ?? <HexMarkIcon size={48} />}</div>
       )}

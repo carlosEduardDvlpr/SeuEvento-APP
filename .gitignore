@@ -2,6 +2,7 @@ node_modules
 dist
 coverage
 .vite
+.pnpm-store/
 
 # Segredos: só o .env.example é versionado.
 .env

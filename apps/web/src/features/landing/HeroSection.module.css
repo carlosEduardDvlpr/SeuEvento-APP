@@ -1,16 +1,53 @@
-/* §14.7: duas colunas alternando texto e imagem no desktop, coluna única no
-   celular. Alinhamento à esquerda, muito respiro. */
 .hero {
-  display: grid;
-  gap: var(--space-48);
-  align-items: center;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  min-height: min(860px, calc(100svh - 72px));
   max-width: var(--container);
-  margin: 0 auto;
-  padding: var(--space-48) var(--space-16) var(--space-64);
+  overflow: hidden;
+  margin: var(--space-16) auto 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--bg-dark);
+}
+
+.image,
+.imageFallback,
+.scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.image {
+  z-index: -3;
+  object-fit: cover;
+}
+
+.imageFallback {
+  z-index: -3;
+  background: var(--venue-ink);
+}
+
+.scrim {
+  z-index: -2;
+  background: linear-gradient(
+    to bottom,
+    transparent 10%,
+    var(--scrim) 42%,
+    var(--scrim-strong) 100%
+  );
+}
+
+.content {
+  width: 100%;
+  padding: var(--space-64) var(--space-16) var(--space-24);
 }
 
 .text {
-  max-width: var(--measure);
+  max-width: 720px;
 }
 
 .title {
@@ -18,11 +55,14 @@
   font-family: var(--font-display);
   font-size: clamp(var(--text-3xl), 6vw, 3.815rem);
   line-height: 1.1;
+  color: var(--on-brand);
+  text-wrap: balance;
 }
 
 .lead {
   margin: var(--space-24) 0 0;
-  color: var(--fg-soft);
+  max-width: 58ch;
+  color: var(--on-brand-soft);
   font-size: var(--text-lg);
 }
 
@@ -35,7 +75,9 @@
   padding: var(--space-16);
   border: 1px solid var(--line-strong);
   border-radius: var(--r-md);
-  background: var(--bg-alt);
+  max-width: 700px;
+  background: var(--surface-veil);
+  backdrop-filter: blur(8px);
 
   /*
    * §18.2, CLS abaixo de 0,1.
@@ -110,18 +152,32 @@
 
 .note {
   margin: var(--space-16) 0 0;
-  color: var(--fg-soft);
+  max-width: 700px;
+  color: var(--on-brand-soft);
   font-size: var(--text-sm);
-}
-
-.image {
-  width: 100%;
-  max-width: 420px;
 }
 
 @media (min-width: 900px) {
   .hero {
-    grid-template-columns: 1fr auto;
-    padding-block: var(--space-96);
+    min-height: min(780px, calc(100svh - 96px));
+    margin-top: var(--space-24);
+  }
+
+  .scrim {
+    background: linear-gradient(90deg, var(--scrim-strong) 0%, var(--scrim) 48%, transparent 82%);
+  }
+
+  .content {
+    padding: var(--space-96) var(--space-64) var(--space-64);
+  }
+
+  .datePicker {
+    margin-top: var(--space-48);
+  }
+}
+
+@media (max-width: 1232px) {
+  .hero {
+    margin-inline: var(--space-16);
   }
 }

@@ -2,7 +2,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-24);
-  max-width: var(--measure);
+  max-width: none;
+  padding: var(--space-24);
+  border-radius: var(--r-md);
+  background: var(--bg-dark);
+  color: var(--on-brand);
 }
 
 .address {
@@ -10,12 +14,12 @@
   align-items: flex-start;
   gap: var(--space-12);
   margin: 0;
-  color: var(--brand);
+  color: var(--action);
   font-size: var(--text-lg);
 }
 
 .address span {
-  color: var(--fg);
+  color: var(--on-brand);
 }
 
 .actions {
@@ -24,9 +28,32 @@
   gap: var(--space-12);
 }
 
+.actions > a:not(:last-child) {
+  border-color: var(--hairline);
+  color: var(--on-brand);
+}
+
+.actions > a:not(:last-child):hover {
+  background: var(--brand-hover);
+}
+
 @media (max-width: 560px) {
   /* No celular as ações ocupam a largura toda, empilhadas. */
   .actions > * {
     width: 100%;
+  }
+}
+
+@media (min-width: 760px) {
+  .content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-48);
+    padding: var(--space-48);
+  }
+
+  .actions {
+    justify-content: flex-end;
   }
 }

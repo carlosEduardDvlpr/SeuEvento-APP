@@ -1,6 +1,7 @@
 import type { Combo } from '@chacara/shared';
 import { Link } from 'react-router';
 import { Money } from '@/components/Money';
+import { PhotoFrame } from '@/components/PhotoFrame';
 import landing from './landing.module.css';
 import styles from './CombosSection.module.css';
 
@@ -46,30 +47,42 @@ export function CombosSection({ combos }: CombosSectionProps) {
         <ul className={[landing.body, styles.grid].join(' ')}>
           {highlights.map((combo) => (
             <li key={combo.id} className={styles.card}>
-              <h3 className={styles.name}>{combo.name}</h3>
+              <PhotoFrame
+                className={styles.photo}
+                variant="tall"
+                src={combo.imageUrl}
+                alt={combo.imageUrl ? `Itens do combo ${combo.name} montados` : ''}
+              />
 
-              {combo.description ? <p className={styles.text}>{combo.description}</p> : null}
+              <div className={styles.content}>
+                <p className={styles.saving}>
+                  você economiza <Money cents={combo.discountCents} />
+                </p>
 
-              <ul className={styles.items}>
-                {combo.items.map((line) => (
-                  <li key={line.itemId}>
-                    {line.quantity}× {line.name}
-                  </li>
-                ))}
-              </ul>
+                <h3 className={styles.name}>{combo.name}</h3>
 
-              <p className={styles.money}>
-                <span className={styles.from}>
-                  <Money cents={combo.itemsTotalCents} />
-                </span>
-                <strong className={styles.price}>
-                  <Money cents={combo.priceCents} />
-                </strong>
-              </p>
+                {combo.description ? <p className={styles.text}>{combo.description}</p> : null}
 
-              <p className={styles.saving}>
-                você economiza <Money cents={combo.discountCents} />
-              </p>
+                <ul className={styles.items}>
+                  {combo.items.map((line) => (
+                    <li key={line.itemId}>
+                      {line.quantity}× {line.name}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className={styles.offer}>
+                  <span className={styles.offerLabel}>Combo completo</span>
+                  <p className={styles.money}>
+                    <span className={styles.from}>
+                      <Money cents={combo.itemsTotalCents} />
+                    </span>
+                    <strong className={styles.price}>
+                      <Money cents={combo.priceCents} />
+                    </strong>
+                  </p>
+                </div>
+              </div>
             </li>
           ))}
         </ul>

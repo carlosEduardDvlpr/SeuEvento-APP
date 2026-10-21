@@ -12,6 +12,7 @@
  */
 
 import { BUSINESS_TIMEZONE } from './dates.js';
+import type { BookingKind } from './enums.js';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -105,6 +106,20 @@ export function describeItems(count: number): string {
   if (count === 0) return 'só a chácara';
 
   return `${count} ${count === 1 ? 'item' : 'itens'}`;
+}
+
+/**
+ * Quem a reserva recebe, para a linha de resumo: "60 pessoas" na chácara, "só
+ * decoração" no pegue e monte sem a chácara (T32).
+ *
+ * Existe porque seis telas escreviam "{n} pessoas" à mão, e com a decoração o
+ * número passou a poder não existir — cada uma ia mostrar "null pessoas" do seu
+ * jeito.
+ */
+export function describeGuests(kind: BookingKind, guestCount: number | null): string {
+  if (kind === 'DECORATION' || guestCount === null) return 'só decoração';
+
+  return `${guestCount} ${guestCount === 1 ? 'pessoa' : 'pessoas'}`;
 }
 
 /**

@@ -310,6 +310,27 @@ export function SparkIcon(props: IconProps) {
   );
 }
 
+/** A chácara, no seletor do que reservar (T32). */
+export function HouseIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3.5 11 12 4l8.5 7" />
+      <path d="M5.5 9.5v10h13v-10" />
+      <path d="M10 19.5v-5h4v5" />
+    </Icon>
+  );
+}
+
+/** Só a decoração, no seletor do que reservar (T32). */
+export function BalloonIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 15c-3 0-5.5-2.9-5.5-6.3A5.5 5.5 0 0 1 12 3a5.5 5.5 0 0 1 5.5 5.7C17.5 12.1 15 15 12 15Z" />
+      <path d="M12 15l-1 1.5h2L12 15M12 16.5c0 2-2 2.5-2 4.5" />
+    </Icon>
+  );
+}
+
 /** Localização: endereço da chácara na landing (§13.1). */
 export function PinIcon(props: IconProps) {
   return (

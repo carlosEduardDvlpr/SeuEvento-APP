@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CatalogItem, Combo } from '@chacara/shared';
+import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { Money } from '@/components/Money';
 import { QuantityStepper } from '@/components/QuantityStepper';
 import { Skeleton } from '@/components/Skeleton';
 import { ImageIcon } from '@/components/icons';
-import { useCategories, useCombos, useItems, useThemes } from '@/api/storefront';
+import { useAvailability, useCategories, useCombos, useItems, useThemes } from '@/api/storefront';
 import { formErrorMessage } from '@/lib/form';
+import { formatDateLong } from '@/lib/format';
 import type { BookingDraft, DraftAction } from './draft';
 import { quantityOf } from './draft';
 import styles from './ItemsStep.module.css';
@@ -34,7 +36,29 @@ export type ItemsStepProps = {
    * envio, e a pessoa volta para este passo para ajustar a quantidade.
    */
   notice?: string;
+  /** Tentou avançar sem item numa reserva de decoração (T32). */
+  error?: string;
 };
+
+/**
+ * Dias da reserva da chácara em que a decoração não sai (T32).
+ *
+ * A dona pode fechar o pegue e monte num dia sem fechar a chácara. Nesse caso o
+ * servidor recusa qualquer item para o período (estoque zero naquele dia), e
+ * mostrar o catálogo seria convidar a pessoa a montar um pedido que não passa.
+ * Só se aplica à chácara: na decoração, o próprio calendário já não deixou
+ * escolher esse dia.
+ */
+function useDecorationClosedDays(draft: BookingDraft): string[] {
+  const range =
+    draft.kind === 'VENUE' && draft.startDate && draft.endDate
+      ? { from: draft.startDate, to: draft.endDate }
+      : null;
+
+  const agenda = useAvailability(range, 'DECORATION');
+
+  return (agenda.data?.days ?? []).filter((day) => day.status === 'blocked').map((day) => day.date);
+}
 
 /** Quantas unidades do item ainda cabem, dado o que já está no rascunho. */
 function comboProgress(combo: Combo, draft: BookingDraft) {
@@ -49,9 +73,10 @@ function comboProgress(combo: Combo, draft: BookingDraft) {
   };
 }
 
-export function ItemsStep({ draft, dispatch, notice }: ItemsStepProps) {
+export function ItemsStep({ draft, dispatch, notice, error }: ItemsStepProps) {
   const [tab, setTab] = useState<Tab>('itens');
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const closedDays = useDecorationClosedDays(draft);
 
   const themes = useThemes();
   const categories = useCategories();
@@ -91,11 +116,52 @@ export function ItemsStep({ draft, dispatch, notice }: ItemsStepProps) {
     return categories.data.filter((category) => present.has(category.id));
   }, [categories.data, items.data]);
 
+  if (closedDays.length > 0) {
+    const days = closedDays.map(formatDateLong).join(', ');
+
+    return (
+      <div className={styles.step}>
+        {notice ? (
+          <p className={styles.problem} role="alert">
+            {notice}
+          </p>
+        ) : null}
+
+        <section>
+          <h2 className={styles.title}>A decoração não sai nessas datas</h2>
+          <p className={styles.hint}>
+            {closedDays.length === 1 ? `No dia ${days}` : `Nos dias ${days}`} o pegue e monte está
+            fechado. Dá para seguir só com a chácara, sem itens — ou voltar e escolher outras datas.
+          </p>
+        </section>
+
+        {/* Item escolhido antes de o dia fechar travaria o pedido na revisão. */}
+        {draft.items.length > 0 ? (
+          <div>
+            <Button
+              onClick={() =>
+                dispatch({ type: 'removeItems', itemIds: draft.items.map((item) => item.itemId) })
+              }
+            >
+              Tirar os itens do pedido
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className={styles.step}>
       {notice ? (
         <p className={styles.problem} role="alert">
           {notice}
+        </p>
+      ) : null}
+
+      {error ? (
+        <p className={styles.problem} role="alert">
+          {error}
         </p>
       ) : null}
 
@@ -224,7 +290,11 @@ export function ItemsStep({ draft, dispatch, notice }: ItemsStepProps) {
           {items.data?.length === 0 ? (
             <EmptyState
               title="Nenhum item neste filtro"
-              description="Tente outro estilo ou veja todos os itens. Você também pode seguir sem itens e alugar só a chácara."
+              description={
+                draft.kind === 'DECORATION'
+                  ? 'Tente outro estilo ou veja todos os itens.'
+                  : 'Tente outro estilo ou veja todos os itens. Você também pode seguir sem itens e alugar só a chácara.'
+              }
             />
           ) : null}
 

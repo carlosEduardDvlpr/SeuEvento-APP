@@ -98,4 +98,26 @@
     grid-template-columns: repeat(3, 1fr);
     gap: var(--space-32);
   }
+
+  .areas {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .area {
+    grid-column: span 4;
+  }
+
+  .area:first-child {
+    grid-column: span 8;
+    grid-row: span 2;
+  }
+
+  .area:first-child .areaPhoto {
+    aspect-ratio: 16 / 10;
+  }
+
+  .area:first-child .areaTitle {
+    font-size: var(--text-xl);
+  }
 }

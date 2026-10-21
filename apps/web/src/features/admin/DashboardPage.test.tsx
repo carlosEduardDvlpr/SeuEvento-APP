@@ -29,6 +29,7 @@ const VENUE: PublicVenue = {
 
 const PEDIDO: AdminBookingSummary = {
   id: 'b-1',
+  kind: 'VENUE',
   startDate: '2026-12-05',
   endDate: '2026-12-06',
   status: 'PENDING',

@@ -1,8 +1,22 @@
 import { z } from 'zod';
+import {
+  DECORATION_NEEDS_ITEMS_ERROR,
+  DECORATION_ONE_DAY_ERROR,
+  VENUE_NEEDS_GUESTS_ERROR,
+  hasGuestsWhenVenue,
+  hasItemsWhenDecoration,
+  isOneDayWhenDecoration,
+} from './booking-kind.js';
 import { optionalText } from './catalog.js';
 import { dailyPriceSchema } from './pricing.js';
 import { appliedComboSchema, quoteItemsSchema, quoteLineSchema } from './quote.js';
-import { bookingStatusSchema, centsSchema, eventTypeSchema, isoDateSchema } from './schemas.js';
+import {
+  bookingKindSchema,
+  bookingStatusSchema,
+  centsSchema,
+  eventTypeSchema,
+  isoDateSchema,
+} from './schemas.js';
 
 /**
  * Contrato da reserva (§11.3).
@@ -16,16 +30,29 @@ import { bookingStatusSchema, centsSchema, eventTypeSchema, isoDateSchema } from
  * o cliente.
  */
 
+/**
+ * Convidados: obrigatório na chácara, ausente na decoração (T32).
+ *
+ * Nulo por padrão, e a regra "na chácara, informe" é um `refine` no objeto: o
+ * campo sozinho não sabe para qual produto o pedido é. Na decoração o número é
+ * ignorado e gravado como nulo — sem a chácara, não há convidados a receber.
+ */
+export const guestCountSchema = z
+  .number({ error: VENUE_NEEDS_GUESTS_ERROR })
+  .int({ error: 'Informe um número inteiro de convidados.' })
+  .min(1, { error: 'Informe pelo menos um convidado.' })
+  .max(2000, { error: 'Confira o número de convidados.' })
+  .nullable()
+  .default(null);
+
 export const createBookingBodySchema = z
   .object({
+    /** Padrão `VENUE`: é o pedido que existia antes da reserva de decoração. */
+    kind: bookingKindSchema.default('VENUE'),
     startDate: isoDateSchema,
     endDate: isoDateSchema,
     eventType: eventTypeSchema,
-    guestCount: z
-      .number({ error: 'Informe quantas pessoas são esperadas.' })
-      .int({ error: 'Informe um número inteiro de convidados.' })
-      .min(1, { error: 'Informe pelo menos um convidado.' })
-      .max(2000, { error: 'Confira o número de convidados.' }),
+    guestCount: guestCountSchema,
     items: quoteItemsSchema.default([]),
     customerNotes: optionalText(600).default(null),
     /**
@@ -40,15 +67,20 @@ export const createBookingBodySchema = z
   .refine(({ startDate, endDate }) => startDate <= endDate, {
     error: 'A data de saída não pode ser anterior à de entrada.',
     path: ['endDate'],
-  });
+  })
+  .refine(isOneDayWhenDecoration, { error: DECORATION_ONE_DAY_ERROR, path: ['endDate'] })
+  .refine(hasItemsWhenDecoration, { error: DECORATION_NEEDS_ITEMS_ERROR, path: ['items'] })
+  .refine(hasGuestsWhenVenue, { error: VENUE_NEEDS_GUESTS_ERROR, path: ['guestCount'] });
 
 export const bookingSchema = z.object({
   id: z.string(),
+  kind: bookingKindSchema,
   startDate: isoDateSchema,
   /** Inclusivo: `startDate === endDate` é uma reserva de um dia (§7.3). */
   endDate: isoDateSchema,
   eventType: eventTypeSchema,
-  guestCount: z.number().int(),
+  /** Nulo na reserva de decoração, que não recebe convidados (T32). */
+  guestCount: z.number().int().nullable(),
   status: bookingStatusSchema,
   /** Até quando o pedido segura as datas. Nulo fora de `PENDING` (§9.2). */
   holdExpiresAt: z.string().nullable(),

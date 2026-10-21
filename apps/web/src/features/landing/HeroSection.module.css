@@ -1,16 +1,75 @@
-/* §14.7: duas colunas alternando texto e imagem no desktop, coluna única no
-   celular. Alinhamento à esquerda, muito respiro. */
+/*
+ * Hero de verdade: a foto da chácara ocupa a largura toda e a altura da tela que
+ * sobra abaixo do cabeçalho fixo.
+ *
+ * Era um cartão com borda e cantos arredondados dentro do `--container`, com
+ * margem em volta e teto de 860 px de altura: no desktop sobrava faixa de fundo
+ * dos dois lados e embaixo, e a foto parecia uma seção a mais, não a abertura do
+ * site.
+ *
+ * `min-height`, e não `height`: num celular baixo o texto e o seletor de datas
+ * não cabem na primeira tela, e o hero precisa crescer em vez de cortá-los.
+ */
 .hero {
-  display: grid;
-  gap: var(--space-48);
-  align-items: center;
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: var(--space-48) var(--space-16) var(--space-64);
+  /*
+   * Altura do cabeçalho do `PublicLayout`: o alvo de toque dos controles, o
+   * respiro de cima e de baixo e a borda. Escrita em tokens para acompanhar se
+   * um deles mudar, em vez de virar número órfão.
+   */
+  --header-height: calc(var(--touch-target) + 2 * var(--space-12) + 1px);
+
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  /* `vh` para quem não conhece `svh`; `svh` não pula quando a barra do navegador some. */
+  min-height: calc(100vh - var(--header-height));
+  min-height: calc(100svh - var(--header-height));
+  overflow: hidden;
+  background: var(--bg-dark);
+}
+
+.image,
+.imageFallback,
+.scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.image {
+  z-index: -3;
+  object-fit: cover;
+}
+
+.imageFallback {
+  z-index: -3;
+  background: var(--venue-ink);
+}
+
+.scrim {
+  z-index: -2;
+  background: linear-gradient(
+    to bottom,
+    transparent 10%,
+    var(--scrim) 42%,
+    var(--scrim-strong) 100%
+  );
+}
+
+/*
+ * A foto vai de ponta a ponta, mas o texto continua alinhado com o resto da
+ * página: o respiro lateral é o que sobra do `--container` (nunca menos que o
+ * das seções), sem precisar de um wrapper só para centralizar.
+ */
+.content {
+  width: 100%;
+  padding: var(--space-64) max(var(--space-16), (100% - var(--container)) / 2) var(--space-32);
 }
 
 .text {
-  max-width: var(--measure);
+  max-width: 720px;
 }
 
 .title {
@@ -18,11 +77,14 @@
   font-family: var(--font-display);
   font-size: clamp(var(--text-3xl), 6vw, 3.815rem);
   line-height: 1.1;
+  color: var(--on-brand);
+  text-wrap: balance;
 }
 
 .lead {
   margin: var(--space-24) 0 0;
-  color: var(--fg-soft);
+  max-width: 58ch;
+  color: var(--on-brand-soft);
   font-size: var(--text-lg);
 }
 
@@ -35,7 +97,9 @@
   padding: var(--space-16);
   border: 1px solid var(--line-strong);
   border-radius: var(--r-md);
-  background: var(--bg-alt);
+  max-width: 700px;
+  background: var(--surface-veil);
+  backdrop-filter: blur(8px);
 
   /*
    * §18.2, CLS abaixo de 0,1.
@@ -110,18 +174,21 @@
 
 .note {
   margin: var(--space-16) 0 0;
-  color: var(--fg-soft);
+  max-width: 700px;
+  color: var(--on-brand-soft);
   font-size: var(--text-sm);
 }
 
-.image {
-  width: 100%;
-  max-width: 420px;
-}
-
 @media (min-width: 900px) {
-  .hero {
-    grid-template-columns: 1fr auto;
-    padding-block: var(--space-96);
+  .scrim {
+    background: linear-gradient(90deg, var(--scrim-strong) 0%, var(--scrim) 48%, transparent 82%);
+  }
+
+  .content {
+    padding-block: var(--space-96) var(--space-64);
+  }
+
+  .datePicker {
+    margin-top: var(--space-48);
   }
 }

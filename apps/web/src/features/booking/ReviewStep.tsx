@@ -40,9 +40,14 @@ function itemName(quote: Quote | undefined, itemId: string): string {
  * A mensagem é montada aqui e não vem da API porque `issues` não é erro: a rota
  * responde 200 e entrega dados crus, e cada tela decide como contar.
  */
-function issueMessage(issue: QuoteIssue, quote: Quote | undefined): string {
+function issueMessage(issue: QuoteIssue, quote: Quote | undefined, decoration: boolean): string {
   if (issue.code === 'DATE_UNAVAILABLE') {
     const dates = issue.dates.map((date) => formatDateRange(date, date)).join(', ');
+
+    // Na decoração ninguém "reserva o dia": o que tira a data é bloqueio ou prazo (T32).
+    if (decoration) {
+      return `O dia ${dates} não está mais disponível para a decoração. Volte ao primeiro passo e escolha outro.`;
+    }
 
     return issue.dates.length === 1
       ? `O dia ${dates} acabou de ser reservado. Volte ao passo das datas e escolha outro.`
@@ -58,6 +63,8 @@ function issueMessage(issue: QuoteIssue, quote: Quote | undefined): string {
 
 export function ReviewStep({ draft, dispatch, venue, quote, isLoading, notice }: ReviewStepProps) {
   const hasDates = draft.startDate !== null && draft.endDate !== null;
+  /** Só a decoração (T32): sem diária, sem convidados, sem regras da casa. */
+  const decoration = draft.kind === 'DECORATION';
 
   return (
     <div className={styles.step}>
@@ -79,32 +86,41 @@ export function ReviewStep({ draft, dispatch, venue, quote, isLoading, notice }:
           className={styles.problem}
           role="alert"
         >
-          {issueMessage(issue, quote)}
+          {issueMessage(issue, quote, decoration)}
         </p>
       ))}
 
       <section className={styles.card}>
-        <h3 className={styles.cardTitle}>A festa</h3>
+        <h3 className={styles.cardTitle}>{decoration ? 'A decoração' : 'A festa'}</h3>
 
         <dl className={styles.facts}>
           <div className={styles.fact}>
-            <dt>Datas</dt>
+            <dt>{decoration ? 'Dia da festa' : 'Datas'}</dt>
             <dd>{hasDates ? formatDateRange(draft.startDate!, draft.endDate!) : '—'}</dd>
           </div>
           <div className={styles.fact}>
             <dt>Tipo</dt>
             <dd>{draft.eventType ? EVENT_TYPE_LABELS[draft.eventType] : '—'}</dd>
           </div>
-          <div className={styles.fact}>
-            <dt>Convidados</dt>
-            <dd>{draft.guestCount ?? '—'}</dd>
-          </div>
-          <div className={styles.fact}>
-            <dt>Horário</dt>
-            <dd>
-              entrada {venue.checkInTime}, saída {venue.checkOutTime}
-            </dd>
-          </div>
+          {decoration ? (
+            <div className={styles.fact}>
+              <dt>Retirada</dt>
+              <dd>combinada com a gente</dd>
+            </div>
+          ) : (
+            <>
+              <div className={styles.fact}>
+                <dt>Convidados</dt>
+                <dd>{draft.guestCount ?? '—'}</dd>
+              </div>
+              <div className={styles.fact}>
+                <dt>Horário</dt>
+                <dd>
+                  entrada {venue.checkInTime}, saída {venue.checkOutTime}
+                </dd>
+              </div>
+            </>
+          )}
         </dl>
       </section>
 
@@ -114,29 +130,35 @@ export function ReviewStep({ draft, dispatch, venue, quote, isLoading, notice }:
         <section className={styles.card}>
           <h3 className={styles.cardTitle}>Valores</h3>
 
-          {/* O nome da regra aparece para a diária mais alta não parecer erro. */}
-          <ul className={styles.lines}>
-            {quote.days.map((day) => (
-              <li key={day.date} className={styles.line}>
+          {/*
+            O nome da regra aparece para a diária mais alta não parecer erro. Sem
+            dias (decoração), o bloco inteiro some: "Diárias R$ 0,00" faria parecer
+            que a chácara entrou de graça no pedido.
+          */}
+          {quote.days.length > 0 ? (
+            <ul className={styles.lines}>
+              {quote.days.map((day) => (
+                <li key={day.date} className={styles.line}>
+                  <span className={styles.lineName}>
+                    {formatWeekdayAndDay(day.date)}
+                    {day.ruleName ? <span className={styles.rule}>{day.ruleName}</span> : null}
+                  </span>
+                  <span className={styles.lineValue}>
+                    <Money cents={day.priceCents} />
+                  </span>
+                </li>
+              ))}
+
+              <li className={[styles.line, styles.subtotal].join(' ')}>
                 <span className={styles.lineName}>
-                  {formatWeekdayAndDay(day.date)}
-                  {day.ruleName ? <span className={styles.rule}>{day.ruleName}</span> : null}
+                  {quote.days.length === 1 ? 'Diária' : `Diárias (${quote.days.length} dias)`}
                 </span>
                 <span className={styles.lineValue}>
-                  <Money cents={day.priceCents} />
+                  <Money cents={quote.dailyTotalCents} />
                 </span>
               </li>
-            ))}
-
-            <li className={[styles.line, styles.subtotal].join(' ')}>
-              <span className={styles.lineName}>
-                {quote.days.length === 1 ? 'Diária' : `Diárias (${quote.days.length} dias)`}
-              </span>
-              <span className={styles.lineValue}>
-                <Money cents={quote.dailyTotalCents} />
-              </span>
-            </li>
-          </ul>
+            </ul>
+          ) : null}
 
           {quote.lines.length > 0 ? (
             <ul className={styles.lines}>
@@ -204,7 +226,11 @@ export function ReviewStep({ draft, dispatch, venue, quote, isLoading, notice }:
       <section className={styles.card}>
         <Textarea
           label="Alguma observação?"
-          help="Conte o que ajuda a chácara a se preparar: horário de chegada para montar, se vai ter bolo grande, se precisa de mais mesas."
+          help={
+            decoration
+              ? 'Conte o que ajuda a separar a decoração: quando você prefere retirar, onde vai ser a festa, alguma cor que precisa combinar.'
+              : 'Conte o que ajuda a chácara a se preparar: horário de chegada para montar, se vai ter bolo grande, se precisa de mais mesas.'
+          }
           rows={4}
           maxLength={600}
           value={draft.customerNotes}
@@ -216,22 +242,40 @@ export function ReviewStep({ draft, dispatch, venue, quote, isLoading, notice }:
       <section className={styles.card}>
         <h3 className={styles.cardTitle}>Antes de enviar</h3>
 
-        <ul className={styles.rules}>
-          <li>
-            O pedido chega como <strong>aguardando confirmação</strong>. As datas ficam seguras por
-            até {venue.holdHours} horas enquanto a chácara responde.
-          </li>
-          <li>
-            Dá para cancelar pelo site até {venue.freeCancelUntilDays} dias antes do início. Depois
-            disso, é só falar com a gente.
-          </li>
-          <li>
-            A decoração é <strong>pegue e monte</strong>: você retira os itens, monta no dia e
-            devolve ao final.
-          </li>
-        </ul>
+        {decoration ? (
+          <ul className={styles.rules}>
+            <li>
+              O pedido chega como <strong>aguardando confirmação</strong>. Os itens ficam separados
+              para você por até {venue.holdHours} horas enquanto a gente responde.
+            </li>
+            <li>
+              Dá para cancelar pelo site até {venue.freeCancelUntilDays} dias antes da festa. Depois
+              disso, é só falar com a gente.
+            </li>
+            <li>
+              A decoração é <strong>pegue e monte</strong>: você retira os itens, monta a festa e
+              devolve depois. O horário da retirada e da devolução é combinado com a gente.
+            </li>
+          </ul>
+        ) : (
+          <ul className={styles.rules}>
+            <li>
+              O pedido chega como <strong>aguardando confirmação</strong>. As datas ficam seguras
+              por até {venue.holdHours} horas enquanto a chácara responde.
+            </li>
+            <li>
+              Dá para cancelar pelo site até {venue.freeCancelUntilDays} dias antes do início.
+              Depois disso, é só falar com a gente.
+            </li>
+            <li>
+              A decoração é <strong>pegue e monte</strong>: você retira os itens, monta no dia e
+              devolve ao final.
+            </li>
+          </ul>
+        )}
 
-        {venue.houseRules ? (
+        {/* Regras da casa são da chácara: quem leva só a decoração não vai estar lá. */}
+        {venue.houseRules && !decoration ? (
           <>
             <h3 className={styles.cardTitle}>Regras da casa</h3>
             <p className={styles.houseRules}>{venue.houseRules}</p>

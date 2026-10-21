@@ -7,6 +7,7 @@
  */
 export {
   capitalizeFirst,
+  describeGuests,
   describeItems,
   formatBRL,
   formatDateLong,

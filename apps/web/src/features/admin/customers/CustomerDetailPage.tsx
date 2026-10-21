@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ArrowLeftIcon } from '@/components/icons';
 import { formErrorMessage } from '@/lib/form';
-import { formatDateRange, formatDeadline } from '@/lib/format';
+import { describeGuests, formatDateRange, formatDeadline } from '@/lib/format';
 import { whatsappUrl } from '@/lib/whatsapp';
 import adminStyles from '../admin.module.css';
 import styles from './CustomerDetailPage.module.css';
@@ -122,7 +122,8 @@ export function CustomerDetailPage() {
                   </span>
 
                   <span className={styles.rowMeta}>
-                    {EVENT_TYPE_LABELS[booking.eventType]} · {booking.guestCount} pessoas
+                    {EVENT_TYPE_LABELS[booking.eventType]} ·{' '}
+                    {describeGuests(booking.kind, booking.guestCount)}
                     {booking.createdByAdmin ? ' · lançada por você' : ''}
                   </span>
                 </Link>

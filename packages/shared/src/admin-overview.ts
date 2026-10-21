@@ -1,6 +1,13 @@
 import { z } from 'zod';
-import { dayStatusSchema, isoDateSchema } from './schemas.js';
-import { bookingStatusSchema, centsSchema, eventTypeSchema } from './schemas.js';
+import {
+  blockScopeSchema,
+  bookingKindSchema,
+  bookingStatusSchema,
+  centsSchema,
+  dayStatusSchema,
+  eventTypeSchema,
+  isoDateSchema,
+} from './schemas.js';
 
 /**
  * Calendário e visão geral do painel (§11.2, §13.4).
@@ -46,11 +53,13 @@ export const adminCustomerSummarySchema = z.object({
  */
 export const adminBookingSummarySchema = z.object({
   id: z.string(),
+  kind: bookingKindSchema,
   startDate: isoDateSchema,
   endDate: isoDateSchema,
   status: bookingStatusSchema,
   eventType: eventTypeSchema,
-  guestCount: z.number().int(),
+  /** Nulo na reserva de decoração (T32). */
+  guestCount: z.number().int().nullable(),
   totalCents: centsSchema,
   /** Até quando o pedido segura as datas. Nulo fora de `PENDING` (§9.2). */
   holdExpiresAt: z.string().nullable(),
@@ -70,10 +79,20 @@ export const adminBookingSummarySchema = z.object({
  */
 export const adminCalendarDaySchema = z.object({
   date: isoDateSchema,
+  /** Estado do dia **para a chácara**: é a agenda que o site vende (T32). */
   status: dayStatusSchema,
+  /** Reservas ativas do dia, dos dois produtos. O resumo diz qual é qual. */
   bookingIds: z.array(z.string()),
   /** Motivo do bloqueio, quando o dia está bloqueado. */
   blockReason: z.string().nullable(),
+  /**
+   * O que o bloqueio fecha, quando há bloqueio (T32).
+   *
+   * Vem separado do `status` porque um bloqueio só da decoração deixa a chácara
+   * livre — o `status` continua `free`, e é este campo que conta ao dono que a
+   * decoração não sai naquele dia.
+   */
+  blockScope: blockScopeSchema.nullable(),
 });
 
 export const adminCalendarSchema = z.object({

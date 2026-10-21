@@ -104,6 +104,7 @@ function toBooking(row: BookingRow, cancelRules: CancelRules): Booking {
 
   return {
     id: row.id,
+    kind: row.kind,
     startDate,
     endDate: toISODate(row.endDate),
     eventType: row.eventType,
@@ -272,7 +273,15 @@ export async function createBooking({
     loadVenueRules(prisma),
   ]);
 
-  if (body.guestCount > rules.maxGuests) {
+  /*
+   * Reserva de chácara ocupa a data; reserva de decoração disputa só estoque
+   * (T32). Quase toda diferença entre as duas, daqui para baixo, sai deste
+   * booleano — e o núcleo transacional continua o mesmo.
+   */
+  const isVenue = body.kind === 'VENUE';
+
+  // O schema já exigiu o número na chácara; o `?? 0` só existe para o tipo.
+  if (isVenue && (body.guestCount ?? 0) > rules.maxGuests) {
     throw fieldError('guestCount', `A chácara recebe até ${rules.maxGuests} pessoas.`);
   }
 
@@ -283,7 +292,7 @@ export async function createBooking({
    */
   const quote = await quoteFromDatabase(
     prisma,
-    { startDate: body.startDate, endDate: body.endDate, items: body.items },
+    { kind: body.kind, startDate: body.startDate, endDate: body.endDate, items: body.items },
     now,
   );
 
@@ -362,6 +371,7 @@ export async function createBooking({
       from: body.startDate,
       to: body.endDate,
       now,
+      kind: body.kind,
     });
 
     return new AppError(
@@ -382,20 +392,27 @@ export async function createBooking({
          * A constraint da §8.1 considera `PENDING` como ocupando a data, sem olhar
          * o prazo. Sem este passo, um pedido vencido bloquearia a data até o job de
          * expiração rodar — até 15 minutos de uma data que já deveria estar livre.
+         *
+         * Só na chácara, e só pedido de chácara (T32): a constraint não olha
+         * decoração, e pedido de decoração vencido não segura nada — o estoque já
+         * o ignora pelo prazo. Fechar o registro dele é trabalho do job.
          */
-        const expiring = await tx.booking.findMany({
-          where: {
-            status: 'PENDING',
-            holdExpiresAt: { lt: now },
-            ...overlappingRangeFilter(body.startDate, body.endDate),
-          },
-          select: {
-            id: true,
-            startDate: true,
-            endDate: true,
-            user: { select: { name: true, email: true } },
-          },
-        });
+        const expiring = isVenue
+          ? await tx.booking.findMany({
+              where: {
+                kind: 'VENUE',
+                status: 'PENDING',
+                holdExpiresAt: { lt: now },
+                ...overlappingRangeFilter(body.startDate, body.endDate),
+              },
+              select: {
+                id: true,
+                startDate: true,
+                endDate: true,
+                user: { select: { name: true, email: true } },
+              },
+            })
+          : [];
 
         if (expiring.length > 0) {
           await tx.booking.updateMany({
@@ -446,14 +463,12 @@ export async function createBooking({
          * terminar. Ordenar por id é o que evita deadlock — dois pedidos com os
          * mesmos itens em ordens diferentes travariam um ao outro.
          *
-         * ACHADO, e vale registrar: com **uma chácara só**, esta trava é segunda
-         * linha de defesa e nunca é o que decide. Duas reservas ativas não podem
-         * compartilhar um dia (§8.1), e o estoque é contado por dia (§9.3) — então
-         * um conflito de estoque exige um dia em comum, que a constraint já
-         * recusou antes. A trava passa a importar no dia em que a chácara tiver
-         * mais de um espaço no mesmo dia, ou alugar item sem alugar a chácara. A
-         * §9.3 a exige, ela custa uma consulta, e some o risco de a regra de
-         * sobreposição mudar e ninguém lembrar daqui.
+         * Até a T32, com uma chácara só, esta trava era segunda linha de defesa:
+         * duas reservas ativas não compartilhavam dia (§8.1), então conflito de
+         * estoque exigia um dia que a constraint já tinha recusado. A reserva só de
+         * decoração mudou isso — ela não passa pela constraint, e duas pessoas
+         * pedindo o último painel para o mesmo sábado são decididas **aqui**. É a
+         * única coisa entre o estoque e uma dupla entrega do mesmo item.
          *
          * Sem itens não há o que travar, e a constraint da §8.1 já cobre as datas.
          */
@@ -481,13 +496,14 @@ export async function createBooking({
         }
 
         /*
-         * 5. Bloqueio do admin.
+         * 5. Bloqueio do admin, do escopo deste produto (T32).
          *
          * A constraint da §8.1 só sabe de reservas; `BlockedDate` é outra tabela.
          * Reservar um dia bloqueado criaria uma festa marcada num dia em que a
-         * chácara está fechada.
+         * chácara está fechada. O bloqueio só da decoração não fecha a chácara —
+         * ele já zerou o estoque dos itens no passo 4.
          */
-        const blocked = await findBlockedDaysIn(tx, body.startDate, body.endDate);
+        const blocked = await findBlockedDaysIn(tx, body.startDate, body.endDate, body.kind);
 
         if (blocked.length > 0) {
           throw new AppError(
@@ -502,10 +518,12 @@ export async function createBooking({
         return tx.booking.create({
           data: {
             userId,
+            kind: body.kind,
             startDate: parseISODate(body.startDate),
             endDate: parseISODate(body.endDate),
             eventType: body.eventType,
-            guestCount: body.guestCount,
+            // Decoração não recebe convidados: o número, se veio, não vale (T32).
+            guestCount: isVenue ? body.guestCount : null,
             status: confirmedByAdmin ? 'CONFIRMED' : 'PENDING',
             // Reserva confirmada ocupa a data por ser confirmada; deixar o prazo
             // correndo faria o job de expiração cancelá-la (§9.2).
@@ -624,6 +642,7 @@ async function notify({
             houseRules: settings.houseRules,
             whatsapp: settings.whatsapp,
             bookingUrl: `${env.APP_URL}/reservas/${row.id}`,
+            kind: row.kind,
           }),
         });
       }
@@ -638,6 +657,7 @@ async function notify({
           totalFormatted: formatBRL(row.totalCents),
           holdHours: rules.holdHours,
           bookingUrl: `${env.APP_URL}/reservas/${row.id}`,
+          kind: row.kind,
         }),
       });
     }
@@ -657,6 +677,7 @@ async function notify({
           guestCount: row.guestCount,
           totalFormatted: formatBRL(row.totalCents),
           adminUrl: `${env.APP_URL}/admin/reservas/${row.id}`,
+          kind: row.kind,
         }),
       });
     }
@@ -851,6 +872,7 @@ export async function cancelMyBooking({
         dates: formatDateRange(toISODate(row.startDate), toISODate(row.endDate)),
         reason,
         whatsapp: settings.whatsapp,
+        kind: row.kind,
       }),
     });
   }

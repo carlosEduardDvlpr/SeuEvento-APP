@@ -1,4 +1,14 @@
+import type { BookingKind } from '@chacara/shared';
 import { type Email, renderEmail } from './render.js';
+
+/*
+ * Os e-mails de reserva recebem `kind` (T32), e o padrão é a chácara.
+ *
+ * A decoração sozinha muda o que cada e-mail promete: não há "datas seguras"
+ * nem "a chácara é sua nesses dias", e sim **itens separados** para um dia, com
+ * a retirada combinada direto com a dona. O texto da chácara ficou exatamente
+ * como era.
+ */
 
 /**
  * E-mails transacionais (§17).
@@ -108,6 +118,7 @@ export function bookingReceivedTemplate({
   totalFormatted,
   holdHours,
   bookingUrl,
+  kind = 'VENUE',
 }: {
   name: string;
   /** Período em linguagem natural, ex.: "5 a 6 de dezembro de 2026". */
@@ -115,7 +126,22 @@ export function bookingReceivedTemplate({
   totalFormatted: string;
   holdHours: number;
   bookingUrl: string;
+  kind?: BookingKind;
 }): Email {
+  if (kind === 'DECORATION') {
+    return renderEmail('Recebemos seu pedido de decoração', {
+      preheader: `Separamos os itens por ${holdHours} horas enquanto confirmamos.`,
+      heading: 'Recebemos seu pedido',
+      paragraphs: [
+        `Olá, ${name}. Seu pedido de decoração para ${dates} chegou, e os itens ficam separados para você por ${holdHours} horas enquanto a gente confirma.`,
+        `Total do pedido: ${totalFormatted}.`,
+        'Você recebe um e-mail assim que a reserva for confirmada. Se preferir, pode acompanhar pelo site.',
+      ],
+      action: { label: 'Ver meu pedido', url: bookingUrl },
+      note: 'Nada foi cobrado ainda. O pagamento e a retirada dos itens são combinados direto com a gente.',
+    });
+  }
+
   return renderEmail('Recebemos seu pedido de reserva', {
     preheader: `Seguramos as datas por ${holdHours} horas enquanto confirmamos.`,
     heading: 'Recebemos seu pedido',
@@ -140,12 +166,27 @@ export function holdExpiredTemplate({
   dates,
   holdHours,
   bookingUrl,
+  kind = 'VENUE',
 }: {
   name: string;
   dates: string;
   holdHours: number;
   bookingUrl: string;
+  kind?: BookingKind;
 }): Email {
+  if (kind === 'DECORATION') {
+    return renderEmail('Seu pedido de decoração expirou', {
+      preheader: 'Os itens voltaram a ficar disponíveis.',
+      heading: 'O prazo do seu pedido terminou',
+      paragraphs: [
+        `Olá, ${name}. Seu pedido de decoração para ${dates} ficou ${holdHours} horas sem confirmação, então os itens voltaram a ficar disponíveis.`,
+        'Se ainda quer a decoração, dá para enviar um pedido novo: os itens podem estar livres.',
+      ],
+      action: { label: 'Fazer um pedido novo', url: bookingUrl },
+      note: 'Se você já desistiu, não precisa fazer nada.',
+    });
+  }
+
   return renderEmail('Seu pedido de reserva expirou', {
     preheader: 'As datas voltaram a ficar disponíveis.',
     heading: 'O prazo do seu pedido terminou',
@@ -175,23 +216,43 @@ export function newBookingForAdminTemplate({
   guestCount,
   totalFormatted,
   adminUrl,
+  kind = 'VENUE',
 }: {
   customerName: string;
   customerPhone: string | null;
   dates: string;
-  guestCount: number;
+  /** Nulo na decoração, que não recebe convidados. */
+  guestCount: number | null;
   totalFormatted: string;
   adminUrl: string;
+  kind?: BookingKind;
 }): Email {
+  const phone = customerPhone
+    ? `WhatsApp do cliente: ${customerPhone}.`
+    : 'O cliente não deixou telefone no perfil.';
+
+  if (kind === 'DECORATION' || guestCount === null) {
+    return renderEmail(`Novo pedido de decoração: ${dates}`, {
+      preheader: `${customerName} pediu decoração para ${dates}. Confirme ou recuse pelo painel.`,
+      heading: 'Chegou um pedido de decoração',
+      paragraphs: [
+        `${customerName} pediu só a decoração (pegue e monte, sem a chácara) para ${dates}.`,
+        `Total do pedido: ${totalFormatted}.`,
+        phone,
+      ],
+      action: { label: 'Ver o pedido no painel', url: adminUrl },
+      // A dona precisa saber que este pedido não mexeu na agenda da chácara.
+      note: 'A data continua livre para a chácara. Os itens ficam separados até você responder ou o prazo terminar.',
+    });
+  }
+
   return renderEmail(`Novo pedido de reserva: ${dates}`, {
     preheader: `${customerName} pediu ${dates}. Confirme ou recuse pelo painel.`,
     heading: 'Chegou um pedido de reserva',
     paragraphs: [
       `${customerName} pediu a chácara para ${dates}, para ${guestCount} ${guestCount === 1 ? 'pessoa' : 'pessoas'}.`,
       `Total do pedido: ${totalFormatted}.`,
-      customerPhone
-        ? `WhatsApp do cliente: ${customerPhone}.`
-        : 'O cliente não deixou telefone no perfil.',
+      phone,
     ],
     action: { label: 'Ver o pedido no painel', url: adminUrl },
     note: 'As datas ficam seguras até você responder ou o prazo terminar.',
@@ -211,13 +272,21 @@ export function bookingCancelledTemplate({
   dates,
   reason,
   whatsapp,
+  kind = 'VENUE',
 }: {
   name: string;
   dates: string;
   reason: string | null;
   whatsapp: string | null;
+  kind?: BookingKind;
 }): Email {
-  const paragraphs = [`Olá, ${name}. A reserva de ${dates} foi cancelada.`];
+  const decoration = kind === 'DECORATION';
+
+  const paragraphs = [
+    decoration
+      ? `Olá, ${name}. A reserva da decoração para ${dates} foi cancelada.`
+      : `Olá, ${name}. A reserva de ${dates} foi cancelada.`,
+  ];
 
   if (reason) paragraphs.push(`Motivo: ${reason}`);
 
@@ -228,10 +297,14 @@ export function bookingCancelledTemplate({
   );
 
   return renderEmail('Sua reserva foi cancelada', {
-    preheader: 'As datas voltaram a ficar disponíveis.',
+    preheader: decoration
+      ? 'Os itens voltaram a ficar disponíveis.'
+      : 'As datas voltaram a ficar disponíveis.',
     heading: 'Reserva cancelada',
     paragraphs,
-    note: 'As datas voltaram para o calendário. Se quiser tentar de novo, elas podem estar livres.',
+    note: decoration
+      ? 'Os itens voltaram a ficar disponíveis. Se quiser tentar de novo, eles podem estar livres.'
+      : 'As datas voltaram para o calendário. Se quiser tentar de novo, elas podem estar livres.',
   });
 }
 
@@ -253,6 +326,7 @@ export function bookingConfirmedTemplate({
   houseRules,
   whatsapp,
   bookingUrl,
+  kind = 'VENUE',
 }: {
   name: string;
   dates: string;
@@ -263,7 +337,29 @@ export function bookingConfirmedTemplate({
   houseRules: string | null;
   whatsapp: string | null;
   bookingUrl: string;
+  kind?: BookingKind;
 }): Email {
+  /*
+   * Decoração confirmada não carrega horário de entrada nem regras da casa: são
+   * da chácara, e a pessoa não vai estar lá. Também não leva o endereço — onde a
+   * retirada acontece é combinado com a dona, e o e-mail não deveria inventar.
+   */
+  if (kind === 'DECORATION') {
+    return renderEmail('Sua reserva está confirmada', {
+      preheader: `Decoração para ${dates} confirmada.`,
+      heading: 'Reserva confirmada',
+      paragraphs: [
+        `Olá, ${name}. Sua reserva da decoração para ${dates} está confirmada.`,
+        `Valor combinado: ${totalFormatted}.`,
+        whatsapp
+          ? `Para combinar a retirada e a devolução dos itens, fale com a gente pelo WhatsApp ${whatsapp}.`
+          : 'Para combinar a retirada e a devolução dos itens, responda este e-mail.',
+      ],
+      action: { label: 'Ver minha reserva', url: bookingUrl },
+      note: 'O pagamento é combinado direto com a gente.',
+    });
+  }
+
   const paragraphs = [
     `Olá, ${name}. Sua reserva de ${dates} está confirmada. A chácara é sua nesses dias.`,
     `Entrada a partir das ${checkInTime} e saída até as ${checkOutTime}.`,

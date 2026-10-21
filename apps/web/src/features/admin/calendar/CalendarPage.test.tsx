@@ -15,6 +15,7 @@ import { CalendarPage } from './CalendarPage';
 
 const RESERVA: AdminBookingSummary = {
   id: 'b-1',
+  kind: 'VENUE',
   startDate: '2026-11-20',
   endDate: '2026-11-21',
   status: 'CONFIRMED',
@@ -66,6 +67,8 @@ function novemberCalendar(
       status: block ? 'blocked' : ids.length > 0 ? 'booked' : date < '2026-11-17' ? 'past' : 'free',
       bookingIds: ids,
       blockReason: block?.reason ?? null,
+      // Bloqueio de teste é o original: fecha só a chácara.
+      blockScope: block ? 'VENUE' : null,
     });
   }
 
@@ -335,10 +338,12 @@ describe('CalendarPage', () => {
       await user.type(await screen.findByLabelText('Motivo do bloqueio'), 'Manutenção');
       await user.click(screen.getByRole('button', { name: 'Bloquear este dia' }));
 
+      // Sem escolher, o bloqueio é o de sempre: fecha só a chácara (T32).
       await waitFor(() => {
         expect(calls.find((call) => call.method === 'POST')?.body).toEqual({
           date: '2026-11-25',
           reason: 'Manutenção',
+          scope: 'VENUE',
         });
       });
     });
@@ -356,11 +361,12 @@ describe('CalendarPage', () => {
         expect(calls.find((call) => call.method === 'POST')?.body).toEqual({
           date: '2026-11-25',
           reason: null,
+          scope: 'VENUE',
         });
       });
     });
 
-    it('avisa que o dia ficou indisponível', async () => {
+    it('avisa o que ficou indisponível', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       stubFetch();
       renderCalendar();
@@ -370,7 +376,7 @@ describe('CalendarPage', () => {
       await user.click(await screen.findByRole('button', { name: 'Bloquear este dia' }));
 
       expect(await screen.findByRole('status')).toHaveTextContent(
-        '25 de novembro de 2026 ficou indisponível.',
+        '25 de novembro de 2026 ficou indisponível para a chácara.',
       );
     });
 
@@ -413,7 +419,9 @@ describe('CalendarPage', () => {
       await screen.findByRole('heading', { name: 'Novembro de 2026' });
       await user.click(dayButton(25)!);
 
-      expect(await screen.findByText(/Dia bloqueado: Uso da família/)).toBeVisible();
+      expect(
+        await screen.findByText(/A chácara está fechada neste dia: Uso da família/),
+      ).toBeVisible();
       expect(screen.getByRole('button', { name: 'Liberar este dia' })).toBeVisible();
       // E não oferece bloquear de novo o que já está bloqueado.
       expect(screen.queryByRole('button', { name: 'Bloquear este dia' })).not.toBeInTheDocument();
@@ -464,5 +472,90 @@ describe('CalendarPage', () => {
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Algo deu errado do nosso lado.');
     });
+  });
+});
+
+/*
+ * T32: a decoração aparece por cima da agenda da chácara, sem mudar o estado do
+ * dia. Os dados montados aqui imitam o servidor: reserva de decoração não deixa
+ * o dia `booked`, e bloqueio só da decoração não o deixa `blocked`.
+ */
+describe('CalendarPage: decoração', () => {
+  const DECORACAO: AdminBookingSummary = {
+    ...RESERVA,
+    id: 'b-3',
+    kind: 'DECORATION',
+    guestCount: null,
+    startDate: '2026-11-28',
+    endDate: '2026-11-28',
+    customer: { id: 'u-3', name: 'Carla Dias', email: null, phone: '11977771234' },
+  };
+
+  /** Novembro com uma decoração saindo no dia 28 e a decoração fechada no dia 26. */
+  function withDecoration(): AdminCalendar {
+    const calendar = novemberCalendar({ bookings: [DECORACAO] });
+
+    return {
+      ...calendar,
+      days: calendar.days.map((day) => {
+        if (day.date === '2026-11-28') return { ...day, status: 'free' as const };
+        if (day.date === '2026-11-26') {
+          return { ...day, blockScope: 'DECORATION' as const, blockReason: 'Viagem' };
+        }
+        return day;
+      }),
+    };
+  }
+
+  it('mostra a decoração saindo sem ocupar o dia da chácara', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    stubFetch({ '2026-11': withDecoration() });
+    renderCalendar();
+
+    await screen.findByRole('heading', { name: 'Novembro de 2026' });
+
+    expect(dayButton(28)).toHaveTextContent('Livre');
+    expect(dayButton(28)).toHaveTextContent('1 decoração');
+
+    await user.click(dayButton(28)!);
+    expect(await screen.findByText(/só decoração/)).toBeVisible();
+  });
+
+  it('marca o dia com a decoração fechada e explica o que continua aberto', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    stubFetch({ '2026-11': withDecoration() });
+    renderCalendar();
+
+    await screen.findByRole('heading', { name: 'Novembro de 2026' });
+
+    expect(dayButton(26)).toHaveTextContent('Livre');
+    expect(dayButton(26)).toHaveTextContent('sem decoração');
+
+    await user.click(dayButton(26)!);
+    expect(await screen.findByText(/A decoração está fechada neste dia: Viagem/)).toBeVisible();
+    expect(screen.getByText(/A chácara continua reservável/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Liberar este dia' })).toBeVisible();
+  });
+
+  it('bloqueia só a decoração quando a dona escolhe', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const calls = stubFetch();
+    renderCalendar();
+
+    await screen.findByRole('heading', { name: 'Novembro de 2026' });
+    await user.click(dayButton(25)!);
+    await user.click(await screen.findByRole('radio', { name: 'Só a decoração' }));
+    await user.click(screen.getByRole('button', { name: 'Bloquear este dia' }));
+
+    await waitFor(() => {
+      expect(calls.find((call) => call.method === 'POST')?.body).toEqual({
+        date: '2026-11-25',
+        reason: null,
+        scope: 'DECORATION',
+      });
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '25 de novembro de 2026 ficou sem saída de decoração.',
+    );
   });
 });

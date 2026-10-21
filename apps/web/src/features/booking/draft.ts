@@ -1,4 +1,4 @@
-import type { EventType } from '@chacara/shared';
+import type { BookingKind, EventType } from '@chacara/shared';
 import { readJSON, removeKey, writeJSON } from '@/lib/storage';
 
 /**
@@ -17,10 +17,16 @@ import { readJSON, removeKey, writeJSON } from '@/lib/storage';
 export type DraftItem = { itemId: string; quantity: number };
 
 export type BookingDraft = {
+  /**
+   * O que a pessoa está reservando (T32): a chácara, com ou sem decoração, ou só
+   * a decoração. Começa na chácara, que é o pedido mais comum.
+   */
+  kind: BookingKind;
   startDate: string | null;
   /** Inclusivo. Igual ao início numa reserva de um dia (§7.3). */
   endDate: string | null;
   eventType: EventType | null;
+  /** Só na chácara. Na decoração fica guardado, mas não vai no pedido. */
   guestCount: number | null;
   /** Estilo escolhido no passo de itens. Não vai para a reserva: é só filtro. */
   themeId: string | null;
@@ -29,6 +35,7 @@ export type BookingDraft = {
 };
 
 export const EMPTY_DRAFT: BookingDraft = {
+  kind: 'VENUE',
   startDate: null,
   endDate: null,
   eventType: null,
@@ -39,6 +46,7 @@ export const EMPTY_DRAFT: BookingDraft = {
 };
 
 export type DraftAction =
+  | { type: 'setKind'; kind: BookingKind }
   | { type: 'setRange'; startDate: string | null; endDate: string | null }
   | { type: 'setEventType'; eventType: EventType }
   | { type: 'setGuestCount'; guestCount: number | null }
@@ -50,6 +58,18 @@ export type DraftAction =
 
 export function draftReducer(draft: BookingDraft, action: DraftAction): BookingDraft {
   switch (action.type) {
+    /*
+     * Decoração é um dia só: o intervalo escolhido para a chácara encolhe para o
+     * primeiro dia, que é o da festa. O resto fica — trocar de ideia e voltar não
+     * deveria apagar o tipo de festa nem os itens já escolhidos.
+     */
+    case 'setKind':
+      return {
+        ...draft,
+        kind: action.kind,
+        endDate: action.kind === 'DECORATION' ? draft.startDate : draft.endDate,
+      };
+
     case 'setRange':
       return { ...draft, startDate: action.startDate, endDate: action.endDate };
 
@@ -125,6 +145,8 @@ export function loadDraft(): BookingDraft {
     : [];
 
   return {
+    // Rascunho de antes da T32 não tem `kind`, e era da chácara.
+    kind: stored.kind === 'DECORATION' ? 'DECORATION' : 'VENUE',
     startDate: typeof stored.startDate === 'string' ? stored.startDate : null,
     endDate: typeof stored.endDate === 'string' ? stored.endDate : null,
     eventType: typeof stored.eventType === 'string' ? (stored.eventType as EventType) : null,
@@ -154,5 +176,16 @@ export function hasDates(draft: BookingDraft): boolean {
 }
 
 export function isStepOneComplete(draft: BookingDraft): boolean {
-  return hasDates(draft) && draft.eventType !== null && draft.guestCount !== null;
+  if (!hasDates(draft) || draft.eventType === null) return false;
+
+  // Decoração não recebe convidados (T32).
+  return draft.kind === 'DECORATION' || draft.guestCount !== null;
+}
+
+/**
+ * O passo de itens está completo? Na chácara os itens são opcionais; na
+ * decoração, eles **são** o pedido (T32).
+ */
+export function isItemsStepComplete(draft: BookingDraft): boolean {
+  return draft.kind === 'VENUE' || draft.items.length > 0;
 }

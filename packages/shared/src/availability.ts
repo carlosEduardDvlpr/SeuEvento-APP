@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { optionalText } from './catalog.js';
-import { dayStatusSchema, isoDateSchema } from './schemas.js';
+import { blockScopeSchema, bookingKindSchema, dayStatusSchema, isoDateSchema } from './schemas.js';
 
 /**
  * Disponibilidade de datas (§9.1, §11.3) e bloqueios do admin.
@@ -19,8 +19,16 @@ import { dayStatusSchema, isoDateSchema } from './schemas.js';
  */
 export const AVAILABILITY_MAX_DAYS = 120;
 
+/**
+ * `kind` diz de qual produto é a agenda (T32).
+ *
+ * A chácara e a decoração têm agendas diferentes: a retirada de decoração não
+ * ocupa a data da chácara, e o dono pode fechar um produto sem fechar o outro.
+ * O padrão é `VENUE`, que é o que a rota respondia antes de existir decoração
+ * sozinha.
+ */
 export const availabilityQuerySchema = z
-  .object({ from: isoDateSchema, to: isoDateSchema })
+  .object({ from: isoDateSchema, to: isoDateSchema, kind: bookingKindSchema.default('VENUE') })
   .refine(({ from, to }) => from <= to, {
     error: 'A data final não pode ser anterior à inicial.',
     path: ['to'],
@@ -44,11 +52,17 @@ export type Availability = z.infer<typeof availabilitySchema>;
 export const blockedDateSchema = z.object({
   date: isoDateSchema,
   reason: z.string().nullable(),
+  scope: blockScopeSchema,
 });
 
+/**
+ * Bloqueio de um dia. Sem `scope`, fecha só a chácara: é o que bloquear
+ * significava antes de a decoração sair sozinha (T32).
+ */
 export const createBlockedDateBodySchema = z.object({
   date: isoDateSchema,
   reason: optionalText(200).default(null),
+  scope: blockScopeSchema.default('VENUE'),
 });
 
 /** O `:date` das rotas de bloqueio é um dia, não um identificador. */

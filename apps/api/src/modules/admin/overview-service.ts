@@ -43,6 +43,7 @@ export function monthRange(month: string): { from: ISODate; to: ISODate } {
 type BookingRow = Prisma.BookingGetPayload<{
   select: {
     id: true;
+    kind: true;
     startDate: true;
     endDate: true;
     status: true;
@@ -59,6 +60,7 @@ type BookingRow = Prisma.BookingGetPayload<{
 /** Campos do resumo, num lugar só: o calendário e a visão geral usam o mesmo. */
 const summarySelect = {
   id: true,
+  kind: true,
   startDate: true,
   endDate: true,
   status: true,
@@ -74,6 +76,7 @@ const summarySelect = {
 function toSummary(row: BookingRow): AdminBookingSummary {
   return {
     id: row.id,
+    kind: row.kind,
     startDate: toISODate(row.startDate),
     endDate: toISODate(row.endDate),
     status: row.status,
@@ -98,6 +101,10 @@ function toSummary(row: BookingRow): AdminBookingSummary {
  * Traz reservas **ativas**, com o mesmo filtro da disponibilidade: pedido vencido
  * não ocupa data e também não deve aparecer no calendário como se ocupasse. As
  * canceladas ficam de fora — quem as procura vai à lista de reservas.
+ *
+ * O `status` de cada dia é o da **chácara**, que é a agenda que o site vende. As
+ * reservas de decoração entram na lista do dia mesmo assim (T32): o dia continua
+ * livre para a chácara, mas a dona precisa saber que naquele dia sai um kit.
  */
 export async function getAdminCalendar(
   prisma: PrismaClient,
@@ -113,9 +120,10 @@ export async function getAdminCalendar(
       select: summarySelect,
       orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
     }),
+    // Todos os escopos: um bloqueio só da decoração também é algo que a dona fez.
     prisma.blockedDate.findMany({
       where: { date: { gte: parseISODate(from), lte: parseISODate(to) } },
-      select: { date: true, reason: true },
+      select: { date: true, reason: true, scope: true },
     }),
   ]);
 
@@ -129,7 +137,7 @@ export async function getAdminCalendar(
     }
   }
 
-  const reasons = new Map(blocks.map((block) => [toISODate(block.date), block.reason]));
+  const blockOf = new Map(blocks.map((block) => [toISODate(block.date), block]));
 
   return {
     month,
@@ -139,7 +147,8 @@ export async function getAdminCalendar(
       date: day.date,
       status: day.status,
       bookingIds: byDay.get(day.date) ?? [],
-      blockReason: reasons.get(day.date) ?? null,
+      blockReason: blockOf.get(day.date)?.reason ?? null,
+      blockScope: blockOf.get(day.date)?.scope ?? null,
     })),
     bookings: rows.map(toSummary),
   };
@@ -151,6 +160,9 @@ export async function getAdminCalendar(
  * Reaproveita o status de cada dia em vez de contar reservas: uma reserva de três
  * dias ocupa três, e um dia com reserva **e** bloqueio é contado uma vez — pelo
  * bloqueio, que é o que a §9.1 diz que vence.
+ *
+ * É ocupação **da chácara** (T32): uma retirada de decoração não ocupa o dia, e
+ * contá-la faria o mês parecer vendido com a chácara vazia.
  */
 export async function getMonthOccupancy(
   prisma: PrismaClient,

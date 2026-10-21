@@ -7,7 +7,7 @@ import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formErrorMessage } from '@/lib/form';
-import { describeItems, formatDateRange, formatTimeUntil } from '@/lib/format';
+import { describeGuests, describeItems, formatDateRange, formatTimeUntil } from '@/lib/format';
 import { DeleteAccountSection } from './DeleteAccountSection';
 import { groupBookings } from './groupBookings';
 import styles from './MyBookingsPage.module.css';
@@ -34,17 +34,19 @@ function BookingCard({ booking }: { booking: Booking }) {
         <span className={styles.dates}>{formatDateRange(booking.startDate, booking.endDate)}</span>
 
         <span className={styles.meta}>
-          {EVENT_TYPE_LABELS[booking.eventType]} · {booking.guestCount} pessoas ·{' '}
-          {describeItems(booking.items.length)}
+          {EVENT_TYPE_LABELS[booking.eventType]} ·{' '}
+          {describeGuests(booking.kind, booking.guestCount)} · {describeItems(booking.items.length)}
         </span>
 
         {/*
           §13.3: pedido pendente mostra quando as datas deixam de ficar seguras.
-          É a informação que decide se a pessoa espera ou liga para a chácara.
+          É a informação que decide se a pessoa espera ou liga para a chácara. Na
+          decoração o que fica seguro são os itens, não a data (T32).
         */}
         {booking.status === 'PENDING' && booking.holdExpiresAt ? (
           <span className={styles.hold}>
-            Datas seguras {formatTimeUntil(booking.holdExpiresAt)}
+            {booking.kind === 'DECORATION' ? 'Itens separados' : 'Datas seguras'}{' '}
+            {formatTimeUntil(booking.holdExpiresAt)}
           </span>
         ) : null}
       </Link>

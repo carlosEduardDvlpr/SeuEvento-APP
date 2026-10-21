@@ -35,34 +35,42 @@ export function ThemesSection({ themes }: ThemesSectionProps) {
         </div>
 
         <ul className={[landing.body, styles.grid].join(' ')}>
-          {themes.map((theme) => (
+          {themes.map((theme, index) => (
             <li key={theme.id} className={styles.card}>
               <Link className={styles.link} to={`/reservar?estilo=${theme.id}`}>
                 <PhotoFrame
+                  className={styles.photo}
                   variant="tall"
                   src={theme.coverImageUrl}
                   alt={theme.coverImageUrl ? `Decoração no estilo ${theme.name}` : ''}
                   {...(theme.palette[0] ? { fillColor: theme.palette[0].hex } : {})}
                 />
 
-                <h3 className={styles.name}>{theme.name}</h3>
-                {theme.tagline ? <p className={styles.tagline}>{theme.tagline}</p> : null}
+                <div className={styles.content}>
+                  {index === 0 ? <span className={styles.featured}>Estilo em destaque</span> : null}
+                  <h3 className={styles.name}>{theme.name}</h3>
+                  {theme.tagline ? <p className={styles.tagline}>{theme.tagline}</p> : null}
 
-                {/*
+                  {/*
                   A paleta é dado do estilo (§14.3), não decoração: o nome de cada
                   cor vem como texto para quem não distingue as amostras.
                 */}
-                <ul className={styles.palette}>
-                  {theme.palette.map((color) => (
-                    <li key={color.hex} className={styles.swatch} style={{ background: color.hex }}>
-                      <span className="sr-only">
-                        {color.name} ({color.hex})
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                  <ul className={styles.palette}>
+                    {theme.palette.map((color) => (
+                      <li
+                        key={color.hex}
+                        className={styles.swatch}
+                        style={{ background: color.hex }}
+                      >
+                        <span className="sr-only">
+                          {color.name} ({color.hex})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
 
-                <span className={styles.cta}>Ver itens deste estilo</span>
+                  <span className={styles.cta}>Ver itens deste estilo</span>
+                </div>
               </Link>
             </li>
           ))}

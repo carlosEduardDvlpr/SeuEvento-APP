@@ -12,6 +12,7 @@ import { Textarea } from '@/components/Textarea';
 import { ArrowLeftIcon } from '@/components/icons';
 import { formErrorMessage } from '@/lib/form';
 import {
+  describeGuests,
   formatDateLong,
   formatDateRange,
   formatDeadline,
@@ -67,6 +68,8 @@ export function BookingDetailPage() {
 
   const data = booking.data;
   const dates = formatDateRange(data.startDate, data.endDate);
+  /** Só a decoração (T32): sem diária, sem horário de entrada, itens em vez de datas. */
+  const decoration = data.kind === 'DECORATION';
 
   async function handleCancel() {
     try {
@@ -92,17 +95,26 @@ export function BookingDetailPage() {
         <StatusBadge status={data.status} />
         <h1 className={styles.title}>{dates}</h1>
         <p className={styles.lead}>
-          {EVENT_TYPE_LABELS[data.eventType]} para {data.guestCount}{' '}
-          {data.guestCount === 1 ? 'pessoa' : 'pessoas'}
+          {decoration
+            ? `${EVENT_TYPE_LABELS[data.eventType]} · só a decoração, sem a chácara`
+            : `${EVENT_TYPE_LABELS[data.eventType]} para ${describeGuests(data.kind, data.guestCount)}`}
         </p>
       </header>
 
       {/* §13.3: pedido pendente mostra quando as datas deixam de ficar seguras. */}
       {data.status === 'PENDING' && data.holdExpiresAt ? (
-        <p className={styles.hold}>
-          Suas datas estão seguras <strong>{formatTimeUntil(data.holdExpiresAt)}</strong>, até{' '}
-          {formatDeadline(data.holdExpiresAt)}. A chácara responde por e-mail.
-        </p>
+        decoration ? (
+          <p className={styles.hold}>
+            Os itens estão separados para você{' '}
+            <strong>{formatTimeUntil(data.holdExpiresAt)}</strong>, até{' '}
+            {formatDeadline(data.holdExpiresAt)}. A gente responde por e-mail.
+          </p>
+        ) : (
+          <p className={styles.hold}>
+            Suas datas estão seguras <strong>{formatTimeUntil(data.holdExpiresAt)}</strong>, até{' '}
+            {formatDeadline(data.holdExpiresAt)}. A chácara responde por e-mail.
+          </p>
+        )
       ) : null}
 
       {data.status === 'CANCELLED' ? (
@@ -113,21 +125,36 @@ export function BookingDetailPage() {
       ) : null}
 
       <section className={styles.card}>
-        <h2 className={styles.cardTitle}>A festa</h2>
+        <h2 className={styles.cardTitle}>{decoration ? 'A decoração' : 'A festa'}</h2>
 
         <dl className={styles.facts}>
-          <div>
-            <dt>Entrada</dt>
-            <dd>
-              {formatDateLong(data.startDate)}, {venue.data?.checkInTime ?? '—'}
-            </dd>
-          </div>
-          <div>
-            <dt>Saída</dt>
-            <dd>
-              {formatDateLong(data.endDate)}, {venue.data?.checkOutTime ?? '—'}
-            </dd>
-          </div>
+          {decoration ? (
+            <>
+              <div>
+                <dt>Dia da festa</dt>
+                <dd>{formatDateLong(data.startDate)}</dd>
+              </div>
+              <div>
+                <dt>Retirada e devolução</dt>
+                <dd>combinadas com a gente</dd>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <dt>Entrada</dt>
+                <dd>
+                  {formatDateLong(data.startDate)}, {venue.data?.checkInTime ?? '—'}
+                </dd>
+              </div>
+              <div>
+                <dt>Saída</dt>
+                <dd>
+                  {formatDateLong(data.endDate)}, {venue.data?.checkOutTime ?? '—'}
+                </dd>
+              </div>
+            </>
+          )}
           <div>
             <dt>Pedido feito em</dt>
             <dd>{formatDeadline(data.createdAt)}</dd>
@@ -138,28 +165,31 @@ export function BookingDetailPage() {
       <section className={styles.card}>
         <h2 className={styles.cardTitle}>Valores</h2>
 
-        <ul className={styles.lines}>
-          {data.days.map((day) => (
-            <li key={day.date} className={styles.line}>
+        {/* Sem diária na decoração: o bloco some em vez de mostrar R$ 0,00. */}
+        {data.days.length > 0 ? (
+          <ul className={styles.lines}>
+            {data.days.map((day) => (
+              <li key={day.date} className={styles.line}>
+                <span className={styles.lineName}>
+                  {formatWeekdayAndDay(day.date)}
+                  {day.ruleName ? <span className={styles.rule}>{day.ruleName}</span> : null}
+                </span>
+                <span className={styles.lineValue}>
+                  <Money cents={day.priceCents} />
+                </span>
+              </li>
+            ))}
+
+            <li className={[styles.line, styles.subtotal].join(' ')}>
               <span className={styles.lineName}>
-                {formatWeekdayAndDay(day.date)}
-                {day.ruleName ? <span className={styles.rule}>{day.ruleName}</span> : null}
+                {data.days.length === 1 ? 'Diária' : `Diárias (${data.days.length} dias)`}
               </span>
               <span className={styles.lineValue}>
-                <Money cents={day.priceCents} />
+                <Money cents={data.dailyTotalCents} />
               </span>
             </li>
-          ))}
-
-          <li className={[styles.line, styles.subtotal].join(' ')}>
-            <span className={styles.lineName}>
-              {data.days.length === 1 ? 'Diária' : `Diárias (${data.days.length} dias)`}
-            </span>
-            <span className={styles.lineValue}>
-              <Money cents={data.dailyTotalCents} />
-            </span>
-          </li>
-        </ul>
+          </ul>
+        ) : null}
 
         {data.items.length > 0 ? (
           <ul className={styles.lines}>
@@ -266,8 +296,9 @@ export function BookingDetailPage() {
         }
       >
         <p>
-          As datas de <strong>{dates}</strong> voltam a ficar livres para outras pessoas. Não dá
-          para desfazer: se mudar de ideia, será preciso fazer um pedido novo.
+          {decoration ? 'Os itens de ' : 'As datas de '}
+          <strong>{dates}</strong> voltam a ficar livres para outras pessoas. Não dá para desfazer:
+          se mudar de ideia, será preciso fazer um pedido novo.
         </p>
 
         {formErrorMessage(cancel.error) ? (

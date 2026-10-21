@@ -8,7 +8,7 @@ import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formErrorMessage } from '@/lib/form';
-import { formatDateRange, formatTimeUntil } from '@/lib/format';
+import { describeGuests, formatDateRange, formatTimeUntil } from '@/lib/format';
 import { whatsappUrl } from '@/lib/whatsapp';
 import styles from './admin.module.css';
 import dashboardStyles from './DashboardPage.module.css';
@@ -37,8 +37,8 @@ function BookingRow({ booking }: { booking: AdminBookingSummary }) {
       <div className={dashboardStyles.rowMain}>
         <span className={dashboardStyles.rowDates}>{dates}</span>
         <span className={dashboardStyles.rowMeta}>
-          {booking.customer.name} · {EVENT_TYPE_LABELS[booking.eventType]} · {booking.guestCount}{' '}
-          pessoas
+          {booking.customer.name} · {EVENT_TYPE_LABELS[booking.eventType]} ·{' '}
+          {describeGuests(booking.kind, booking.guestCount)}
         </span>
 
         {booking.status === 'PENDING' && booking.holdExpiresAt ? (

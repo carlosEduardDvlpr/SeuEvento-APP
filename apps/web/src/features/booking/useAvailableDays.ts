@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { DayStatus } from '@chacara/shared';
+import type { BookingKind, DayStatus } from '@chacara/shared';
 import { useAvailability } from '@/api/storefront';
 import { addMonths, firstDayOfMonth, lastDayOfMonth } from './calendar-dates';
 
@@ -27,11 +27,12 @@ export type AvailableDays = {
  * costuma avançar um mês por vez. Pedir mês a mês deixaria a troca piscando
  * "carregando" a cada clique na seta.
  */
-export function useAvailableDays(visibleMonth: Date): AvailableDays {
+export function useAvailableDays(visibleMonth: Date, kind: BookingKind = 'VENUE'): AvailableDays {
   const from = firstDayOfMonth(visibleMonth);
   const to = lastDayOfMonth(addMonths(visibleMonth, 1));
 
-  const { data, isPending, error } = useAvailability({ from, to });
+  // A agenda é a do produto escolhido: a decoração não esbarra na chácara (T32).
+  const { data, isPending, error } = useAvailability({ from, to }, kind);
 
   const byDate = useMemo(() => {
     const map = new Map<string, DayStatus>();

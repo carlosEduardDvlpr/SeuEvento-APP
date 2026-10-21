@@ -1,10 +1,20 @@
 import { z } from 'zod';
 import { createCustomerBodySchema } from './admin-customers.js';
 import { adminBookingSummarySchema, adminCustomerSummarySchema } from './admin-overview.js';
+import { guestCountSchema } from './booking.js';
+import {
+  DECORATION_NEEDS_ITEMS_ERROR,
+  DECORATION_ONE_DAY_ERROR,
+  VENUE_NEEDS_GUESTS_ERROR,
+  hasGuestsWhenVenue,
+  hasItemsWhenDecoration,
+  isOneDayWhenDecoration,
+} from './booking-kind.js';
 import { optionalText } from './catalog.js';
 import { dailyPriceSchema } from './pricing.js';
 import { appliedComboSchema, quoteItemsSchema, quoteLineSchema } from './quote.js';
 import {
+  bookingKindSchema,
   bookingStatusSchema,
   centsSchema,
   eventTypeSchema,
@@ -32,11 +42,13 @@ import {
  */
 export const adminBookingSchema = z.object({
   id: z.string(),
+  kind: bookingKindSchema,
   startDate: isoDateSchema,
   /** Inclusivo: `startDate === endDate` é uma reserva de um dia (§7.3). */
   endDate: isoDateSchema,
   eventType: eventTypeSchema,
-  guestCount: z.number().int(),
+  /** Nulo na reserva de decoração (T32). */
+  guestCount: z.number().int().nullable(),
   status: bookingStatusSchema,
   holdExpiresAt: z.string().nullable(),
 
@@ -107,14 +119,11 @@ export const createAdminBookingBodySchema = z
   .object({
     customerId: z.uuid({ error: 'Escolha um cliente.' }).optional(),
     customer: createCustomerBodySchema.optional(),
+    kind: bookingKindSchema.default('VENUE'),
     startDate: isoDateSchema,
     endDate: isoDateSchema,
     eventType: eventTypeSchema,
-    guestCount: z
-      .number({ error: 'Informe quantas pessoas são esperadas.' })
-      .int()
-      .min(1, { error: 'Informe pelo menos um convidado.' })
-      .max(2000),
+    guestCount: guestCountSchema,
     items: quoteItemsSchema.default([]),
     customerNotes: optionalText(600).default(null),
     adminNotes: optionalText(2000).default(null),
@@ -129,7 +138,11 @@ export const createAdminBookingBodySchema = z
   .refine(({ startDate, endDate }) => startDate <= endDate, {
     error: 'A data de saída não pode ser anterior à de entrada.',
     path: ['endDate'],
-  });
+  })
+  // As mesmas regras de forma do pedido do cliente (T32): o painel não tem atalho.
+  .refine(isOneDayWhenDecoration, { error: DECORATION_ONE_DAY_ERROR, path: ['endDate'] })
+  .refine(hasItemsWhenDecoration, { error: DECORATION_NEEDS_ITEMS_ERROR, path: ['items'] })
+  .refine(hasGuestsWhenVenue, { error: VENUE_NEEDS_GUESTS_ERROR, path: ['guestCount'] });
 
 export const updateBookingStatusBodySchema = z
   .object({

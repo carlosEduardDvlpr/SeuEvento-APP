@@ -1,6 +1,10 @@
 import type { Db } from '../../lib/db.js';
 import { type ISODate, eachDay, toISODate } from '../../lib/dates.js';
-import { activeBookingsFilter, overlappingRangeFilter } from '../availability/service.js';
+import {
+  activeBookingsFilter,
+  findBlockedDaysIn,
+  overlappingRangeFilter,
+} from '../availability/service.js';
 
 /**
  * Estoque dos itens, dia a dia (§9.3).
@@ -13,6 +17,18 @@ import { activeBookingsFilter, overlappingRangeFilter } from '../availability/se
  *
  * e o pedido só cabe se a quantidade couber em **todos** os dias do intervalo.
  * Basta um dia apertado para o pedido inteiro não passar.
+ *
+ * Duas regras da T32 moram aqui:
+ *
+ * - **As reservas dos dois produtos contam.** O painel que saiu para uma festa na
+ *   chácara e o que saiu para uma festa em outro lugar são o mesmo painel. É por
+ *   isso que a agenda da decoração não precisa de `booked`: quem decide se o kit
+ *   cabe é esta conta.
+ * - **Dia com a decoração fechada tem estoque zero.** Quando a dona bloqueia a
+ *   decoração num dia (escopo `DECORATION` ou `BOTH`), nenhum item sai — nem
+ *   sozinho, nem junto com a chácara. Tratar isso como estoque zero, e não como
+ *   regra à parte, faz o orçamento e a criação recusarem pelo mesmo caminho de
+ *   sempre (`STOCK_INSUFFICIENT`), com a mesma mensagem que a tela já sabe dar.
  */
 
 export type StockShortage = {
@@ -98,12 +114,14 @@ export async function findStockShortages(
 
   const itemIds = lines.map((line) => line.itemId);
 
-  const [items, reserved] = await Promise.all([
+  const [items, reserved, closedDays] = await Promise.all([
     db.item.findMany({ where: { id: { in: itemIds } }, select: { id: true, stock: true } }),
     loadReservedPerDay(db, { from, to, itemIds, ignoreBookingId, now }),
+    findBlockedDaysIn(db, from, to, 'DECORATION'),
   ]);
 
   const stockOf = new Map(items.map((item) => [item.id, item.stock]));
+  const closed = new Set(closedDays);
   const days = eachDay(from, to);
   const shortages: StockShortage[] = [];
 
@@ -117,7 +135,7 @@ export async function findStockShortages(
 
     // O pior dia manda: o pedido vale pelo intervalo inteiro.
     const worstAvailable = days.reduce((worst, day) => {
-      const free = stock - (perDay?.get(day) ?? 0);
+      const free = closed.has(day) ? 0 : stock - (perDay?.get(day) ?? 0);
       return free < worst ? free : worst;
     }, stock);
 

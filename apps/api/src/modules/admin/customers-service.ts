@@ -114,6 +114,7 @@ export async function getAdminCustomer(
         orderBy: [{ startDate: 'desc' }, { id: 'asc' }],
         select: {
           id: true,
+          kind: true,
           startDate: true,
           endDate: true,
           status: true,
@@ -136,6 +137,7 @@ export async function getAdminCustomer(
     ...customer,
     bookings: row.bookings.map((booking) => ({
       id: booking.id,
+      kind: booking.kind,
       startDate: toISODate(booking.startDate),
       endDate: toISODate(booking.endDate),
       status: booking.status,

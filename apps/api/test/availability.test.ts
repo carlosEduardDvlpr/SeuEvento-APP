@@ -262,13 +262,18 @@ describe('disponibilidade', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({ date: '2027-05-10', reason: 'Manutenção da piscina' });
+      // Sem escopo, o bloqueio é o de sempre: fecha só a chácara (T32).
+      expect(response.json()).toEqual({
+        date: '2027-05-10',
+        reason: 'Manutenção da piscina',
+        scope: 'VENUE',
+      });
     });
 
     it('aceita bloqueio sem motivo', async () => {
       const response = await asAdmin('POST', '/api/admin/blocked-dates', { date: '2027-05-10' });
 
-      expect(response.json()).toEqual({ date: '2027-05-10', reason: null });
+      expect(response.json()).toEqual({ date: '2027-05-10', reason: null, scope: 'VENUE' });
     });
 
     /*
@@ -297,8 +302,8 @@ describe('disponibilidade', () => {
       const response = await asAdmin('GET', '/api/admin/blocked-dates');
 
       expect(response.json()).toEqual([
-        { date: '2027-05-10', reason: 'Antes' },
-        { date: '2027-05-20', reason: 'Depois' },
+        { date: '2027-05-10', reason: 'Antes', scope: 'VENUE' },
+        { date: '2027-05-20', reason: 'Depois', scope: 'VENUE' },
       ]);
     });
 

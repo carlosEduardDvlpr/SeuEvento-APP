@@ -1,5 +1,6 @@
 import type {
   Availability,
+  BookingKind,
   CatalogItem,
   Category,
   Combo,
@@ -95,11 +96,20 @@ export function useGallery(kind?: GalleryKind, options: { enabled?: boolean } = 
  * O número combina de propósito com o `Cache-Control: max-age=30` que a rota
  * devolve: as duas camadas expiram juntas, em vez de o Query insistir num dado
  * que o navegador já descartou.
+ *
+ * `kind` escolhe a agenda (T32): a da chácara, que é o padrão, ou a da
+ * decoração. A URL da chácara fica igual à de antes, sem o parâmetro.
  */
-export function useAvailability(range: { from: string; to: string } | null) {
+export function useAvailability(
+  range: { from: string; to: string } | null,
+  kind: BookingKind = 'VENUE',
+) {
   return useQuery({
-    queryKey: ['availability', range],
-    queryFn: () => apiFetch<Availability>(`/availability?from=${range?.from}&to=${range?.to}`),
+    queryKey: ['availability', range, kind],
+    queryFn: () =>
+      apiFetch<Availability>(
+        `/availability?from=${range?.from}&to=${range?.to}${kind === 'VENUE' ? '' : `&kind=${kind}`}`,
+      ),
     enabled: range !== null,
     staleTime: 30 * 1000,
   });

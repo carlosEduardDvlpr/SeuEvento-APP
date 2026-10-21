@@ -44,6 +44,23 @@ enum GalleryKind {
   EVENTS
 }
 
+/// O que a reserva contrata (T32).
+///
+/// A chácara e o pegue e monte são dois produtos da mesma dona, e a decoração
+/// também sai sozinha, para festa em outro lugar. A diferença não é cosmética:
+/// só `VENUE` ocupa a data da chácara (ver a constraint `booking_no_overlap`).
+enum BookingKind {
+  VENUE // a chácara, com ou sem itens do pegue e monte
+  DECORATION // só a decoração, sem a chácara: um dia de uso, sem diária
+}
+
+/// O que um bloqueio do dono fecha naquele dia (T32).
+enum BlockScope {
+  VENUE // só a chácara: é o bloqueio original, e o padrão
+  DECORATION // só a saída de decoração; a chácara continua reservável
+  BOTH
+}
+
 enum EventType {
   BIRTHDAY_KIDS // aniversário infantil
   BIRTHDAY_ADULT // aniversário adulto
@@ -227,10 +244,11 @@ model ComboItem {
 model Booking {
   id            String        @id @default(uuid())
   userId        String
+  kind          BookingKind   @default(VENUE)
   startDate     DateTime      @db.Date
   endDate       DateTime      @db.Date // inclusivo
   eventType     EventType
-  guestCount    Int
+  guestCount    Int? // nulo só em reserva de decoração: sem a chácara, não há convidados a receber
   status        BookingStatus @default(PENDING)
   holdExpiresAt DateTime?     @db.Timestamptz(6) // só enquanto PENDING
 
@@ -273,8 +291,9 @@ model BookingItem {
 }
 
 model BlockedDate {
-  date   DateTime @id @db.Date
+  date   DateTime   @id @db.Date
   reason String?
+  scope  BlockScope @default(VENUE)
 }
 
 model GalleryImage {

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import {
+  BLOCK_SCOPES,
+  BOOKING_KINDS,
   BOOKING_STATUSES,
   DAY_STATUSES,
   DISCOUNT_TYPES,
@@ -118,6 +120,8 @@ export const discountTypeSchema = z.enum(DISCOUNT_TYPES);
 export const eventTypeSchema = z.enum(EVENT_TYPES);
 export const galleryKindSchema = z.enum(GALLERY_KINDS);
 export const dayStatusSchema = z.enum(DAY_STATUSES);
+export const bookingKindSchema = z.enum(BOOKING_KINDS);
+export const blockScopeSchema = z.enum(BLOCK_SCOPES);
 
 /** Paginação das listas do admin (§11.1). */
 export const paginationSchema = z.object({

@@ -296,3 +296,80 @@
     white-space: nowrap;
   }
 }
+
+/* ------------------------------------------------------------ decoração (T32) */
+
+/*
+ * Kits que saem no dia. O balão e a cor são os da Decoração na identidade da
+ * dona, e o balão é o que diferencia este número do de reservas quando, no
+ * celular, as palavras somem.
+ */
+.kitCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--decor-ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.decorClosedText {
+  color: var(--decor-ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/*
+ * Decoração fechada: borda **tracejada**, que é forma e não só cor (§14.2).
+ *
+ * Vem depois das classes de status de propósito, pelo mesmo motivo da legenda
+ * (ver acima): declarada antes, a borda do status venceria e o tracejado sumiria
+ * justamente no dia bloqueado para as duas coisas.
+ */
+.dayDecorClosed {
+  border: 2px dashed var(--decor-ink);
+}
+
+.scopes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-16);
+  padding: 0;
+  border: none;
+}
+
+.scopesLegend {
+  margin-bottom: var(--space-8);
+  padding: 0;
+  font-weight: 600;
+}
+
+.scopeOption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--touch-target);
+  cursor: pointer;
+}
+
+.scopeOption input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--brand);
+}
+
+@media (max-width: 600px) {
+  /* Mesmo raciocínio do status: a borda tracejada e a legenda contam no celular. */
+  .decorClosedText {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

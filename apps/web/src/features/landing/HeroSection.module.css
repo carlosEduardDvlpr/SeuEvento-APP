@@ -1,14 +1,31 @@
+/*
+ * Hero de verdade: a foto da chácara ocupa a largura toda e a altura da tela que
+ * sobra abaixo do cabeçalho fixo.
+ *
+ * Era um cartão com borda e cantos arredondados dentro do `--container`, com
+ * margem em volta e teto de 860 px de altura: no desktop sobrava faixa de fundo
+ * dos dois lados e embaixo, e a foto parecia uma seção a mais, não a abertura do
+ * site.
+ *
+ * `min-height`, e não `height`: num celular baixo o texto e o seletor de datas
+ * não cabem na primeira tela, e o hero precisa crescer em vez de cortá-los.
+ */
 .hero {
+  /*
+   * Altura do cabeçalho do `PublicLayout`: o alvo de toque dos controles, o
+   * respiro de cima e de baixo e a borda. Escrita em tokens para acompanhar se
+   * um deles mudar, em vez de virar número órfão.
+   */
+  --header-height: calc(var(--touch-target) + 2 * var(--space-12) + 1px);
+
   position: relative;
   isolation: isolate;
   display: flex;
   align-items: flex-end;
-  min-height: min(860px, calc(100svh - 72px));
-  max-width: var(--container);
+  /* `vh` para quem não conhece `svh`; `svh` não pula quando a barra do navegador some. */
+  min-height: calc(100vh - var(--header-height));
+  min-height: calc(100svh - var(--header-height));
   overflow: hidden;
-  margin: var(--space-16) auto 0;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
   background: var(--bg-dark);
 }
 
@@ -41,9 +58,14 @@
   );
 }
 
+/*
+ * A foto vai de ponta a ponta, mas o texto continua alinhado com o resto da
+ * página: o respiro lateral é o que sobra do `--container` (nunca menos que o
+ * das seções), sem precisar de um wrapper só para centralizar.
+ */
 .content {
   width: 100%;
-  padding: var(--space-64) var(--space-16) var(--space-24);
+  padding: var(--space-64) max(var(--space-16), (100% - var(--container)) / 2) var(--space-32);
 }
 
 .text {
@@ -158,26 +180,15 @@
 }
 
 @media (min-width: 900px) {
-  .hero {
-    min-height: min(780px, calc(100svh - 96px));
-    margin-top: var(--space-24);
-  }
-
   .scrim {
     background: linear-gradient(90deg, var(--scrim-strong) 0%, var(--scrim) 48%, transparent 82%);
   }
 
   .content {
-    padding: var(--space-96) var(--space-64) var(--space-64);
+    padding-block: var(--space-96) var(--space-64);
   }
 
   .datePicker {
     margin-top: var(--space-48);
-  }
-}
-
-@media (max-width: 1232px) {
-  .hero {
-    margin-inline: var(--space-16);
   }
 }

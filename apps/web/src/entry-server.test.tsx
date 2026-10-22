@@ -91,7 +91,22 @@ const COMBOS: Combo[] = [
   },
 ];
 
-const SEED = { venue: VENUE, gallery: GALLERY, themes: THEMES, combos: COMBOS };
+const ITEMS = [
+  {
+    id: '00000000-0000-4000-8000-000000000001',
+    name: 'Decoração casamento 1',
+    description: null,
+    imageUrl: '/catalogo/casamento/1.jpg',
+    priceCents: 40000,
+    stock: 1,
+    assemblyNotes: null,
+    sortOrder: 1,
+    category: { id: 'cat-1', name: 'Casamento', sortOrder: 0 },
+    themeIds: [],
+  },
+];
+
+const SEED = { venue: VENUE, gallery: GALLERY, themes: THEMES, combos: COMBOS, items: ITEMS };
 const SITE_URL = 'https://chacara.exemplo.com.br';
 
 beforeEach(() => {
@@ -117,6 +132,7 @@ describe('renderLanding', () => {
     expect(page.html).toContain('Chácara Seu Evento');
     expect(page.html).toContain('Rústico Boho');
     expect(page.html).toContain('Combo Nuvens');
+    expect(page.html).toContain('Decoração casamento 1');
 
     expect(page.title).toBe('Chácara Seu Evento — chácara para festas e decoração pegue e monte');
     expect(page.canonical).toBe('https://chacara.exemplo.com.br/');

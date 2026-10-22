@@ -289,6 +289,53 @@ describe('BookingWizard', () => {
         expect(stored.endDate).toBe('2026-12-09');
       });
     });
+
+    /*
+     * O cartão da vitrine de itens da landing manda `?item=`. O id precisa ter o
+     * formato de uuid, por isso o item aqui não é o `PAINEL` dos outros casos.
+     */
+    const VITRINE: CatalogItem = { ...PAINEL, id: '00000000-0000-4000-8000-000000000001' };
+
+    function storedItems() {
+      const stored = JSON.parse(
+        window.sessionStorage.getItem('chacara:booking-draft') ?? '{}',
+      ) as BookingDraft;
+      return stored.items;
+    }
+
+    it('põe no pedido, com uma unidade, o item que veio da vitrine', async () => {
+      stubFetch({ '/api/items': [VITRINE, MESA] });
+      renderWizard(`/reservar?item=${VITRINE.id}`);
+
+      await screen.findByText('Quando é a festa?');
+
+      await waitFor(() => {
+        expect(storedItems()).toEqual([{ itemId: VITRINE.id, quantity: 1 }]);
+      });
+    });
+
+    it('não mexe na quantidade de um item que já estava no pedido', async () => {
+      stubFetch({ '/api/items': [VITRINE, MESA] });
+      seedDraft({ items: [{ itemId: VITRINE.id, quantity: 3 }] });
+      renderWizard(`/reservar?item=${VITRINE.id}`);
+
+      await screen.findByText('Quando é a festa?');
+
+      await waitFor(() => {
+        expect(storedItems()).toEqual([{ itemId: VITRINE.id, quantity: 3 }]);
+      });
+    });
+
+    it('ignora item fora do formato em vez de quebrar', async () => {
+      stubFetch();
+      renderWizard('/reservar?item=nao-e-um-id');
+
+      await screen.findByText('Quando é a festa?');
+
+      await waitFor(() => {
+        expect(storedItems()).toEqual([]);
+      });
+    });
   });
 
   /*

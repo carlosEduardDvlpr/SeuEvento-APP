@@ -39,6 +39,7 @@ const SOURCES = {
   gallery: '/gallery',
   themes: '/themes',
   combos: '/combos',
+  items: '/items',
 };
 
 /** Domínio de exemplo que o `sitemap.xml` do repositório carrega. */

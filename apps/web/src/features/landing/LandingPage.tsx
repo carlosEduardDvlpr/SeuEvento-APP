@@ -1,4 +1,4 @@
-import { useCombos, useGallery, useThemes } from '@/api/storefront';
+import { useCombos, useGallery, useItems, useThemes } from '@/api/storefront';
 import { useVenue } from '@/api/venue';
 import { Skeleton } from '@/components/Skeleton';
 import { formErrorMessage } from '@/lib/form';
@@ -8,6 +8,7 @@ import { FaqSection } from './FaqSection';
 import { GallerySection } from './GallerySection';
 import { HeroSection } from './HeroSection';
 import { HowItWorksSection } from './HowItWorksSection';
+import { ItemsSection } from './ItemsSection';
 import { ThemesSection } from './ThemesSection';
 import { VenueSection } from './VenueSection';
 import styles from './LandingPage.module.css';
@@ -20,9 +21,13 @@ import styles from './LandingPage.module.css';
  * datas em um gesto, e é por isso que o seletor de datas está no hero, não no
  * fim.
  *
- * **Seção sem conteúdo não aparece.** Galeria, estilos e combos se escondem
- * sozinhos quando o painel ainda não tem nada: a §16.6 proíbe inventar conteúdo,
- * e uma seção vazia é pior que a ausência dela.
+ * A vitrine de itens (`ItemsSection`) entrou depois, a pedido do dono, entre os
+ * estilos e os combos: é o bloco da decoração, e ela precisa aparecer mesmo
+ * quando ainda não há estilo cadastrado.
+ *
+ * **Seção sem conteúdo não aparece.** Galeria, estilos, itens e combos se
+ * escondem sozinhos quando o painel ainda não tem nada: a §16.6 proíbe inventar
+ * conteúdo, e uma seção vazia é pior que a ausência dela.
  *
  * Os depoimentos da §13.1 (item 7) ficam de fora por decisão consciente: a §13.1
  * exige depoimento **real, com nome e tipo de evento**, e não há onde guardá-los
@@ -35,6 +40,7 @@ export function LandingPage() {
   const venue = useVenue();
   const gallery = useGallery();
   const themes = useThemes();
+  const items = useItems();
   const combos = useCombos();
 
   if (venue.isPending) {
@@ -66,6 +72,7 @@ export function LandingPage() {
       <GallerySection images={events} />
       <HowItWorksSection />
       <ThemesSection themes={themes.data ?? []} />
+      <ItemsSection items={items.data ?? []} />
       <CombosSection combos={combos.data ?? []} />
       <FaqSection venue={venue.data} />
       <DirectionsSection venue={venue.data} />

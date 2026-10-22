@@ -1,4 +1,4 @@
-import type { Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
+import type { CatalogItem, Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
 import type { QueryClient } from '@tanstack/react-query';
 
 /**
@@ -6,7 +6,7 @@ import type { QueryClient } from '@tanstack/react-query';
  *
  * O pré-renderizador do build grava este pacote no HTML, e o SPA o carrega no
  * cache do Query antes do primeiro desenho. São duas vantagens de uma vez: a
- * primeira pintura não espera quatro requisições, e o HTML que o React
+ * primeira pintura não espera cinco requisições, e o HTML que o React
  * hidrata é idêntico ao que ele renderizaria — sem isso a hidratação acusaria
  * divergência e jogaria o HTML pré-renderizado fora.
  *
@@ -20,6 +20,8 @@ export type AppSeed = {
   gallery: GalleryImage[];
   themes: Theme[];
   combos: Combo[];
+  /** A vitrine de itens da landing. Preço de tabela, que muda pelo painel. */
+  items: CatalogItem[];
 };
 
 /**
@@ -42,6 +44,7 @@ export function applySeed(client: QueryClient, seed: AppSeed): void {
   client.setQueryData(['gallery', 'all'], seed.gallery);
   client.setQueryData(['themes'], seed.themes);
   client.setQueryData(['combos', {}], seed.combos);
+  client.setQueryData(['items', {}], seed.items);
 }
 
 /** Lê o pacote da global, ignorando qualquer coisa que não tenha a cara certa. */
@@ -59,6 +62,7 @@ export function readSeed(scope: Record<string, unknown>): AppSeed | null {
    */
   if (!seed.venue || !Array.isArray(seed.gallery)) return null;
   if (!Array.isArray(seed.themes) || !Array.isArray(seed.combos)) return null;
+  if (!Array.isArray(seed.items)) return null;
 
   return seed as AppSeed;
 }

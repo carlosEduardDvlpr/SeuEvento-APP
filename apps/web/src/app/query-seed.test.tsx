@@ -1,4 +1,4 @@
-import type { Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
+import type { CatalogItem, Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -71,7 +71,22 @@ const COMBOS: Combo[] = [
   },
 ];
 
-const SEED = { venue: VENUE, gallery: GALLERY, themes: THEMES, combos: COMBOS };
+const ITEMS: CatalogItem[] = [
+  {
+    id: '00000000-0000-4000-8000-000000000001',
+    name: 'Decoração casamento 1',
+    description: null,
+    imageUrl: '/catalogo/casamento/1.jpg',
+    priceCents: 40_000,
+    stock: 1,
+    assemblyNotes: null,
+    sortOrder: 1,
+    category: { id: 'cat-1', name: 'Casamento', sortOrder: 0 },
+    themeIds: [],
+  },
+];
+
+const SEED = { venue: VENUE, gallery: GALLERY, themes: THEMES, combos: COMBOS, items: ITEMS };
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -102,6 +117,7 @@ describe('applySeed', () => {
     // A landing já desenha com o conteúdo, sem passar pelo estado de carregamento.
     expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(screen.getByText('Rústico Boho')).toBeInTheDocument();
+    expect(screen.getByText('Decoração casamento 1')).toBeInTheDocument();
 
     await waitFor(() => expect(urls.length).toBeGreaterThan(0));
 
@@ -109,6 +125,7 @@ describe('applySeed', () => {
     expect(urls.filter((url) => url.startsWith('/api/gallery'))).toEqual([]);
     expect(urls.filter((url) => url.startsWith('/api/themes'))).toEqual([]);
     expect(urls.filter((url) => url.startsWith('/api/combos'))).toEqual([]);
+    expect(urls.filter((url) => url.startsWith('/api/items'))).toEqual([]);
 
     /*
      * A disponibilidade **tem** de ser buscada: ela depende de que dia é hoje e
@@ -134,5 +151,7 @@ describe('readSeed', () => {
     expect(readSeed({ [SEED_GLOBAL]: { venue: VENUE } })).toBeNull();
     expect(readSeed({ [SEED_GLOBAL]: { ...SEED, themes: undefined } })).toBeNull();
     expect(readSeed({ [SEED_GLOBAL]: { ...SEED, venue: undefined } })).toBeNull();
+    // Pacote de antes da vitrine de itens: a landing busca da rede em vez de quebrar.
+    expect(readSeed({ [SEED_GLOBAL]: { ...SEED, items: undefined } })).toBeNull();
   });
 });

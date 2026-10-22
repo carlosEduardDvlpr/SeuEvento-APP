@@ -2060,6 +2060,8 @@ Objetivo: fazer a pessoa \*\*sentir a festa na chácara\*\* e chegar às datas e
 
 5\. \*\*Estilos.\*\* Os temas da seção 15 em cartões de arco com paleta e uma foto de kit montado. Clicar leva ao wizard com o filtro de tema aplicado.
 
+5\.1 \*\*Decoração pegue e monte\*\* (acrescentada em outubro de 2026, a pedido do dono). Os itens ativos com estoque, com foto, nome e preço de tabela, filtráveis por categoria; aparece mesmo sem estilo cadastrado. Mostra oito e revela o resto sob pedido. Clicar leva ao wizard com o item já no pedido (`?item=`).
+
 6\. \*\*Combos.\*\* Os combos ativos mais vantajosos, com quanto o cliente economiza.
 
 7\. \*\*Depoimentos.\*\* Reais, com nome e tipo de evento. Sem depoimento inventado.

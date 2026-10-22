@@ -1,4 +1,4 @@
-import type { Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
+import type { CatalogItem, Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -111,6 +111,32 @@ const COMBO: Combo = {
   priceCents: 40_000,
 };
 
+const CASAMENTO = { id: 'cat-casamento', name: 'Casamento', sortOrder: 0 };
+const CHA_DE_BEBE = { id: 'cat-cha', name: 'Chá de bebê', sortOrder: 1 };
+
+function vitrine(number: number, category: typeof CASAMENTO, stock = 1): CatalogItem {
+  return {
+    id: `00000000-0000-4000-8000-${String(number).padStart(12, '0')}`,
+    name: `Decoração ${category.name.toLowerCase()} ${number}`,
+    description: null,
+    imageUrl: `/catalogo/${category.id}/${number}.jpg`,
+    // Diferente do preço do combo de exemplo: o teste de combos procura o dele na página.
+    priceCents: 35_000,
+    stock,
+    assemblyNotes: null,
+    sortOrder: number,
+    category,
+    themeIds: [],
+  };
+}
+
+/** Nove itens em duas categorias, e um décimo sem estoque, que não pode aparecer. */
+const ITEMS: CatalogItem[] = [
+  ...[1, 2, 3, 4, 5, 6].map((number) => vitrine(number, CASAMENTO)),
+  ...[7, 8, 9].map((number) => vitrine(number, CHA_DE_BEBE)),
+  vitrine(10, CHA_DE_BEBE, 0),
+];
+
 /** Agenda de dois meses com os primeiros dias ocupados por antecedência. */
 function availability(freeFrom = '2026-11-20') {
   const days: { date: string; status: 'free' | 'past' | 'booked' }[] = [];
@@ -132,6 +158,7 @@ function stubFetch(routes: Routes = {}) {
     '/api/public/venue': () => jsonResponse(VENUE),
     '/api/gallery': () => jsonResponse([HERO, AREA, ...EVENT_PHOTOS]),
     '/api/themes': () => jsonResponse([THEME]),
+    '/api/items': () => jsonResponse(ITEMS),
     '/api/combos': () => jsonResponse([COMBO]),
     ...routes,
   };
@@ -175,7 +202,7 @@ describe('LandingPage', () => {
   it('tem um único h1, e ele descreve a página (§18.1)', async () => {
     renderLanding();
 
-    await screen.findByText('Sua festa no nosso quintal');
+    await screen.findByRole('heading', { level: 1 });
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
@@ -191,7 +218,7 @@ describe('LandingPage', () => {
   it('segue a ordem de seções da §13.1', async () => {
     renderLanding();
 
-    await screen.findByText('Sua festa no nosso quintal');
+    await screen.findByRole('heading', { level: 1 });
 
     const titles = screen
       .getAllByRole('heading', { level: 2 })
@@ -203,6 +230,8 @@ describe('LandingPage', () => {
       'Festas que já aconteceram aqui',
       'Pegue e monte: como funciona',
       'Escolha um estilo',
+      // A vitrine de itens entrou depois, a pedido do dono, no bloco da decoração.
+      'Decoração pegue e monte',
       'Combos que saem mais barato',
       'Perguntas frequentes',
       'Como chegar',
@@ -320,7 +349,7 @@ describe('galeria', () => {
   it('não aparece quando não há foto de festa', async () => {
     renderLanding({ '/api/gallery': () => jsonResponse([HERO, AREA]) });
 
-    await screen.findByText('Sua festa no nosso quintal');
+    await screen.findByRole('heading', { level: 1 });
     expect(screen.queryByText('Festas que já aconteceram aqui')).not.toBeInTheDocument();
   });
 
@@ -411,7 +440,7 @@ describe('estilos', () => {
   it('não aparece sem estilo cadastrado', async () => {
     renderLanding({ '/api/themes': () => jsonResponse([]) });
 
-    await screen.findByText('Sua festa no nosso quintal');
+    await screen.findByRole('heading', { level: 1 });
     expect(screen.queryByText('Escolha um estilo')).not.toBeInTheDocument();
   });
 });
@@ -437,7 +466,7 @@ describe('combos', () => {
   it('não aparece sem combo cadastrado', async () => {
     renderLanding({ '/api/combos': () => jsonResponse([]) });
 
-    await screen.findByText('Sua festa no nosso quintal');
+    await screen.findByRole('heading', { level: 1 });
     expect(screen.queryByText('Combos que saem mais barato')).not.toBeInTheDocument();
   });
 });
@@ -551,7 +580,7 @@ describe('como chegar', () => {
         jsonResponse({ ...VENUE, address: null, whatsapp: null, mapsUrl: null }),
     });
 
-    await screen.findByText('Sua festa no nosso quintal');
+    await screen.findByRole('heading', { level: 1 });
     expect(screen.queryByText('Como chegar')).not.toBeInTheDocument();
   });
 
@@ -561,5 +590,75 @@ describe('como chegar', () => {
     await screen.findByText('Como chegar');
     expect(screen.queryByRole('link', { name: 'Abrir no mapa' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Falar pelo WhatsApp' })).toBeVisible();
+  });
+});
+
+/*
+ * Vitrine de itens: pedido do dono para a landing mostrar a decoração mesmo
+ * antes de existir estilo cadastrado.
+ */
+describe('vitrine de itens', () => {
+  async function itemsSection() {
+    const heading = await screen.findByRole('heading', { name: 'Decoração pegue e monte' });
+    return heading.closest('section')!;
+  }
+
+  it('aparece mesmo sem estilo cadastrado', async () => {
+    renderLanding({ '/api/themes': () => jsonResponse([]) });
+
+    const section = await itemsSection();
+
+    expect(within(section).getByRole('heading', { name: 'Decoração casamento 1' })).toBeVisible();
+    expect(screen.queryByText('Escolha um estilo')).not.toBeInTheDocument();
+  });
+
+  it('some quando ainda não há item', async () => {
+    renderLanding({ '/api/items': () => jsonResponse([]) });
+
+    // Os combos chegam pela mesma rodada de requisições: a vitrine já teria aparecido.
+    await screen.findByText('Combos que saem mais barato');
+    expect(screen.queryByText('Decoração pegue e monte')).not.toBeInTheDocument();
+  });
+
+  it('mostra o preço e leva ao wizard com o item no pedido', async () => {
+    renderLanding();
+
+    const section = await itemsSection();
+    const link = within(section).getByRole('link', { name: /Decoração casamento 1/ });
+
+    expect(link).toHaveAttribute('href', `/reservar?item=${ITEMS[0]!.id}`);
+    expect(within(link).getByText('R$ 350,00')).toBeVisible();
+  });
+
+  it('filtra por categoria', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderLanding();
+
+    const section = await itemsSection();
+    await user.click(within(section).getByRole('button', { name: 'Chá de bebê' }));
+
+    expect(within(section).getByRole('button', { name: 'Chá de bebê' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(within(section).getAllByRole('listitem')).toHaveLength(3);
+    expect(
+      within(section).queryByRole('heading', { name: 'Decoração casamento 1' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('mostra oito, revela o resto sob pedido e deixa de fora o item sem estoque', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderLanding();
+
+    const section = await itemsSection();
+    expect(within(section).getAllByRole('listitem')).toHaveLength(8);
+
+    await user.click(within(section).getByRole('button', { name: 'Mostrar mais 1 decoração' }));
+
+    expect(within(section).getAllByRole('listitem')).toHaveLength(9);
+    expect(within(section).queryByText('Decoração chá de bebê 10')).not.toBeInTheDocument();
+    // §18.1: o botão some, e o foco vai para o primeiro cartão que apareceu.
+    expect(within(section).getByRole('link', { name: /Decoração chá de bebê 9/ })).toHaveFocus();
   });
 });

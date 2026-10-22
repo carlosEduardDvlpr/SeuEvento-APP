@@ -64,17 +64,31 @@ function estimateItemsCents(draft: BookingDraft, prices: Map<string, number>): n
  * A data também escolhe a **chácara** (T32): as datas livres do hero são as da
  * agenda da chácara, e abrir o wizard na decoração com uma delas trocaria a
  * pergunta que a pessoa respondeu ao clicar.
+ *
+ * `?item=` vem do cartão da vitrine de itens: o item entra no pedido com uma
+ * unidade. Se já estava, fica como estava — a pessoa pode ter escolhido três
+ * antes, e voltar pela landing não pode desfazer isso. Só o formato do id é
+ * conferido aqui; item que saiu do catálogo cai fora no passo de itens, pelo
+ * mesmo caminho de qualquer item desativado.
  */
 function withLandingChoice(
   draft: BookingDraft,
-  choice: { date: string | null; themeId: string | null },
+  choice: { date: string | null; themeId: string | null; itemId: string | null },
 ): BookingDraft {
   const isDate = choice.date !== null && /^\d{4}-\d{2}-\d{2}$/.test(choice.date);
+
+  const itemId =
+    choice.itemId !== null && /^[0-9a-f-]{36}$/i.test(choice.itemId) ? choice.itemId : null;
+  const items =
+    itemId && !draft.items.some((item) => item.itemId === itemId)
+      ? [...draft.items, { itemId, quantity: 1 }]
+      : draft.items;
 
   return {
     ...draft,
     ...(isDate ? { kind: 'VENUE' as const, startDate: choice.date, endDate: choice.date } : {}),
     ...(choice.themeId ? { themeId: choice.themeId } : {}),
+    items,
   };
 }
 
@@ -111,6 +125,7 @@ export function BookingWizard() {
     withLandingChoice(loadDraft(), {
       date: searchParams.get('data'),
       themeId: searchParams.get('estilo'),
+      itemId: searchParams.get('item'),
     }),
   );
   const [showErrors, setShowErrors] = useState(false);
@@ -146,11 +161,15 @@ export function BookingWizard() {
    * `replace` para a limpeza não criar uma entrada no histórico.
    */
   useEffect(() => {
-    if (!searchParams.has('data') && !searchParams.has('estilo')) return;
+    if (!searchParams.has('data') && !searchParams.has('estilo') && !searchParams.has('item')) {
+      return;
+    }
 
     const next = new URLSearchParams(searchParams);
     next.delete('data');
     next.delete('estilo');
+    // Sem isto, recarregar a página poria o item de volta depois de a pessoa tirá-lo.
+    next.delete('item');
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 

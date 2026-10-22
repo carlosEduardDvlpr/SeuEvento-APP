@@ -1,0 +1,183 @@
+/*
+ * Vitrine dos itens do pegue e monte.
+ *
+ * Magenta é a cor da Decoração na identidade da cliente (ver `tokens.css`), e é
+ * ele que marca categoria, filtro escolhido e chamada: a seção fala de
+ * decoração, não do espaço.
+ */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.filter {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color var(--transition),
+    background var(--transition);
+}
+
+.filter:hover {
+  border-color: var(--line-strong);
+  background: var(--bg-alt);
+}
+
+/* Escolhido: preenchimento e contraste de texto, além do `aria-pressed` (§14.2). */
+.filterActive,
+.filterActive:hover {
+  border-color: var(--decor-ink);
+  background: var(--decor-ink);
+  color: var(--on-brand);
+}
+
+/* Duas colunas no celular: é vitrine, e foto de festa pede tamanho. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
+  margin: var(--space-24) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+}
+
+/* O cartão inteiro é o link: no celular o alvo precisa ser o bloco todo. */
+.link {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color var(--transition),
+    transform var(--transition);
+}
+
+.link:hover {
+  border-color: var(--decor);
+  transform: translateY(-2px);
+}
+
+.link:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+
+/*
+ * A moldura-assinatura vira o topo do cartão: sem passe-partout, porque o
+ * cartão já tem borda. Quadrada, que serve a foto em pé e deitada sem cortar
+ * metade de nenhuma.
+ */
+.photo {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  aspect-ratio: 1 / 1;
+}
+
+.photo > img,
+.photo > div {
+  border-radius: 0;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-12);
+}
+
+.category {
+  color: var(--decor-ink);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* Preço e chamada no pé do cartão, alinhados entre cartões de nome curto e longo. */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-8);
+  width: 100%;
+  margin-top: auto;
+  padding-top: var(--space-8);
+}
+
+.price {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cta {
+  color: var(--decor-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.link:hover .cta {
+  text-decoration: underline;
+}
+
+/* `secondaryAction` foi feito para link; num botão, o navegador poria fundo cinza. */
+.more {
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (min-width: 760px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-24);
+  }
+
+  .content {
+    padding: var(--space-16);
+  }
+
+  .name {
+    font-size: var(--text-lg);
+  }
+}
+
+@media (min-width: 1000px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

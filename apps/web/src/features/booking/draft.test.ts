@@ -134,8 +134,9 @@ describe('loadDraft', () => {
     window.sessionStorage.clear();
   });
 
-  it('devolve o rascunho vazio quando nada foi guardado', () => {
-    expect(loadDraft()).toEqual(EMPTY_DRAFT);
+  /* `null`, e não um rascunho vazio: é como o wizard sabe que não há pedido a retomar. */
+  it('não devolve pedido quando nada foi guardado', () => {
+    expect(loadDraft()).toBeNull();
   });
 
   it('recupera o que foi salvo, igualzinho', () => {
@@ -148,7 +149,7 @@ describe('loadDraft', () => {
     saveDraft(FILLED);
     clearDraft();
 
-    expect(loadDraft()).toEqual(EMPTY_DRAFT);
+    expect(loadDraft()).toBeNull();
   });
 
   /*
@@ -159,7 +160,13 @@ describe('loadDraft', () => {
   it('descarta JSON corrompido em vez de estourar', () => {
     window.sessionStorage.setItem(STORAGE_KEY, '{isso não é json');
 
-    expect(loadDraft()).toEqual(EMPTY_DRAFT);
+    expect(loadDraft()).toBeNull();
+  });
+
+  it('descarta o que nem objeto é', () => {
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify('texto'));
+
+    expect(loadDraft()).toBeNull();
   });
 
   it('ignora campo com o tipo errado e mantém os que servem', () => {
@@ -195,13 +202,13 @@ describe('loadDraft', () => {
       }),
     );
 
-    expect(loadDraft().items).toEqual([{ itemId: 'i1', quantity: 2 }]);
+    expect(loadDraft()?.items).toEqual([{ itemId: 'i1', quantity: 2 }]);
   });
 
   it('aceita itens em formato não-lista voltando para lista vazia', () => {
     window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ items: { i1: 2 } }));
 
-    expect(loadDraft().items).toEqual([]);
+    expect(loadDraft()?.items).toEqual([]);
   });
 });
 
@@ -247,6 +254,6 @@ describe('reserva só de decoração (T32)', () => {
       JSON.stringify({ startDate: '2026-12-05', endDate: '2026-12-06', guestCount: 60 }),
     );
 
-    expect(loadDraft().kind).toBe('VENUE');
+    expect(loadDraft()?.kind).toBe('VENUE');
   });
 });

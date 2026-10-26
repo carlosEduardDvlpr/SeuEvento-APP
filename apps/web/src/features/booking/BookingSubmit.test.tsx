@@ -146,7 +146,13 @@ function stubFetch(routes: Record<string, Handler> = {}, user: SessionUser | nul
   return calls;
 }
 
-/** Rascunho completo, como quem já passou pelos dois primeiros passos. */
+/** Chave do pedido guardado no `sessionStorage`. */
+const DRAFT_KEY = 'chacara:booking-draft';
+
+/**
+ * Pedido completo e guardado, como o de quem chegou à revisão: é só a partir
+ * dela que o wizard guarda alguma coisa, e é o que a volta do login encontra.
+ */
 function seedDraft(draft: Partial<BookingDraft> = {}) {
   saveDraft({
     ...EMPTY_DRAFT,
@@ -170,6 +176,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // Desfaz o `spyOn` do `scrollTo` do caso da confirmação.
+  vi.restoreAllMocks();
   window.sessionStorage.clear();
 });
 
@@ -221,6 +229,35 @@ describe('ReviewStep', () => {
       endDate: '2026-12-06',
       items: [{ itemId: PAINEL.id, quantity: 2 }],
     });
+  });
+
+  /*
+   * A foto vem do catálogo, e não do orçamento: é ela que deixa a pessoa
+   * reconhecer a peça, porque o nome no catálogo costuma ser genérico.
+   */
+  it('mostra a foto de cada item do pedido', async () => {
+    stubFetch({
+      'GET /api/items': () => jsonResponse([{ ...PAINEL, imageUrl: '/catalogo/paineis/1.jpg' }]),
+    });
+    renderReview();
+
+    const line = (await screen.findByText('2× Painel de balões arco-íris')).closest('li')!;
+
+    await waitFor(() => {
+      expect(line.querySelector('img')).toHaveAttribute('src', '/catalogo/paineis/1.jpg');
+    });
+    // Decorativa: o nome do item já está do lado, e o leitor de tela não repete.
+    expect(line.querySelector('img')).toHaveAttribute('alt', '');
+  });
+
+  it('põe o ícone no lugar da foto quando o item não tem uma', async () => {
+    stubFetch();
+    renderReview();
+
+    const line = (await screen.findByText('2× Painel de balões arco-íris')).closest('li')!;
+
+    expect(line.querySelector('img')).toBeNull();
+    expect(line.querySelector('svg')).not.toBeNull();
   });
 
   it('diz que é só a chácara quando não há item no pedido', async () => {
@@ -308,10 +345,69 @@ describe('ReviewStep', () => {
     await user.type(await screen.findByLabelText('Alguma observação?'), 'Chegamos às 14h.');
 
     await waitFor(() => {
-      const stored = JSON.parse(
-        window.sessionStorage.getItem('chacara:booking-draft') ?? '{}',
-      ) as BookingDraft;
+      const stored = JSON.parse(window.sessionStorage.getItem(DRAFT_KEY) ?? '{}') as BookingDraft;
       expect(stored.customerNotes).toBe('Chegamos às 14h.');
+    });
+  });
+});
+
+/*
+ * O pedido não é carrinho (§12.2): só fica guardado a partir da revisão, que é
+ * de onde quem não está logado sai para entrar ou se cadastrar, e só até ser
+ * enviado. Os casos entram por um link da landing, que começa um pedido novo e
+ * descarta o que o `beforeEach` deixou guardado.
+ */
+describe('pedido guardado a partir da revisão', () => {
+  function storedDraft(): BookingDraft | null {
+    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as BookingDraft) : null;
+  }
+
+  it('guarda o pedido ao chegar à revisão, e não antes', async () => {
+    const user = userEvent.setup();
+    stubFetch({}, null);
+    renderWithProviders(<BookingWizard />, { route: '/reservar?data=2026-12-05' });
+
+    await user.click(await screen.findByLabelText('Chá de bebê'));
+    await user.type(screen.getByLabelText('Número de convidados'), '40');
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    await screen.findByText('Escolha o estilo da festa');
+    expect(storedDraft()).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    expect(await screen.findByText('Falta só entrar')).toBeVisible();
+    await waitFor(() => {
+      expect(storedDraft()).toMatchObject({
+        startDate: '2026-12-05',
+        endDate: '2026-12-05',
+        eventType: 'BABY_SHOWER',
+        guestCount: 40,
+        items: [],
+      });
+    });
+  });
+
+  it('segue guardando quando a pessoa volta da revisão para ajustar', async () => {
+    const user = userEvent.setup();
+    stubFetch({}, null);
+    renderWithProviders(<BookingWizard />, { route: '/reservar?data=2026-12-05' });
+
+    await user.click(await screen.findByLabelText('Chá de bebê'));
+    await user.type(screen.getByLabelText('Número de convidados'), '40');
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    await screen.findByText('Escolha o estilo da festa');
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    await screen.findByText('Falta só entrar');
+
+    await user.click(screen.getByRole('button', { name: /Voltar/ }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Aumentar Painel de balões arco-íris' }),
+    );
+
+    await waitFor(() => {
+      expect(storedDraft()?.items).toEqual([{ itemId: PAINEL.id, quantity: 1 }]);
     });
   });
 });
@@ -480,7 +576,23 @@ describe('envio do pedido', () => {
     await user.click(await screen.findByRole('button', { name: 'Solicitar reserva' }));
     await screen.findByText('Pedido enviado');
 
-    expect(window.sessionStorage.getItem('chacara:booking-draft')).toBeNull();
+    expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+  });
+
+  /* O botão de enviar fica no fim da revisão; a confirmação não pode abrir lá embaixo. */
+  it('abre a confirmação do topo', async () => {
+    const user = userEvent.setup();
+    const scrollTo = vi.spyOn(window, 'scrollTo');
+    stubFetch({
+      'POST /api/bookings': () => jsonResponse(BOOKING, 201),
+      'GET /api/bookings/b-1': () => jsonResponse(BOOKING),
+    });
+    renderReview();
+
+    await user.click(await screen.findByRole('button', { name: 'Solicitar reserva' }));
+    await screen.findByText('Pedido enviado');
+
+    expect(scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
   it('mantém o rascunho quando o envio falha', async () => {
@@ -494,7 +606,7 @@ describe('envio do pedido', () => {
     await user.click(await screen.findByRole('button', { name: 'Solicitar reserva' }));
 
     expect(await screen.findByText('Você já tem 3 pedidos aguardando confirmação.')).toBeVisible();
-    expect(window.sessionStorage.getItem('chacara:booking-draft')).not.toBeNull();
+    expect(window.sessionStorage.getItem(DRAFT_KEY)).not.toBeNull();
   });
 
   /*

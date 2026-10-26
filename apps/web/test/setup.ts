@@ -35,3 +35,14 @@ if (typeof HTMLDialogElement !== 'undefined' && !HTMLDialogElement.prototype.sho
     this.dispatchEvent(new Event('close'));
   };
 }
+
+/**
+ * `window.scrollTo` no jsdom: existe, mas só avisa que não foi implementado.
+ *
+ * A troca de página e a de passo do wizard rolam para o topo, e sem isto cada
+ * teste que navega encheria a saída de "Not implemented: window.scrollTo". Uma
+ * função vazia de verdade também deixa o `vi.spyOn` conferir a chamada.
+ */
+if (typeof window !== 'undefined') {
+  window.scrollTo = () => {};
+}

@@ -3,6 +3,7 @@ import { EVENT_TYPE_LABELS } from '@chacara/shared';
 import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { Textarea } from '@/components/Textarea';
+import { ImageIcon } from '@/components/icons';
 import { formatDateRange, formatWeekdayAndDay } from '@/lib/format';
 import type { BookingDraft, DraftAction } from './draft';
 import styles from './ReviewStep.module.css';
@@ -23,6 +24,8 @@ export type ReviewStepProps = {
   draft: BookingDraft;
   dispatch: (action: DraftAction) => void;
   venue: PublicVenue;
+  /** Foto de cada item, pelo id. Item sem foto fica de fora e ganha o ícone. */
+  itemImages: ReadonlyMap<string, string>;
   quote: Quote | undefined;
   isLoading: boolean;
   /** Mensagem do envio recusado, quando o problema é desta tela. */
@@ -61,7 +64,15 @@ function issueMessage(issue: QuoteIssue, quote: Quote | undefined, decoration: b
     : `Só temos ${issue.available} ${issue.available === 1 ? 'unidade' : 'unidades'} de “${name}” nessas datas. Volte aos itens e ajuste a quantidade.`;
 }
 
-export function ReviewStep({ draft, dispatch, venue, quote, isLoading, notice }: ReviewStepProps) {
+export function ReviewStep({
+  draft,
+  dispatch,
+  venue,
+  itemImages,
+  quote,
+  isLoading,
+  notice,
+}: ReviewStepProps) {
   const hasDates = draft.startDate !== null && draft.endDate !== null;
   /** Só a decoração (T32): sem diária, sem convidados, sem regras da casa. */
   const decoration = draft.kind === 'DECORATION';
@@ -162,16 +173,33 @@ export function ReviewStep({ draft, dispatch, venue, quote, isLoading, notice }:
 
           {quote.lines.length > 0 ? (
             <ul className={styles.lines}>
-              {quote.lines.map((line) => (
-                <li key={line.itemId} className={styles.line}>
-                  <span className={styles.lineName}>
-                    {line.quantity}× {line.name}
-                  </span>
-                  <span className={styles.lineValue}>
-                    <Money cents={line.totalCents} />
-                  </span>
-                </li>
-              ))}
+              {quote.lines.map((line) => {
+                const image = itemImages.get(line.itemId);
+
+                return (
+                  <li key={line.itemId} className={[styles.line, styles.itemLine].join(' ')}>
+                    <span className={styles.itemName}>
+                      {/*
+                        `alt=""`: o nome do item vem logo ao lado, e repeti-lo na
+                        foto faria o leitor de tela dizer tudo duas vezes (§18.1).
+                      */}
+                      <span className={styles.thumb}>
+                        {image ? (
+                          <img src={image} alt="" loading="lazy" decoding="async" />
+                        ) : (
+                          <ImageIcon size={20} />
+                        )}
+                      </span>
+                      <span>
+                        {line.quantity}× {line.name}
+                      </span>
+                    </span>
+                    <span className={styles.lineValue}>
+                      <Money cents={line.totalCents} />
+                    </span>
+                  </li>
+                );
+              })}
 
               <li className={[styles.line, styles.subtotal].join(' ')}>
                 <span className={styles.lineName}>Itens do pegue e monte</span>

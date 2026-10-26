@@ -19,8 +19,9 @@ import styles from './SubmitGate.module.css';
  * de montar o pedido inteiro.
  *
  * O rascunho **não se perde** em nenhum caminho: o Google entra sem sair da
- * página, e os links para entrar e se cadastrar levam `next` com a URL atual,
- * enquanto o rascunho espera no `sessionStorage` (§12.2).
+ * página, e os links para entrar e se cadastrar levam `next` com a URL atual.
+ * Esta tela só aparece na revisão, e é a partir dela que o pedido fica guardado
+ * no `sessionStorage` até o envio (§12.2).
  */
 
 export type SubmitGateProps = {

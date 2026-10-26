@@ -74,12 +74,8 @@ export function ItemsSection({ items }: ItemsSectionProps) {
       <div className={landing.inner}>
         <div className={landing.heading}>
           <h2 className={landing.title} id="titulo-decoracao">
-            Decoração pegue e monte
+            Decorações
           </h2>
-          <p className={landing.lead}>
-            Você retira os itens, monta a festa e devolve depois. Dá para levar junto com a chácara
-            ou só a decoração, para uma festa em outro lugar.
-          </p>
         </div>
 
         {/* Com uma categoria só, o filtro não teria o que filtrar. */}

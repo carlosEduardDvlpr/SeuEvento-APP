@@ -182,13 +182,15 @@ describe('renderLanding', () => {
 
   /*
    * A disponibilidade fica fora do pacote de dados de propósito (§18.3): vinda
-   * do build, mostraria data livre que já pode ter dono. O HTML tem de sair com
-   * o estado de consulta, que é onde o cliente também começa.
+   * do build, mostraria data livre que já pode ter dono. O hero leva ao
+   * calendário do wizard em vez de mostrar datas, então nada no HTML depende da
+   * agenda.
    */
   it('não congela a agenda no HTML', () => {
     const page = renderLanding({ ...SEED, siteUrl: SITE_URL });
 
-    expect(page.html).toContain('Consultando a agenda');
+    expect(page.html).toContain('Reservar uma data');
+    expect(page.html).not.toContain('Consultando a agenda');
     expect(JSON.parse(page.seed)).not.toHaveProperty('availability');
   });
 });

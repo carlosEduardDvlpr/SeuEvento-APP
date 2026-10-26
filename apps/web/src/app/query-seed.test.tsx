@@ -1,6 +1,6 @@
 import type { CatalogItem, Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { LandingPage } from '@/features/landing/LandingPage';
@@ -93,13 +93,13 @@ afterEach(() => {
 });
 
 describe('applySeed', () => {
-  it('deixa a landing pronta sem nenhuma requisição de catálogo', async () => {
+  it('deixa a landing pronta sem nenhuma requisição', async () => {
     const urls: string[] = [];
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string) => {
         urls.push(url);
-        return Promise.resolve(jsonResponse({ days: [] }));
+        return Promise.resolve(jsonResponse([]));
       }),
     );
 
@@ -119,19 +119,14 @@ describe('applySeed', () => {
     expect(screen.getByText('Rústico Boho')).toBeInTheDocument();
     expect(screen.getByText('Decoração casamento 1')).toBeInTheDocument();
 
-    await waitFor(() => expect(urls.length).toBeGreaterThan(0));
-
-    expect(urls.filter((url) => url.startsWith('/api/public/venue'))).toEqual([]);
-    expect(urls.filter((url) => url.startsWith('/api/gallery'))).toEqual([]);
-    expect(urls.filter((url) => url.startsWith('/api/themes'))).toEqual([]);
-    expect(urls.filter((url) => url.startsWith('/api/combos'))).toEqual([]);
-    expect(urls.filter((url) => url.startsWith('/api/items'))).toEqual([]);
-
     /*
-     * A disponibilidade **tem** de ser buscada: ela depende de que dia é hoje e
-     * do que já foi reservado, e por isso fica fora do pacote de propósito.
+     * Nenhuma requisição, nem a da agenda. A disponibilidade continua fora do
+     * pacote de propósito (depende de hoje e do que já foi reservado), mas a
+     * landing nem a consulta: o hero leva ao calendário do wizard, que pede a
+     * agenda na hora. O pedido de montagem sai durante o `render`, então a lista
+     * já estaria preenchida aqui.
      */
-    expect(urls.some((url) => url.startsWith('/api/availability'))).toBe(true);
+    expect(urls).toEqual([]);
   });
 });
 

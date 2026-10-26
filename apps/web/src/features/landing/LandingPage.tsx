@@ -5,7 +5,6 @@ import { formErrorMessage } from '@/lib/form';
 import { CombosSection } from './CombosSection';
 import { DirectionsSection } from './DirectionsSection';
 import { FaqSection } from './FaqSection';
-import { GallerySection } from './GallerySection';
 import { HeroSection } from './HeroSection';
 import { HowItWorksSection } from './HowItWorksSection';
 import { ItemsSection } from './ItemsSection';
@@ -18,23 +17,26 @@ import styles from './LandingPage.module.css';
  *
  * A ordem das seções é decisão de produto e está fixada na §13.1 — não mexer sem
  * aprovação. O objetivo é fazer a pessoa sentir a festa na chácara e chegar às
- * datas em um gesto, e é por isso que o seletor de datas está no hero, não no
- * fim.
+ * datas em um gesto, e é por isso que o hero tem um botão só, o que leva ao
+ * calendário.
  *
  * A vitrine de itens (`ItemsSection`) entrou depois, a pedido do dono, entre os
  * estilos e os combos: é o bloco da decoração, e ela precisa aparecer mesmo
- * quando ainda não há estilo cadastrado.
+ * quando ainda não há estilo cadastrado. A galeria de festas ("Festas que já
+ * aconteceram aqui") saiu, também a pedido do dono: fotos da seção "Eventos"
+ * que ainda existam no banco são ignoradas.
  *
- * **Seção sem conteúdo não aparece.** Galeria, estilos, itens e combos se
- * escondem sozinhos quando o painel ainda não tem nada: a §16.6 proíbe inventar
+ * **Seção sem conteúdo não aparece.** Estilos, itens e combos se escondem
+ * sozinhos quando o painel ainda não tem nada: a §16.6 proíbe inventar
  * conteúdo, e uma seção vazia é pior que a ausência dela.
  *
  * Os depoimentos da §13.1 (item 7) ficam de fora por decisão consciente: a §13.1
  * exige depoimento **real, com nome e tipo de evento**, e não há onde guardá-los
  * (§8 não tem o modelo). Inventar seria o único jeito de a seção existir hoje.
  *
- * Cada seção busca o que precisa por hook próprio, em paralelo: só o hero depende
- * de `venue` para renderizar, e o resto aparece conforme chega.
+ * Cada seção busca o que precisa por hook próprio, em paralelo. A página espera
+ * só `venue`, de que a chácara, as perguntas e o "como chegar" dependem; o resto
+ * aparece conforme chega.
  */
 export function LandingPage() {
   const venue = useVenue();
@@ -63,13 +65,11 @@ export function LandingPage() {
   const images = gallery.data ?? [];
   const hero = images.find((image) => image.kind === 'HERO');
   const areas = images.filter((image) => image.kind === 'VENUE');
-  const events = images.filter((image) => image.kind === 'EVENTS');
 
   return (
     <>
-      <HeroSection venue={venue.data} hero={hero} />
+      <HeroSection hero={hero} />
       <VenueSection venue={venue.data} areas={areas} />
-      <GallerySection images={events} />
       <HowItWorksSection />
       <ThemesSection themes={themes.data ?? []} />
       <ItemsSection items={items.data ?? []} />

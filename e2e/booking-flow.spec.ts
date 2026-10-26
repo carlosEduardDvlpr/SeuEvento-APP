@@ -25,32 +25,37 @@ function brl(cents: number): string {
 }
 
 /**
- * Abre o wizard pela primeira data livre sugerida no hero.
+ * Abre o wizard pelo botão do hero e escolhe o primeiro dia livre.
  *
- * É o caminho que a §13.1 promete ("chegar às datas em um gesto") e o que a
- * landing existe para fazer. Também evita navegar o calendário mês a mês para
- * achar um dia livre, que é a parte frágil de testar calendário.
+ * É o caminho que a §13.1 promete ("chegar às datas em um gesto"): o hero tem um
+ * botão só, e ele leva ao calendário. O dia é o primeiro que o calendário deixa
+ * clicar, e não uma data fixa: assim o teste não depende do dia em que roda nem
+ * de navegar mês a mês, que é a parte frágil de testar calendário.
  */
-async function startFromHeroDate(page: Page): Promise<string> {
+async function startFromHero(page: Page): Promise<string> {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sua festa no nosso quintal');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Espaço Donna Belle');
+
+  await page.getByRole('link', { name: 'Reservar uma data' }).click();
+
+  await expect(page).toHaveURL(/\/reservar$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Montar meu pedido');
 
   /*
-   * Seletor pelo `href`, não pelo texto: o rótulo é um dia da semana abreviado
-   * pelo `Intl`, e casar texto aqui já pegou "Termos de uso" no rodapé por
-   * engano. O endereço é o que define o que estes links são.
+   * Seletor pela estrutura do `react-day-picker`, não pelo texto: o rótulo do
+   * dia é escrito pelo `Intl`, e casar texto já pegou "Termos de uso" no rodapé
+   * por engano. Só dia livre fica habilitado, e o calendário só aparece depois
+   * que a agenda chega, então o primeiro botão habilitado é o primeiro dia livre.
    */
-  const firstFreeDate = page.locator('a[href^="/reservar?data="]').first();
-  await expect(firstFreeDate).toBeVisible();
-
-  await firstFreeDate.click();
-
-  await expect(page).toHaveURL(/\/reservar\?data=\d{4}-\d{2}-\d{2}/);
+  const firstFreeDay = page.locator('[data-day]:has(> button:not([disabled]))').first();
+  await expect(firstFreeDay).toBeVisible();
 
   // A data escolhida volta como texto para as asserções seguintes.
-  const chosen = new URL(page.url()).searchParams.get('data');
+  const chosen = await firstFreeDay.getAttribute('data-day');
   expect(chosen).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+  await firstFreeDay.locator('button').click();
 
   return chosen as string;
 }
@@ -62,14 +67,11 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
   // ----------------------------------------------------------------------
   // 1. Landing e passo 1: datas, tipo de festa e convidados
   // ----------------------------------------------------------------------
-  const chosenDate = await startFromHeroDate(page);
-
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Montar meu pedido');
+  const chosenDate = await startFromHero(page);
 
   /*
-   * O calendário precisa chegar já com a data do link aplicada. A §13.1 pede o
-   * wizard "já preenchido", e é aqui que se vê se o parâmetro foi aplicado na
-   * inicialização do rascunho e não num efeito depois do primeiro desenho.
+   * O clique precisa virar escolha: um dia só, que é as duas pontas do
+   * intervalo (§7.3).
    *
    * A asserção é no `aria-label` porque é ali que o `react-day-picker` diz que o
    * dia está escolhido ("…de outubro de 2026, selecionado"). É também o que um

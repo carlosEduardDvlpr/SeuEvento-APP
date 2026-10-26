@@ -172,7 +172,13 @@ function renderWizard(route = '/reservar') {
   return renderWithProviders(<BookingWizard />, { route, withAuth: false });
 }
 
-/** Semeia o rascunho como se a pessoa já tivesse passado pelo passo 1. */
+/** Chave do pedido guardado no `sessionStorage`. */
+const DRAFT_KEY = 'chacara:booking-draft';
+
+/**
+ * Semeia o pedido guardado, como se a pessoa já tivesse chegado à revisão e
+ * voltado (é só a partir dela que o wizard guarda alguma coisa).
+ */
 function seedDraft(draft: Partial<BookingDraft> = {}) {
   saveDraft({
     ...EMPTY_DRAFT,
@@ -194,6 +200,8 @@ describe('BookingWizard', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    // Desfaz o `spyOn` do `scrollTo` no caso da rolagem.
+    vi.restoreAllMocks();
     window.sessionStorage.clear();
   });
 
@@ -226,9 +234,12 @@ describe('BookingWizard', () => {
   });
 
   /*
-   * §13.1: clicar numa data livre na landing abre o wizard "já preenchido". A
-   * aplicação acontece na inicialização do rascunho, não num efeito, para o
-   * calendário não aparecer vazio por um instante.
+   * §13.1: a escolha feita na landing abre o wizard "já preenchido". A aplicação
+   * acontece na inicialização do pedido, não num efeito, para o calendário não
+   * aparecer vazio por um instante.
+   *
+   * E cada escolha começa um pedido **novo** (§12.2): o pedido não é carrinho, e
+   * o que sobrou de outra visita não soma com o clique de agora.
    */
   describe('escolha vinda da landing', () => {
     it('aplica a data do link como reserva de um dia', async () => {
@@ -239,12 +250,20 @@ describe('BookingWizard', () => {
       expect(screen.getByText('(1 dia)')).toBeVisible();
     });
 
-    it('a data do link vence o rascunho guardado', async () => {
+    it('começa um pedido novo, sem o que estava guardado', async () => {
       stubFetch();
       seedDraft({ startDate: '2026-12-05', endDate: '2026-12-06' });
       renderWizard('/reservar?data=2026-12-09');
 
       expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
+      // O tipo de festa e os convidados eram do pedido guardado, e ficaram com ele.
+      expect(screen.getByLabelText('Chá de bebê')).not.toBeChecked();
+      expect(screen.getByLabelText('Número de convidados')).toHaveValue(null);
+
+      // E o pedido antigo não volta depois pelo "Reservar" do cabeçalho.
+      await waitFor(() => {
+        expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+      });
     });
 
     it('ignora data fora do formato em vez de quebrar', async () => {
@@ -257,7 +276,6 @@ describe('BookingWizard', () => {
 
     it('aplica o estilo do link ao filtro de itens', async () => {
       const urls = stubFetch();
-      seedDraft();
       renderWizard(`/reservar?step=itens&estilo=${BOHO.id}`);
 
       await screen.findByText('Escolha o estilo da festa');
@@ -268,73 +286,62 @@ describe('BookingWizard', () => {
     });
 
     /*
-     * A data do link entra no rascunho guardado, e não só no estado da tela: é
-     * isso que faz a escolha sobreviver ao desvio por login mais adiante.
+     * Antes da revisão, o pedido vive só na tela: nada vai para o
+     * armazenamento, e sair e voltar começa do zero (ver o caso "esquece o
+     * pedido" mais abaixo). O que é guardado a partir da revisão está em
+     * `BookingSubmit.test.tsx`, que é onde há sessão para a revisão abrir.
      *
      * A limpeza do parâmetro da URL não é verificável aqui — o `MemoryRouter` não
      * mexe em `window.location`, e um teste que passa por vacuidade seria pior
      * que nenhum. Ela está coberta na verificação ao vivo.
      */
-    it('guarda no rascunho a data que veio do link', async () => {
+    it('não guarda o pedido antes da revisão', async () => {
       stubFetch();
       renderWizard('/reservar?data=2026-12-09');
 
       await screen.findByText('9 de dezembro de 2026');
 
       await waitFor(() => {
-        const stored = JSON.parse(
-          window.sessionStorage.getItem('chacara:booking-draft') ?? '{}',
-        ) as BookingDraft;
-        expect(stored.startDate).toBe('2026-12-09');
-        expect(stored.endDate).toBe('2026-12-09');
+        expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
       });
     });
 
     /*
      * O cartão da vitrine de itens da landing manda `?item=`. O id precisa ter o
      * formato de uuid, por isso o item aqui não é o `PAINEL` dos outros casos.
+     *
+     * O que entrou no pedido se vê pelo rodapé, que conta as linhas e estima o
+     * valor dos itens: antes da revisão, não há mais onde olhar.
      */
     const VITRINE: CatalogItem = { ...PAINEL, id: '00000000-0000-4000-8000-000000000001' };
-
-    function storedItems() {
-      const stored = JSON.parse(
-        window.sessionStorage.getItem('chacara:booking-draft') ?? '{}',
-      ) as BookingDraft;
-      return stored.items;
-    }
 
     it('põe no pedido, com uma unidade, o item que veio da vitrine', async () => {
       stubFetch({ '/api/items': [VITRINE, MESA] });
       renderWizard(`/reservar?item=${VITRINE.id}`);
 
-      await screen.findByText('Quando é a festa?');
-
-      await waitFor(() => {
-        expect(storedItems()).toEqual([{ itemId: VITRINE.id, quantity: 1 }]);
-      });
+      expect(await screen.findByText('Itens escolhidos (1)')).toBeVisible();
+      expect(await screen.findByText('R$ 120,00')).toBeVisible();
     });
 
-    it('não mexe na quantidade de um item que já estava no pedido', async () => {
+    /*
+     * O defeito que o dono encontrou: escolher um item, voltar à landing e
+     * escolher outro abria a reserva com os dois.
+     */
+    it('começa o pedido só com o item da vitrine, sem somar ao que estava guardado', async () => {
       stubFetch({ '/api/items': [VITRINE, MESA] });
-      seedDraft({ items: [{ itemId: VITRINE.id, quantity: 3 }] });
+      // O que sobrou de outra visita: a mesa, que levaria a estimativa a R$ 200,00.
+      seedDraft({ items: [{ itemId: MESA.id, quantity: 1 }] });
       renderWizard(`/reservar?item=${VITRINE.id}`);
 
-      await screen.findByText('Quando é a festa?');
-
-      await waitFor(() => {
-        expect(storedItems()).toEqual([{ itemId: VITRINE.id, quantity: 3 }]);
-      });
+      expect(await screen.findByText('Itens escolhidos (1)')).toBeVisible();
+      expect(await screen.findByText('R$ 120,00')).toBeVisible();
     });
 
     it('ignora item fora do formato em vez de quebrar', async () => {
       stubFetch();
       renderWizard('/reservar?item=nao-e-um-id');
 
-      await screen.findByText('Quando é a festa?');
-
-      await waitFor(() => {
-        expect(storedItems()).toEqual([]);
-      });
+      expect(await screen.findByText('Só a chácara, sem itens')).toBeVisible();
     });
   });
 
@@ -400,7 +407,12 @@ describe('BookingWizard', () => {
     expect(screen.getByLabelText('Número de convidados')).toHaveValue(60);
   });
 
-  it('guarda cada escolha, para a próxima montagem continuar de onde parou', async () => {
+  /*
+   * O pedido não é carrinho (§12.2): o que a pessoa monta e abandona antes da
+   * revisão não fica guardado. A volta do login, que precisa do pedido inteiro,
+   * só acontece a partir da revisão, e lá ele é guardado.
+   */
+  it('esquece o pedido que não chegou à revisão', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubFetch();
     const first = renderWizard();
@@ -412,8 +424,27 @@ describe('BookingWizard', () => {
     first.unmount();
     renderWizard();
 
-    expect(await screen.findByLabelText('Casamento ou noivado')).toBeChecked();
-    expect(screen.getByLabelText('Número de convidados')).toHaveValue(80);
+    expect(await screen.findByLabelText('Casamento ou noivado')).not.toBeChecked();
+    expect(screen.getByLabelText('Número de convidados')).toHaveValue(null);
+    expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+  });
+
+  /*
+   * A troca de passo é só na query, e a rolagem do navegador ficava onde estava:
+   * quem tocava em "Continuar" no fim do passo caía no meio do seguinte.
+   */
+  it('começa o passo seguinte do topo', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const scrollTo = vi.spyOn(window, 'scrollTo');
+    stubFetch();
+    seedDraft();
+    renderWizard();
+
+    await screen.findByText('Quando é a festa?');
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    expect(await screen.findByText('Escolha o estilo da festa')).toBeVisible();
+    expect(scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
   /*
@@ -583,9 +614,7 @@ describe('BookingWizard, passo de itens', () => {
     await screen.findByText('Mesa de madeira rústica');
 
     await waitFor(() => {
-      const stored = JSON.parse(
-        window.sessionStorage.getItem('chacara:booking-draft') ?? '{}',
-      ) as BookingDraft;
+      const stored = JSON.parse(window.sessionStorage.getItem(DRAFT_KEY) ?? '{}') as BookingDraft;
       expect(stored.items).toEqual([]);
     });
   });

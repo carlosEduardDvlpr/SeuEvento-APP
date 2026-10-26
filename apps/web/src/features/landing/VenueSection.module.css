@@ -21,6 +21,11 @@
   color: var(--venue-ink);
 }
 
+/* O endereço é longo: ganha a linha inteira em vez de espremer uma coluna. */
+.factWide {
+  grid-column: 1 / -1;
+}
+
 .fact svg {
   grid-row: span 2;
 }
@@ -37,20 +42,43 @@
   font-weight: 600;
 }
 
-/* Tour por áreas: foto e duas linhas por área (§13.1). */
+/*
+ * Tour por áreas: foto e duas linhas por área (§13.1).
+ *
+ * Grade em que nenhuma linha fica pela metade, com qualquer número de áreas: o
+ * dono tira e põe foto pelo painel, e a seção precisa continuar arrumada. A
+ * foto em destaque de antes ocupava duas linhas, mas as duas áreas empilhadas
+ * ao lado ficavam mais altas que ela, e sobrava um vão embaixo; com cinco
+ * áreas, a última linha ainda saía com um buraco.
+ *
+ * Duas colunas já no celular, para o passeio não virar uma rolagem de fotos
+ * inteiras; linhas de três no desktop.
+ */
 .areas {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--space-24);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-24) var(--space-16);
   margin: var(--space-48) 0 0;
   padding: 0;
   list-style: none;
 }
 
 .area {
+  /* Proporção da foto. A área que ganha mais largura troca por uma mais larga. */
+  --area-ratio: 4 / 3;
+
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+}
+
+/* Celular: com número ímpar de áreas, a primeira abre a seção na largura toda. */
+@media (max-width: 899px) {
+  .area:first-child:nth-last-child(odd) {
+    --area-ratio: 3 / 2;
+
+    grid-column: 1 / -1;
+  }
 }
 
 .areaPhoto {
@@ -58,7 +86,7 @@
   align-items: center;
   justify-content: center;
   /* Proporção reservada para a troca por foto real não saltar (§14.9). */
-  aspect-ratio: 4 / 3;
+  aspect-ratio: var(--area-ratio);
   overflow: hidden;
   /* Mesmo fio dourado da moldura-assinatura, para a grade de áreas não ficar
      com cara de bloco solto no meio das seções emolduradas. */
@@ -87,12 +115,6 @@
   font-size: var(--text-sm);
 }
 
-.address {
-  max-width: var(--measure);
-  margin: var(--space-32) 0 0;
-  color: var(--fg-soft);
-}
-
 @media (min-width: 900px) {
   .facts {
     grid-template-columns: repeat(3, 1fr);
@@ -100,24 +122,32 @@
   }
 
   .areas {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    align-items: start;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--space-32) var(--space-24);
   }
 
   .area {
-    grid-column: span 4;
+    grid-column: span 2;
   }
 
-  .area:first-child {
-    grid-column: span 8;
-    grid-row: span 2;
+  /*
+   * Linhas de três, e o que sobra vira linha de duas, no começo, onde a foto
+   * maior abre a seção. Com 3k + 2 áreas, as duas primeiras dividem a primeira
+   * linha; com 3k + 4, as quatro primeiras formam duas linhas de duas. O
+   * `nth-last-child` é o que faz a primeira área saber quantas vêm depois.
+   */
+  .area:nth-child(1):nth-last-child(3n + 2),
+  .area:nth-child(2):nth-last-child(3n + 1),
+  .area:nth-child(1):nth-last-child(3n + 4),
+  .area:nth-child(2):nth-last-child(3n + 3),
+  .area:nth-child(3):nth-last-child(3n + 2),
+  .area:nth-child(4):nth-last-child(3n + 1) {
+    --area-ratio: 3 / 2;
+
+    grid-column: span 3;
   }
 
-  .area:first-child .areaPhoto {
-    aspect-ratio: 16 / 10;
-  }
-
-  .area:first-child .areaTitle {
+  .areaTitle {
     font-size: var(--text-xl);
   }
 }

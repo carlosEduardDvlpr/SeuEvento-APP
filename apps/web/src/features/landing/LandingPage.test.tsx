@@ -1,15 +1,12 @@
 import type { CatalogItem, Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { errorResponse, jsonResponse, renderWithProviders } from '../../../test/helpers/render';
 import { LandingPage } from './LandingPage';
 
 /**
  * Landing (§13.1).
- *
- * O relógio é fixado porque o hero sugere as próximas datas livres: sem data
- * fixa, os textos de dia da semana mudariam a cada execução.
  *
  * O que está sob teste, acima de tudo: **seção sem conteúdo não aparece** (§16.6).
  * A landing lê o que o dono cadastrou, e inventar nada é a regra.
@@ -137,18 +134,6 @@ const ITEMS: CatalogItem[] = [
   vitrine(10, CHA_DE_BEBE, 0),
 ];
 
-/** Agenda de dois meses com os primeiros dias ocupados por antecedência. */
-function availability(freeFrom = '2026-11-20') {
-  const days: { date: string; status: 'free' | 'past' | 'booked' }[] = [];
-
-  for (let day = 15; day <= 30; day += 1) {
-    const date = `2026-11-${String(day).padStart(2, '0')}`;
-    days.push({ date, status: date < freeFrom ? 'past' : 'free' });
-  }
-
-  return { days };
-}
-
 type Routes = Record<string, () => Response>;
 
 function stubFetch(routes: Routes = {}) {
@@ -171,10 +156,7 @@ function stubFetch(routes: Routes = {}) {
       const path = url.split('?')[0]!;
       const handler = base[url] ?? base[path];
 
-      if (handler) return Promise.resolve(handler());
-      if (path === '/api/availability') return Promise.resolve(jsonResponse(availability()));
-
-      return Promise.resolve(jsonResponse([]));
+      return Promise.resolve(handler ? handler() : jsonResponse([]));
     }),
   );
 
@@ -187,14 +169,7 @@ function renderLanding(routes: Routes = {}) {
   return urls;
 }
 
-beforeEach(() => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
-  // 15/11/2026 às 12:00 em São Paulo.
-  vi.setSystemTime(new Date('2026-11-15T15:00:00.000Z'));
-});
-
 afterEach(() => {
-  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -224,14 +199,13 @@ describe('LandingPage', () => {
       .getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent);
 
+    // O hero não tem h2: é o h1 com uma frase e um botão.
     expect(titles).toEqual([
-      'Quando é a festa?',
       'A chácara',
-      'Festas que já aconteceram aqui',
       'Pegue e monte: como funciona',
       'Escolha um estilo',
       // A vitrine de itens entrou depois, a pedido do dono, no bloco da decoração.
-      'Decoração pegue e monte',
+      'Decorações',
       'Combos que saem mais barato',
       'Perguntas frequentes',
       'Como chegar',
@@ -239,58 +213,37 @@ describe('LandingPage', () => {
   });
 });
 
-describe('hero com verificação de datas', () => {
-  it('sugere as próximas datas livres, com link que já leva a data', async () => {
+/*
+ * Hero (§13.1, item 1): o nome, uma frase e um botão só. Era um seletor com as
+ * próximas datas livres; o dono preferiu levar direto ao calendário do wizard.
+ */
+describe('hero', () => {
+  it('abre com o nome e a frase da chácara', async () => {
     renderLanding();
 
-    const link = await screen.findByRole('link', { name: /20 de novembro/ });
-
-    expect(link).toHaveAttribute('href', '/reservar?data=2026-11-20');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Espaço Donna Belle' }),
+    ).toBeVisible();
+    expect(screen.getByText('O cenário perfeito para momentos inesquecíveis.')).toBeVisible();
   });
 
-  it('pede a agenda a partir de hoje, por dois meses', async () => {
-    const urls = renderLanding();
-
-    await screen.findByText('Quando é a festa?');
-
-    expect(urls).toContain('/api/availability?from=2026-11-15&to=2027-01-14');
-  });
-
-  it('não sugere data que a antecedência mínima já descartou', async () => {
+  it('leva ao calendário do wizard por um botão só', async () => {
     renderLanding();
 
-    await screen.findByRole('link', { name: /20 de novembro/ });
-    // 16/11 vem como `past` no stub: dentro da antecedência.
-    expect(screen.queryByRole('link', { name: /16 de novembro/ })).not.toBeInTheDocument();
-  });
-
-  it('limita as sugestões para não virar lista', async () => {
-    renderLanding();
-
-    await screen.findByText('Quando é a festa?');
-    const dates = screen.getAllByRole('link', { name: /de novembro/ });
-
-    expect(dates.length).toBeLessThanOrEqual(4);
-  });
-
-  /* Inventar data livre seria pior que não mostrar nenhuma. */
-  it('oferece o calendário quando os dois meses estão cheios', async () => {
-    renderLanding({
-      '/api/availability': () => jsonResponse({ days: [{ date: '2026-11-20', status: 'booked' }] }),
-    });
-
-    expect(await screen.findByText(/próximos dois meses estão cheios/)).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Abrir o calendário' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Reservar uma data' })).toHaveAttribute(
       'href',
       '/reservar',
     );
   });
 
-  it('diz o prazo do pedido com o valor configurado', async () => {
-    renderLanding();
+  /* Os dias livres são do calendário do wizard, que pede a agenda na hora. */
+  it('não consulta a agenda', async () => {
+    const urls = renderLanding();
 
-    // Aparece no hero e na FAQ; as duas saem do mesmo número configurado.
-    expect((await screen.findAllByText(/seguras por até 48 horas/)).length).toBeGreaterThan(0);
+    // Quando os combos aparecem, a página inteira já montou: o pedido já teria saído.
+    await screen.findByText('Combos que saem mais barato');
+
+    expect(urls.filter((url) => url.startsWith('/api/availability'))).toEqual([]);
   });
 
   it('usa a foto de destaque quando o dono subiu uma', async () => {
@@ -338,85 +291,20 @@ describe('a chácara', () => {
   });
 });
 
-describe('galeria', () => {
-  it('mostra só as fotos de eventos no mosaico', async () => {
+/*
+ * A galeria de festas saiu da landing a pedido do dono. O stub continua
+ * devolvendo fotos da seção "Eventos", como o banco pode ainda ter: a landing
+ * tem de ignorá-las.
+ */
+describe('fotos de festas', () => {
+  it('não aparecem, mesmo que a API ainda as devolva', async () => {
     renderLanding();
 
-    expect(await screen.findByAltText('Chá de bebê com painel de nuvens')).toBeVisible();
-    expect(screen.getByAltText('Casamento no gramado')).toBeVisible();
-  });
+    await screen.findByText('Combos que saem mais barato');
 
-  it('não aparece quando não há foto de festa', async () => {
-    renderLanding({ '/api/gallery': () => jsonResponse([HERO, AREA]) });
-
-    await screen.findByRole('heading', { level: 1 });
     expect(screen.queryByText('Festas que já aconteceram aqui')).not.toBeInTheDocument();
-  });
-
-  it('abre a ampliação com a foto escolhida', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    renderLanding();
-
-    await user.click(await screen.findByAltText('Chá de bebê com painel de nuvens'));
-
-    const dialog = within(await screen.findByRole('dialog'));
-    expect(dialog.getByText('1 de 2')).toBeVisible();
-    expect(dialog.getByText('Chá de bebê da Lia')).toBeVisible();
-  });
-
-  /*
-   * §13.1: navegação por teclado na visualização ampliada.
-   *
-   * A tecla vai por `fireEvent` e não por `userEvent`: o polyfill de
-   * `showModal()` do jsdom não move o foco para dentro do diálogo (está
-   * documentado em `test/setup.ts`), então um `keyboard()` chegaria ao `body` e
-   * nunca ao `onKeyDown`. No navegador o foco entra sozinho e o evento borbulha.
-   */
-  it('anda pelas fotos com as setas', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    renderLanding();
-
-    await user.click(await screen.findByAltText('Chá de bebê com painel de nuvens'));
-    const dialog = await screen.findByRole('dialog');
-
-    fireEvent.keyDown(dialog, { key: 'ArrowRight' });
-
-    expect(within(screen.getByRole('dialog')).getByText('2 de 2')).toBeVisible();
-  });
-
-  it('a seta volta da primeira para a última', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    renderLanding();
-
-    await user.click(await screen.findByAltText('Chá de bebê com painel de nuvens'));
-    const dialog = await screen.findByRole('dialog');
-
-    fireEvent.keyDown(dialog, { key: 'ArrowLeft' });
-
-    expect(within(screen.getByRole('dialog')).getByText('2 de 2')).toBeVisible();
-  });
-
-  it('oferece botões de navegação além do teclado', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    renderLanding();
-
-    await user.click(await screen.findByAltText('Chá de bebê com painel de nuvens'));
-    const dialog = within(await screen.findByRole('dialog'));
-
-    await user.click(dialog.getByRole('button', { name: 'Próxima foto' }));
-
-    expect(dialog.getByText('2 de 2')).toBeVisible();
-  });
-
-  it('fecha a ampliação', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    renderLanding();
-
-    await user.click(await screen.findByAltText('Chá de bebê com painel de nuvens'));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Fechar' }));
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByAltText('Chá de bebê com painel de nuvens')).not.toBeInTheDocument();
+    expect(screen.queryByAltText('Casamento no gramado')).not.toBeInTheDocument();
   });
 });
 
@@ -493,7 +381,7 @@ describe('perguntas frequentes', () => {
 
   /* Cada resposta sai da configuração: mudar no painel muda a resposta aqui. */
   it('responde o horário com o que está configurado', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderLanding({
       '/api/public/venue': () =>
         jsonResponse({ ...VENUE, checkInTime: '10:00', checkOutTime: '20:00' }),
@@ -505,7 +393,7 @@ describe('perguntas frequentes', () => {
   });
 
   it('responde a antecedência com o número configurado', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderLanding();
 
     await openQuestion(user, /antecedência preciso reservar/);
@@ -514,7 +402,7 @@ describe('perguntas frequentes', () => {
   });
 
   it('diz que dá para reservar para hoje quando não há antecedência', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderLanding({ '/api/public/venue': () => jsonResponse({ ...VENUE, minLeadDays: 0 }) });
 
     await openQuestion(user, /antecedência preciso reservar/);
@@ -522,8 +410,18 @@ describe('perguntas frequentes', () => {
     expect(screen.getByText(/até para hoje/)).toBeVisible();
   });
 
+  /* O prazo do pedido saiu do hero com o seletor de datas; agora só a FAQ o diz. */
+  it('responde quanto tempo a data fica segura com o prazo configurado', async () => {
+    const user = userEvent.setup();
+    renderLanding({ '/api/public/venue': () => jsonResponse({ ...VENUE, holdHours: 24 }) });
+
+    await openQuestion(user, /Quanto tempo a data fica reservada/);
+
+    expect(screen.getByText(/seguras por até 24 horas/)).toBeVisible();
+  });
+
   it('responde o cancelamento com o prazo configurado', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderLanding();
 
     await openQuestion(user, /Consigo cancelar/);
@@ -532,7 +430,7 @@ describe('perguntas frequentes', () => {
   });
 
   it('deixa claro que o site não cobra nada', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderLanding();
 
     await openQuestion(user, /Como funciona o pagamento/);
@@ -599,7 +497,7 @@ describe('como chegar', () => {
  */
 describe('vitrine de itens', () => {
   async function itemsSection() {
-    const heading = await screen.findByRole('heading', { name: 'Decoração pegue e monte' });
+    const heading = await screen.findByRole('heading', { name: 'Decorações' });
     return heading.closest('section')!;
   }
 
@@ -617,7 +515,7 @@ describe('vitrine de itens', () => {
 
     // Os combos chegam pela mesma rodada de requisições: a vitrine já teria aparecido.
     await screen.findByText('Combos que saem mais barato');
-    expect(screen.queryByText('Decoração pegue e monte')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Decorações' })).not.toBeInTheDocument();
   });
 
   it('mostra o preço e leva ao wizard com o item no pedido', async () => {
@@ -631,7 +529,7 @@ describe('vitrine de itens', () => {
   });
 
   it('filtra por categoria', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderLanding();
 
     const section = await itemsSection();
@@ -648,7 +546,7 @@ describe('vitrine de itens', () => {
   });
 
   it('mostra oito, revela o resto sob pedido e deixa de fora o item sem estoque', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderLanding();
 
     const section = await itemsSection();

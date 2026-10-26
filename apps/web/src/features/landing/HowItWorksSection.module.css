@@ -39,8 +39,14 @@
 }
 
 @media (min-width: 900px) {
+  /*
+   * Uma coluna por passo, quantos forem: o texto é do dono e o número já mudou
+   * uma vez (eram quatro). Com colunas fixas, sobrava uma vazia à direita.
+   */
   .steps {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: none;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
   }
 
   .step:not(:last-child)::after {

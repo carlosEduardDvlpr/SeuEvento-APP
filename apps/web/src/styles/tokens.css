@@ -97,6 +97,7 @@
   /* Véus e sobreposições, em cima de foto ou de diálogo. */
   --scrim: rgb(61 20 48 / 0.5);
   --scrim-strong: rgb(61 20 48 / 0.82);
+  --scrim-soft: rgb(61 20 48 / 0.3); /* borda do véu do hero, onde não há texto */
   --scrim-gradient: rgb(61 20 48 / 0.78);
   --surface-veil: rgb(253 243 240 / 0.9);
   --swatch-line: rgb(0 0 0 / 0.12); /* contorno de amostra de cor, neutro de propósito */

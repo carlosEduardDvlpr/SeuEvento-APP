@@ -5,25 +5,22 @@ import styles from './HowItWorksSection.module.css';
  * Pegue e monte, como funciona (§13.1, item 4).
  *
  * Aqui a numeração é legítima, e a §13.1 diz por quê: é uma sequência real, não
- * uma lista de qualidades. Quatro passos curtos, na ordem em que acontecem.
+ * uma lista de qualidades. Passos curtos, na ordem em que acontecem; o texto é o
+ * do dono.
  */
 
 const STEPS = [
   {
     title: 'Escolha os itens',
-    text: 'Monte o pedido pelo site, filtrando pelo estilo da festa. O valor aparece antes de enviar.',
-  },
-  {
-    title: 'Retire na chácara',
-    text: 'No dia combinado, você passa e leva os itens. Cada um vem com dica de montagem.',
+    text: 'Monte o pedido da decoração pelo site.',
   },
   {
     title: 'Monte do seu jeito',
-    text: 'A decoração fica como você imaginou, sem depender da agenda de ninguém.',
+    text: 'A decoração fica como você imaginou.',
   },
   {
     title: 'Devolva no fim',
-    text: 'Ao desocupar, os itens voltam para a chácara. Sem taxa de montagem.',
+    text: 'Ao desocupar, os itens devem ser reentregues.',
   },
 ];
 
@@ -35,10 +32,6 @@ export function HowItWorksSection() {
           <h2 className={landing.title} id="titulo-pegue-e-monte">
             Pegue e monte: como funciona
           </h2>
-          <p className={landing.lead}>
-            A decoração é sua, e o trabalho de montar também. Sai mais barato e fica do jeito que
-            você quer.
-          </p>
         </div>
 
         <ol className={[landing.body, styles.steps].join(' ')}>

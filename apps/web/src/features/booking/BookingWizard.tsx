@@ -35,8 +35,8 @@ import styles from './BookingWizard.module.css';
  * Wizard de reserva (§13.2).
  *
  * Quatro responsabilidades, e nada de regra de negócio: manter o passo em
- * sincronia com a URL, manter o rascunho vivo entre recarregamentos, pedir o
- * orçamento ao servidor e mandar o pedido.
+ * sincronia com a URL, guardar o pedido que chegou à revisão até ele ser
+ * enviado, pedir o orçamento ao servidor e mandar o pedido.
  *
  * **O servidor decide.** O total oficial vem do `POST /pricing/quote`; o rodapé
  * só estima enquanto o orçamento não existe, e diz que está estimando (§13.2).
@@ -50,46 +50,63 @@ function estimateItemsCents(draft: BookingDraft, prices: Map<string, number>): n
   );
 }
 
-/**
- * Aplica ao rascunho o que a landing escolheu (§13.1).
- *
- * `?data=` vem de clicar numa data livre no hero; `?estilo=` de clicar num
- * cartão de estilo. O que vem na URL **vence** o que estava guardado: a pessoa
- * acabou de apontar o que quer, e manter o rascunho antigo faria o clique dela
- * parecer ignorado.
- *
- * A data preenche as duas pontas, porque um clique é uma festa de um dia (§7.3) —
- * e ela fica editável no calendário, que é o passo onde a pessoa cai.
- *
- * A data também escolhe a **chácara** (T32): as datas livres do hero são as da
- * agenda da chácara, e abrir o wizard na decoração com uma delas trocaria a
- * pergunta que a pessoa respondeu ao clicar.
- *
- * `?item=` vem do cartão da vitrine de itens: o item entra no pedido com uma
- * unidade. Se já estava, fica como estava — a pessoa pode ter escolhido três
- * antes, e voltar pela landing não pode desfazer isso. Só o formato do id é
- * conferido aqui; item que saiu do catálogo cai fora no passo de itens, pelo
- * mesmo caminho de qualquer item desativado.
- */
-function withLandingChoice(
-  draft: BookingDraft,
-  choice: { date: string | null; themeId: string | null; itemId: string | null },
-): BookingDraft {
-  const isDate = choice.date !== null && /^\d{4}-\d{2}-\d{2}$/.test(choice.date);
+/** O que a landing escolheu e mandou na URL (§13.1). */
+type LandingChoice = { date: string | null; themeId: string | null; itemId: string | null };
 
+/** A escolha da landing, ou `null` quando a pessoa chegou sem nenhuma. */
+function landingChoice(params: URLSearchParams): LandingChoice | null {
+  const choice = {
+    date: params.get('data'),
+    themeId: params.get('estilo'),
+    itemId: params.get('item'),
+  };
+
+  return choice.date === null && choice.themeId === null && choice.itemId === null ? null : choice;
+}
+
+/**
+ * Pedido novo a partir do que a landing escolheu (§13.1).
+ *
+ * `?item=` vem do cartão da vitrine de itens, e o item entra **sozinho**, com
+ * uma unidade: a pessoa clicou numa decoração, e o wizard abre com ela. Antes o
+ * item somava ao que tinha sobrado da visita anterior, como num carrinho, e
+ * quem voltava à landing e escolhia outro caía na reserva com dois.
+ *
+ * `?estilo=` vem de um cartão de estilo e só preenche o filtro do passo de
+ * itens. `?data=` vem dos links de data do hero antigo, que podem estar salvos
+ * por aí: preenche as duas pontas, porque um clique é uma festa de um dia
+ * (§7.3), e fica na chácara, que é de onde eram aquelas datas (T32).
+ *
+ * Só o formato é conferido aqui. Item que saiu do catálogo cai fora no passo de
+ * itens, pelo mesmo caminho de qualquer item desativado.
+ */
+function draftFromLanding(choice: LandingChoice): BookingDraft {
+  const date = choice.date !== null && /^\d{4}-\d{2}-\d{2}$/.test(choice.date) ? choice.date : null;
   const itemId =
     choice.itemId !== null && /^[0-9a-f-]{36}$/i.test(choice.itemId) ? choice.itemId : null;
-  const items =
-    itemId && !draft.items.some((item) => item.itemId === itemId)
-      ? [...draft.items, { itemId, quantity: 1 }]
-      : draft.items;
 
   return {
-    ...draft,
-    ...(isDate ? { kind: 'VENUE' as const, startDate: choice.date, endDate: choice.date } : {}),
+    ...EMPTY_DRAFT,
+    ...(date ? { startDate: date, endDate: date } : {}),
     ...(choice.themeId ? { themeId: choice.themeId } : {}),
-    items,
+    ...(itemId ? { items: [{ itemId, quantity: 1 }] } : {}),
   };
+}
+
+/**
+ * Por onde o pedido começa (§12.2).
+ *
+ * Escolha vinda da landing é sempre um pedido novo, e o que estava guardado fica
+ * para trás. Sem escolha na URL (o botão do hero, o "Reservar" do cabeçalho, a
+ * volta do login), o pedido que chegou à revisão continua de onde parou; se não
+ * houver nenhum, o wizard abre vazio.
+ */
+function startingPoint(params: URLSearchParams): { draft: BookingDraft; saved: boolean } {
+  const choice = landingChoice(params);
+  if (choice) return { draft: draftFromLanding(choice), saved: false };
+
+  const saved = loadDraft();
+  return saved ? { draft: saved, saved: true } : { draft: EMPTY_DRAFT, saved: false };
 }
 
 /**
@@ -114,20 +131,22 @@ export function BookingWizard() {
   const sentBookingId = searchParams.get('reserva');
 
   /*
-   * O rascunho nasce do que estava guardado — quem voltou de /entrar continua de
-   * onde parou (§13.2) — e já recebe o que a landing mandou na URL.
-   *
-   * A aplicação acontece na **inicialização**, não num efeito: a §13.1 pede que
-   * clicar numa data livre abra o wizard "já preenchido", e fazer isso depois da
-   * primeira renderização mostraria o calendário vazio por um instante.
+   * O pedido nasce na **inicialização**, não num efeito: quem chega por um
+   * cartão da landing espera o wizard "já preenchido", e aplicar a escolha
+   * depois da primeira renderização mostraria o pedido vazio por um instante.
    */
-  const [draft, dispatch] = useReducer(draftReducer, undefined, () =>
-    withLandingChoice(loadDraft(), {
-      date: searchParams.get('data'),
-      themeId: searchParams.get('estilo'),
-      itemId: searchParams.get('item'),
-    }),
-  );
+  const [start] = useState(() => startingPoint(searchParams));
+  const [draft, dispatch] = useReducer(draftReducer, start.draft);
+
+  /*
+   * O pedido não é carrinho (§12.2): enquanto a pessoa monta, ele vive só nesta
+   * tela, e sair dela o esquece. Chegar à revisão é tentar agendar, e daí em
+   * diante ele fica guardado até ser enviado, mesmo que a pessoa volte um passo
+   * para ajustar. É o que sobrevive ao desvio por login e cadastro.
+   */
+  const [attempted, setAttempted] = useState(start.saved);
+  const keepDraft = attempted || step === 'revisao';
+
   const [showErrors, setShowErrors] = useState(false);
   const [blocker, setBlocker] = useState<{ step: WizardStep; message: string } | null>(null);
 
@@ -140,25 +159,27 @@ export function BookingWizard() {
   const sentBooking = useBooking(sentBookingId);
 
   /*
-   * Espelho do rascunho, com um dono só.
+   * Espelho do pedido, com um dono só.
    *
-   * O `reset` devolve a **mesma** referência de `EMPTY_DRAFT`, e é só o que
-   * produz essa referência: por isso ele serve para distinguir "pedido enviado,
-   * pode esquecer" de "rascunho em branco porque a pessoa ainda não escolheu".
-   * Sem esse ramo, apagar a chave no envio não serviria de nada — este efeito
-   * rodaria em seguida e regravaria um rascunho vazio.
+   * Antes da revisão a chave é **apagada**, e não deixada como estava: quem
+   * chega com uma escolha da landing começa outro pedido, e o antigo não pode
+   * reaparecer depois pelo "Reservar" do cabeçalho.
+   *
+   * O `reset` do envio devolve a **mesma** referência de `EMPTY_DRAFT`, e é só o
+   * que produz essa referência: é ela que diz "pedido enviado, pode esquecer",
+   * mesmo enquanto a tela ainda está na revisão.
    */
   useEffect(() => {
-    if (draft === EMPTY_DRAFT) clearDraft();
-    else saveDraft(draft);
-  }, [draft]);
+    if (keepDraft && draft !== EMPTY_DRAFT) saveDraft(draft);
+    else clearDraft();
+  }, [draft, keepDraft]);
 
   /*
    * A escolha da landing sai da URL depois de aplicada.
    *
-   * Sem isto, mudar a data no calendário e recarregar a página traria de volta a
-   * data do link — o parâmetro venceria a escolha mais recente da pessoa.
-   * `replace` para a limpeza não criar uma entrada no histórico.
+   * Sem isto, recarregar a página começaria outro pedido a partir do link, e o
+   * que a pessoa mudou depois (outra data, o item tirado) voltaria ao que o
+   * link dizia. `replace` para a limpeza não criar uma entrada no histórico.
    */
   useEffect(() => {
     if (!searchParams.has('data') && !searchParams.has('estilo') && !searchParams.has('item')) {
@@ -168,7 +189,6 @@ export function BookingWizard() {
     const next = new URLSearchParams(searchParams);
     next.delete('data');
     next.delete('estilo');
-    // Sem isto, recarregar a página poria o item de volta depois de a pessoa tirá-lo.
     next.delete('item');
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
@@ -177,6 +197,19 @@ export function BookingWizard() {
     const prices = new Map<string, number>();
     for (const item of catalog.data ?? []) prices.set(item.id, item.priceCents);
     return prices;
+  }, [catalog.data]);
+
+  /*
+   * Foto de cada item, para a revisão mostrar o que a pessoa vai retirar. Vem do
+   * catálogo, e não do orçamento: foto não é preço, e a linha do orçamento traz
+   * só o que entra na conta.
+   */
+  const itemImages = useMemo(() => {
+    const images = new Map<string, string>();
+    for (const item of catalog.data ?? []) {
+      if (item.imageUrl) images.set(item.id, item.imageUrl);
+    }
+    return images;
   }, [catalog.data]);
 
   /*
@@ -205,9 +238,20 @@ export function BookingWizard() {
 
   function goTo(next: WizardStep) {
     setShowErrors(false);
+
+    // Quem chegou à revisão tentou agendar: o pedido segue guardado até o envio.
+    if (step === 'revisao' || next === 'revisao') setAttempted(true);
+
     // `replace: false` de propósito: cada passo entra no histórico, que é o que
     // faz o botão voltar do navegador andar um passo (§13.2).
     setSearchParams({ step: next });
+
+    /*
+     * O passo novo começa do topo. A troca é só na query, e a rolagem ficava onde
+     * estava: quem tocava em "Continuar" no fim de um passo longo caía no meio
+     * do seguinte. Voltar pelo navegador não passa por aqui, e fica com ele.
+     */
+    window.scrollTo(0, 0);
   }
 
   function goForward() {
@@ -270,15 +314,20 @@ export function BookingWizard() {
       });
 
       /*
-       * Só agora o rascunho pode ser esquecido: a §13.2 proíbe tratamento
+       * Só agora o pedido pode ser esquecido: a §13.2 proíbe tratamento
        * otimista para reserva, e limpar antes do 201 perderia o pedido se o envio
-       * falhasse. O `reset` apaga o espelho pelo efeito acima.
+       * falhasse. O `reset` apaga o espelho pelo efeito acima, e o próximo
+       * pedido volta a só ser guardado quando chegar à revisão.
        *
        * `replace: true` para o botão voltar não trazer a pessoa de volta a uma
        * revisão de um pedido que já foi enviado.
        */
       dispatch({ type: 'reset' });
+      setAttempted(false);
       setSearchParams({ reserva: booking.id }, { replace: true });
+
+      // A confirmação começa do topo: o botão de enviar fica no fim da revisão.
+      window.scrollTo(0, 0);
     } catch (error) {
       const target = stepForError(error);
       const message = formErrorMessage(error) ?? 'Não conseguimos enviar o pedido.';
@@ -418,6 +467,7 @@ export function BookingWizard() {
             draft={draft}
             dispatch={dispatch}
             venue={venue.data}
+            itemImages={itemImages}
             quote={quote.data}
             isLoading={quote.isFetching}
             {...(quote.isError ? { notice: formErrorMessage(quote.error) ?? undefined } : {})}

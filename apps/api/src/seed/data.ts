@@ -426,11 +426,5 @@ export const DEMO_GALLERY: readonly DemoGallerySeed[] = [
     caption: 'Área verde',
     sortOrder: 2,
   },
-  {
-    kind: 'EVENTS',
-    url: 'https://placehold.co/1200x1200/F4CBD3/7A5500?text=Cha+de+bebe',
-    alt: 'Mesa de doces de chá de bebê com painel de nuvens ao fundo.',
-    caption: 'Chá de bebê',
-    sortOrder: 1,
-  },
+  // Sem foto de "Eventos": a galeria de festas saiu da landing a pedido do dono.
 ];

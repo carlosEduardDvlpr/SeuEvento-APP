@@ -1,14 +1,9 @@
 /*
  * Hero de verdade: a foto da chácara ocupa a largura toda e a altura da tela que
- * sobra abaixo do cabeçalho fixo.
+ * sobra abaixo do cabeçalho fixo, com o texto centralizado por cima.
  *
- * Era um cartão com borda e cantos arredondados dentro do `--container`, com
- * margem em volta e teto de 860 px de altura: no desktop sobrava faixa de fundo
- * dos dois lados e embaixo, e a foto parecia uma seção a mais, não a abertura do
- * site.
- *
- * `min-height`, e não `height`: num celular baixo o texto e o seletor de datas
- * não cabem na primeira tela, e o hero precisa crescer em vez de cortá-los.
+ * `min-height`, e não `height`: num celular baixo o texto e o botão não cabem
+ * na primeira tela, e o hero precisa crescer em vez de cortá-los.
  */
 .hero {
   /*
@@ -21,7 +16,8 @@
   position: relative;
   isolation: isolate;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: center;
   /* `vh` para quem não conhece `svh`; `svh` não pula quando a barra do navegador some. */
   min-height: calc(100vh - var(--header-height));
   min-height: calc(100svh - var(--header-height));
@@ -41,6 +37,7 @@
 .image {
   z-index: -3;
   object-fit: cover;
+  animation: hero-fade 700ms ease-out backwards;
 }
 
 .imageFallback {
@@ -48,28 +45,33 @@
   background: var(--venue-ink);
 }
 
+/*
+ * Véu mais forte no meio, onde o texto fica, e mais leve nas bordas, onde a
+ * foto respira. O texto claro precisa de contraste sobre qualquer foto que o
+ * dono suba, inclusive as muito claras: no centro o véu chega a 82%.
+ */
 .scrim {
   z-index: -2;
-  background: linear-gradient(
-    to bottom,
-    transparent 10%,
-    var(--scrim) 42%,
-    var(--scrim-strong) 100%
+  background: radial-gradient(
+    ellipse 70% 60% at center,
+    var(--scrim-strong) 0%,
+    var(--scrim) 60%,
+    var(--scrim-soft) 100%
   );
 }
 
 /*
- * A foto vai de ponta a ponta, mas o texto continua alinhado com o resto da
- * página: o respiro lateral é o que sobra do `--container` (nunca menos que o
- * das seções), sem precisar de um wrapper só para centralizar.
+ * Centralizado a pedido do dono: são só o nome, uma frase e um botão, a
+ * "frase curta de chamada" que a §14.7 deixa centralizar.
  */
 .content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
-  padding: var(--space-64) max(var(--space-16), (100% - var(--container)) / 2) var(--space-32);
-}
-
-.text {
-  max-width: 720px;
+  max-width: var(--container);
+  padding: var(--space-64) var(--space-16);
+  text-align: center;
 }
 
 .title {
@@ -79,116 +81,96 @@
   line-height: 1.1;
   color: var(--on-brand);
   text-wrap: balance;
+  animation: hero-rise 700ms ease-out 100ms backwards;
 }
 
 .lead {
-  margin: var(--space-24) 0 0;
-  max-width: 58ch;
+  max-width: 40ch;
+  margin: var(--space-16) 0 0;
   color: var(--on-brand-soft);
   font-size: var(--text-lg);
+  text-wrap: balance;
+  animation: hero-rise 700ms ease-out 200ms backwards;
 }
 
 /*
- * Seletor de datas: o bloco que cumpre a promessa de "chegar às datas em um
- * gesto". Fica dentro do hero, com fundo próprio para se destacar do texto.
+ * A única ação do hero: o dourado da ação principal (§14.2), mais alto e com
+ * letra maior que o botão comum. O contorno escuro segura a borda sobre a foto.
+ * Raio e ausência de sombra são os de todo botão (§14.5).
  */
-.datePicker {
-  margin-top: var(--space-32);
-  padding: var(--space-16);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-md);
-  max-width: 700px;
-  background: var(--surface-veil);
-  backdrop-filter: blur(8px);
-
-  /*
-   * §18.2, CLS abaixo de 0,1.
-   *
-   * A consulta da agenda chega depois do primeiro desenho, e sem esta altura o
-   * "Consultando a agenda…" (uma linha) seria substituído por duas fileiras de
-   * datas, empurrando a landing inteira para baixo. Reservar o espaço troca um
-   * pouco de vazio por nenhum salto.
-   *
-   * A conta está escrita em tokens de propósito: se o alvo de toque ou o respiro
-   * mudar, a altura acompanha em vez de virar número órfão.
-   */
-  min-height: calc(
-    /* padding de cima e de baixo */ 2 * var(--space-16) +
-      /* título, em --text-lg com line-height 1.15 */ 1.44rem + /* duas fileiras de datas */
-      var(--space-12) + 2 * var(--touch-target) + var(--space-8) +
-      /* link "ver todas as datas livres", em --text-sm */ var(--space-12) + 1.36rem
-  );
-}
-
-.datePickerTitle {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-}
-
-.dates {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-8);
-  margin: var(--space-12) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-/*
- * Cada data é um alvo de toque completo, não um texto clicável: no celular essa
- * é a primeira interação do site e precisa ser fácil de acertar (§14.11).
- */
-.date {
+.cta {
   display: inline-flex;
   align-items: center;
-  min-height: var(--touch-target);
-  padding: 0 var(--space-16);
-  border: 1px solid var(--brand);
-  border-radius: 999px;
-  background: var(--bg);
-  color: var(--brand);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  justify-content: center;
+  gap: var(--space-12);
+  min-height: 56px;
+  margin-top: var(--space-32);
+  padding: 0 var(--space-32);
+  border: 1px solid var(--action-line);
+  border-radius: var(--r-sm);
+  background: var(--action);
+  color: var(--action-fg);
+  font-size: var(--text-lg);
+  font-weight: 700;
   text-decoration: none;
+  transition:
+    background-color var(--transition),
+    transform var(--transition);
+  animation: hero-rise 700ms ease-out 300ms backwards;
 }
 
-.date:hover {
-  background: var(--brand);
-  color: var(--on-brand);
+.cta:hover {
+  background: var(--action-hover);
+  transform: translateY(-2px);
 }
 
-.allDates {
-  display: inline-block;
-  margin-top: var(--space-12);
-  color: var(--brand);
-  font-size: var(--text-sm);
-  font-weight: 600;
+/* Anel claro: o azul de `--focus` quase some sobre o véu escuro. */
+.cta:focus-visible {
+  outline: 3px solid var(--on-brand);
+  outline-offset: 4px;
 }
 
-.datesNote {
-  margin: var(--space-12) 0 0;
-  color: var(--fg-soft);
-  font-size: var(--text-sm);
+/*
+ * O momento orquestrado da carga (§14.8): a foto aparece e o texto sobe em
+ * sequência, uma vez.
+ *
+ * `backwards`, e não `both`: o elemento fica no primeiro quadro durante o
+ * atraso e, terminada a animação, volta aos estilos dele. Com `both`, o
+ * `transform` final ficaria preso e o botão não subiria no hover.
+ */
+@keyframes hero-fade {
+  from {
+    opacity: 0;
+  }
 }
 
-.note {
-  margin: var(--space-16) 0 0;
-  max-width: 700px;
-  color: var(--on-brand-soft);
-  font-size: var(--text-sm);
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/*
+ * Quem pede menos movimento vê tudo de uma vez. A regra global do `base.css`
+ * encurta a duração, mas não o atraso, e o botão ficaria invisível por um
+ * terço de segundo.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .image,
+  .title,
+  .lead,
+  .cta {
+    animation: none;
+  }
 }
 
 @media (min-width: 900px) {
-  .scrim {
-    background: linear-gradient(90deg, var(--scrim-strong) 0%, var(--scrim) 48%, transparent 82%);
-  }
-
   .content {
-    padding-block: var(--space-96) var(--space-64);
+    padding-block: var(--space-96);
   }
 
-  .datePicker {
-    margin-top: var(--space-48);
+  .lead {
+    font-size: var(--text-xl);
   }
 }

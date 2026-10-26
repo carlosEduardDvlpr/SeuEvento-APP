@@ -67,9 +67,9 @@ export function renderLanding({ siteUrl, ...seed }: PrerenderInput): PrerenderOu
    * estado em que o cliente também começa — por isso o cabeçalho sai igual nos
    * dois lados.
    *
-   * O mesmo vale para a disponibilidade: ela não está no pacote de dados, então
-   * os dois lados renderizam "Consultando a agenda…" e a hidratação fecha sem
-   * divergência.
+   * A disponibilidade não está no pacote de dados, e a landing nem a consulta:
+   * o hero leva ao calendário do wizard, que pede a agenda na hora. Não há,
+   * portanto, nada que dependa do instante em que o build rodou.
    */
   const html = renderToString(
     <StrictMode>

@@ -12,6 +12,7 @@ import { Seo } from '@/features/seo/Seo';
 import { RequireAuth, RequireRole } from './guards';
 import { PublicLayout } from './layout/PublicLayout';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { ScrollToTop } from './ScrollToTop';
 
 /**
  * Mapa de rotas da §12.1.
@@ -71,6 +72,13 @@ export function AppRoutes() {
         anterior durante o download (§18.3).
       */}
       <Seo />
+
+      {/*
+        Aqui, e não no `AppRouter`: o pré-render monta esta mesma árvore, e um
+        componente a mais só no cliente mudaria a posição dos que vêm depois,
+        que é de onde o `useId` tira os ids. No servidor ele não faz nada.
+      */}
+      <ScrollToTop />
 
       <Suspense fallback={<p className="sr-only">Carregando…</p>}>
         <Routes>

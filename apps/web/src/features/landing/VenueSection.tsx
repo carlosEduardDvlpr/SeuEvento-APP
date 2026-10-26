@@ -1,5 +1,5 @@
 import type { GalleryImage, PublicVenue } from '@chacara/shared';
-import { CalendarIcon, ClockIcon, ImageIcon, UsersIcon } from '@/components/icons';
+import { CalendarIcon, ClockIcon, ImageIcon, PinIcon, UsersIcon } from '@/components/icons';
 import landing from './landing.module.css';
 import styles from './VenueSection.module.css';
 
@@ -10,10 +10,10 @@ import styles from './VenueSection.module.css';
  * o nome da área e a `caption` são as duas linhas que a §13.1 pede. Isso é de
  * propósito — assim o dono descreve as áreas que **existem de verdade** pelo
  * painel, sem ninguém mexer em código, e nós não inventamos "salão de festas"
- * para uma chácara que não tem um (§16.6).
+ * para uma chácara que não tem um (§16.6). A ordem do tour é a da galeria.
  *
- * O bloco de fatos lê `VenueSettings`, então capacidade e horário na landing
- * nunca divergem do que o sistema aceita.
+ * O bloco de fatos lê `VenueSettings`, então capacidade, horário e endereço na
+ * landing nunca divergem do que o sistema aceita.
  */
 
 export type VenueSectionProps = {
@@ -21,8 +21,16 @@ export type VenueSectionProps = {
   areas: GalleryImage[];
 };
 
+type Fact = {
+  icon: typeof UsersIcon;
+  label: string;
+  value: string;
+  /** Ocupa a linha inteira do bloco: o endereço não cabe numa coluna. */
+  wide?: boolean;
+};
+
 export function VenueSection({ venue, areas }: VenueSectionProps) {
-  const facts = [
+  const facts: Fact[] = [
     { icon: UsersIcon, label: 'Cabem até', value: `${venue.maxGuests} pessoas` },
     {
       icon: ClockIcon,
@@ -39,6 +47,11 @@ export function VenueSection({ venue, areas }: VenueSectionProps) {
     },
   ];
 
+  // §13.1: o endereço entra no bloco de fatos, e não solto no fim da seção.
+  if (venue.address) {
+    facts.push({ icon: PinIcon, label: 'Endereço', value: venue.address, wide: true });
+  }
+
   return (
     <section
       className={[landing.section, landing.sectionAlt].join(' ')}
@@ -49,15 +62,15 @@ export function VenueSection({ venue, areas }: VenueSectionProps) {
           <h2 className={landing.title} id="titulo-chacara">
             A chácara
           </h2>
-          <p className={landing.lead}>
-            O espaço é seu pelo dia inteiro: você chega, monta e recebe quem quiser.
-          </p>
         </div>
 
         {/* §14.12: bloco de fatos sem cara de planilha. */}
         <dl className={[landing.body, styles.facts].join(' ')}>
-          {facts.map(({ icon: FactIcon, label, value }) => (
-            <div className={styles.fact} key={label}>
+          {facts.map(({ icon: FactIcon, label, value, wide }) => (
+            <div
+              className={[styles.fact, wide && styles.factWide].filter(Boolean).join(' ')}
+              key={label}
+            >
               <FactIcon size={22} />
               <dt>{label}</dt>
               <dd>{value}</dd>
@@ -89,8 +102,6 @@ export function VenueSection({ venue, areas }: VenueSectionProps) {
             ))}
           </ul>
         ) : null}
-
-        {venue.address ? <p className={styles.address}>{venue.address}</p> : null}
       </div>
     </section>
   );

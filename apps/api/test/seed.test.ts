@@ -43,7 +43,7 @@ describe('seed', () => {
         priceRules: 3,
         items: 8,
         combos: 3,
-        galleryImages: 4,
+        galleryImages: 3,
       });
 
       const second = await seed({ demo: true });

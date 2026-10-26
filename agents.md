@@ -1978,6 +1978,10 @@ Resposta `201` com a reserva completa (status `PENDING`, `holdExpiresAt`, snapsh
 
 \- A landing e o wizard \*\*não exigem login\*\* até o passo final. O rascunho da reserva persiste em `sessionStorage` (sempre com `try/catch`, seção 12.4) para sobreviver ao desvio por login/cadastro.
 
+\- \*\*O rascunho não é carrinho\*\* (outubro de 2026, a pedido do dono). Só o pedido que \*\*chegou à revisão\*\* vai para o `sessionStorage`, e fica lá até ser enviado, mesmo que a pessoa volte um passo para ajustar. Antes da revisão ele vive só na tela, e sair dela o esquece. Cada escolha vinda da landing (`?item=`, `?estilo=`, `?data=`) começa um pedido novo e descarta o guardado; sem escolha na URL (botão do hero, "Reservar" do cabeçalho, volta do login), o pedido guardado continua de onde parou. Antes, o item da vitrine somava com o que tinha sobrado da visita anterior.
+
+\- \*\*Página nova começa do topo\*\* (`app/ScrollToTop.tsx`). Voltar e avançar do navegador ficam com o navegador, e mudança só na query não conta; a troca de passo do wizard rola para o topo por conta própria.
+
 
 
 \### 12.2 Estado
@@ -1992,7 +1996,7 @@ Resposta `201` com a reserva completa (status `PENDING`, `holdExpiresAt`, snapsh
 
 | Sessão (access token, usuário) | Contexto de auth em memória |
 
-| Rascunho do wizard | `useReducer` no componente do wizard + espelho em `sessionStorage` |
+| Rascunho do wizard | `useReducer` no componente do wizard + espelho em `sessionStorage` a partir da revisão, até o envio (12.1) |
 
 | Estado de UI (dialog aberto, aba) | `useState` local |
 
@@ -2050,17 +2054,17 @@ Objetivo: fazer a pessoa \*\*sentir a festa na chácara\*\* e chegar às datas e
 
 
 
-1\. \*\*Hero com verificação de datas.\*\* Foto grande da chácara em uso (hora dourada, uma festa montada) na moldura em arco, título curto e um seletor compacto "Quando é a festa?" com as próximas datas livres. Escolher a data leva ao wizard já preenchido.
+1\. \*\*Hero.\*\* Foto grande da chácara em uso (hora dourada, uma festa montada) ocupando a primeira tela, com o nome, uma frase curta e um botão só, "Reservar uma data", que abre o calendário do wizard. Texto centralizado sobre a foto, com entrada em fade na carga (14.8). Mudou em outubro de 2026, a pedido do dono: era o "Hero com verificação de datas", com a foto na moldura em arco e um seletor "Quando é a festa?" com as próximas datas livres. Desde então a landing não consulta a disponibilidade, e o wizard continua aceitando `?data=` para links antigos. O botão é a mesma ação do "Reservar" do cabeçalho, por isso os dois são dourados (exceção à regra de um botão principal por tela da 14.2).
 
 2\. \*\*A chácara.\*\* Tour por áreas (salão/área coberta, área verde, cozinha, banheiros, estacionamento etc., com o que existir de verdade): foto + duas linhas cada. Capacidade, horários e endereço em bloco de fatos, sem cara de planilha.
 
-3\. \*\*Galeria.\*\* Fotos reais de festas já realizadas, mosaico com proporções variadas. Clique abre visualização ampliada com navegação por teclado.
+3\. \*\*Galeria\*\* (removida em outubro de 2026, a pedido do dono). Era o mosaico "Festas que já aconteceram aqui", com fotos reais de festas já realizadas e visualização ampliada com navegação por teclado. A seção saiu da landing, e o painel deixou de oferecer a seção "Eventos" da galeria. O tipo `EVENTS` continua no banco, sem uso: a landing ignora foto dele.
 
-4\. \*\*Pegue e monte, como funciona.\*\* Aqui a numeração é legítima, porque é uma sequência real: escolher os itens, retirar, montar e devolver. Três passos curtos.
+4\. \*\*Pegue e monte, como funciona.\*\* Aqui a numeração é legítima, porque é uma sequência real: escolher os itens, retirar, montar e devolver. Três passos curtos. (Desde outubro de 2026 o texto é o do dono: escolher, montar e devolver, sem o passo de retirar e sem a frase de abertura.)
 
 5\. \*\*Estilos.\*\* Os temas da seção 15 em cartões de arco com paleta e uma foto de kit montado. Clicar leva ao wizard com o filtro de tema aplicado.
 
-5\.1 \*\*Decoração pegue e monte\*\* (acrescentada em outubro de 2026, a pedido do dono). Os itens ativos com estoque, com foto, nome e preço de tabela, filtráveis por categoria; aparece mesmo sem estilo cadastrado. Mostra oito e revela o resto sob pedido. Clicar leva ao wizard com o item já no pedido (`?item=`).
+5\.1 \*\*Decoração pegue e monte\*\* (acrescentada em outubro de 2026, a pedido do dono; na página, o título é "Decorações", sem frase de abertura). Os itens ativos com estoque, com foto, nome e preço de tabela, filtráveis por categoria; aparece mesmo sem estilo cadastrado. Mostra oito e revela o resto sob pedido. Clicar leva ao wizard com o item já no pedido (`?item=`).
 
 6\. \*\*Combos.\*\* Os combos ativos mais vantajosos, com quanto o cliente economiza.
 
@@ -2094,7 +2098,7 @@ Passo na URL (`?step=datas|itens|revisao`) para o botão voltar do navegador fun
 
 | \*\*2. Itens\*\* | Filtro por \*\*estilo\*\*, depois por categoria. Cartão do item com foto, preço, quantidade e "dica de montagem". Aba "Combos" com os kits do estilo escolhido | Item sem estoque nas datas escolhidas aparece esmaecido com o motivo. Ao completar um combo, aparece a linha de desconto |
 
-| \*\*3. Revisão\*\* | Resumo: datas, diárias por dia, itens, combos aplicados, total. Campo de observações. Regras da casa e política de cancelamento em texto curto | Chama `POST /pricing/quote` (com \*debounce\* de 300 ms) e mostra `issues` |
+| \*\*3. Revisão\*\* | Resumo: datas, diárias por dia, itens (com a foto de cada um), combos aplicados, total. Campo de observações. Regras da casa e política de cancelamento em texto curto | Chama `POST /pricing/quote` (com \*debounce\* de 300 ms) e mostra `issues` |
 
 | \*\*Envio\*\* | Se não logado, mostra entrar/cadastrar/Google \*\*sem perder o rascunho\*\*. Botão \*\*"Solicitar reserva"\*\* | Envia `expectedTotalCents`. Trata `PRICE\_CHANGED`, `DATE\_UNAVAILABLE`, `STOCK\_INSUFFICIENT` (voltando ao passo certo com a mensagem) |
 
@@ -2150,13 +2154,15 @@ Ambiente mais denso e funcional que o da landing, com a mesma identidade (tokens
 
 | \*\*Preços\*\* | Lista de regras (nome, dias, período, valor, prioridade). \*\*Simulador\*\*: escolher um período e ver o valor de cada dia e qual regra venceu |
 
-| \*\*Galeria\*\* | Upload/URL, texto alternativo obrigatório, legenda, ordem por arrastar (ou botões subir/descer), seção (hero, chácara, eventos) |
+| \*\*Galeria\*\* | Upload/URL, texto alternativo obrigatório, legenda, ordem por arrastar (ou botões subir/descer), seção (hero, chácara). A seção "eventos" saiu em outubro de 2026, com a galeria da landing (13.1, item 3) |
 
 | \*\*Clientes\*\* | Lista, contato, histórico de reservas, criação sem senha |
 
 | \*\*Configurações\*\* | Todos os campos de `VenueSettings` |
 
 
+
+> \*\*Registro (outubro de 2026).\*\* Combos e Temas (no menu, "Estilos") saíram do menu do painel a pedido do dono. As telas e as rotas continuam funcionando em `/admin/combos` e `/admin/temas`, e o que está cadastrado continua valendo no site e no preço; só não há mais atalho para elas.
 
 Toda ação destrutiva pede confirmação em diálogo com o resultado explicado ("Isso cancela a reserva e avisa o cliente por e-mail").
 
@@ -2434,6 +2440,8 @@ Hero (desktop):
 
 (O título acima é só um exemplo de tom; o texto final é aprovado pelo dono.)
 
+> \*\*Registro (outubro de 2026).\*\* O hero de hoje não segue este desenho: a foto ocupa a primeira tela inteira, e o nome, a frase e o botão "Reservar uma data" ficam centralizados sobre ela, a pedido do dono (13.1, item 1). É a exceção ao alinhamento à esquerda.
+
 
 
 Wizard no celular:
@@ -2476,7 +2484,7 @@ Wizard no celular:
 
 
 
-\- \*\*Um\*\* momento orquestrado, na carga da landing: a moldura em arco do hero se revela (subindo por `clip-path`/`transform`, \~700 ms, uma vez). O resto da página fica estático.
+\- \*\*Um\*\* momento orquestrado, na carga da landing: a foto do hero aparece em fade e o nome, a frase e o botão sobem em sequência (\~700 ms cada, uma vez). O resto da página fica estático. (A especificação original revelava a moldura em arco por `clip-path`/`transform`; mudou com o hero de outubro de 2026.)
 
 \- Movimento \*\*em resposta à ação\*\* é bem-vindo e curto (120 a 200 ms): seleção de datas no calendário, abrir/fechar diálogo e gaveta, incremento de quantidade, troca de passo do wizard (fade), toast.
 

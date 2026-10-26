@@ -11,8 +11,6 @@ import {
   ListIcon,
   MenuIcon,
   MoneyIcon,
-  PaletteIcon,
-  TagIcon,
   UsersIcon,
 } from '@/components/icons';
 import styles from './AdminLayout.module.css';
@@ -25,6 +23,10 @@ import styles from './AdminLayout.module.css';
  * incluindo as que ainda não existem, que levam à página de "em construção": uma
  * lacuna visível é mais honesta que um menu que cresce a cada entrega e esconde o
  * que falta.
+ *
+ * Combos e Estilos saíram do menu a pedido do dono, que não vai usá-los por
+ * enquanto. As telas continuam funcionando em `/admin/combos` e `/admin/temas`,
+ * e o que já está cadastrado continua valendo no site.
  */
 
 type NavItem = {
@@ -39,8 +41,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/admin/reservas', label: 'Reservas', Icon: ListIcon },
   { to: '/admin/itens', label: 'Itens', Icon: BoxIcon },
   { to: '/admin/categorias', label: 'Categorias', Icon: GridIcon },
-  { to: '/admin/combos', label: 'Combos', Icon: TagIcon },
-  { to: '/admin/temas', label: 'Estilos', Icon: PaletteIcon },
   { to: '/admin/precos', label: 'Preços', Icon: MoneyIcon },
   { to: '/admin/galeria', label: 'Galeria', Icon: ImageIcon },
   { to: '/admin/clientes', label: 'Clientes', Icon: UsersIcon },
@@ -79,7 +79,7 @@ export function AdminLayout() {
     <div className={styles.shell}>
       {/*
         O painel também precisa do atalho (§18.1): sem ele, cada troca de página
-        obriga a passar pelos 3 controles da topbar e pelos 11 itens do menu
+        obriga a passar pelos 3 controles da topbar e pelos 9 itens do menu
         antes de chegar ao conteúdo.
       */}
       <a className="skip-link" href="#admin-conteudo">

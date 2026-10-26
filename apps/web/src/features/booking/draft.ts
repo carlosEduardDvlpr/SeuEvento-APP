@@ -4,13 +4,18 @@ import { readJSON, removeKey, writeJSON } from '@/lib/storage';
 /**
  * Rascunho da reserva (§12.2).
  *
- * Vive num `useReducer` e é espelhado em `sessionStorage`. O espelho existe por
- * um motivo específico: o envio exige sessão, e quem não está logado é desviado
- * para entrar ou se cadastrar. Esse desvio recarrega a aplicação, e sem o
+ * Vive num `useReducer` no wizard, e **não é carrinho**: o pedido que a pessoa
+ * monta e abandona não fica guardado, e cada escolha vinda da landing começa um
+ * pedido novo. Foi pedido do dono (outubro de 2026), depois de um item da
+ * vitrine somar com o que tinha sobrado da visita anterior.
+ *
+ * O que vai para o `sessionStorage` é só o pedido que **chegou à revisão**, e até
+ * ele ser enviado. É ali que o envio exige sessão, e quem não está logado é
+ * desviado para entrar ou se cadastrar: o desvio recarrega a aplicação, e sem o
  * espelho a pessoa voltaria para um wizard vazio depois de montar o pedido
  * inteiro (§13.2).
  *
- * `sessionStorage` e não `localStorage`: o rascunho é desta visita. Guardar por
+ * `sessionStorage` e não `localStorage`: o pedido é desta visita. Guardar por
  * semanas faria a pessoa reencontrar datas que já passaram.
  */
 
@@ -126,16 +131,17 @@ export function draftReducer(draft: BookingDraft, action: DraftAction): BookingD
 const STORAGE_KEY = 'chacara:booking-draft';
 
 /**
- * Lê o rascunho guardado.
+ * Lê o pedido guardado, ou `null` quando não há nenhum para retomar.
  *
  * Valida campo por campo em vez de confiar no que estava no armazenamento: o
  * conteúdo pode ser de uma versão anterior do formato, ou ter sido editado à mão.
  * Campo estranho volta ao padrão, e o pior caso é a pessoa reescolher.
  */
-export function loadDraft(): BookingDraft {
+export function loadDraft(): BookingDraft | null {
   const stored = readJSON<Partial<BookingDraft>>(STORAGE_KEY);
 
-  if (!stored) return EMPTY_DRAFT;
+  // Nada guardado, JSON corrompido ou algo que nem objeto é: não há o que retomar.
+  if (!stored || typeof stored !== 'object') return null;
 
   const items = Array.isArray(stored.items)
     ? stored.items.filter(

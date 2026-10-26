@@ -37,13 +37,21 @@ import galleryStyles from './GalleryPage.module.css';
  * Galeria de fotos (§13).
  *
  * Organizada por seção, e não numa lista única, porque a ordem só faz sentido
- * dentro da seção: a capa tem uma sequência, as festas realizadas têm outra.
+ * dentro da seção: a capa tem uma sequência, as áreas da chácara têm outra.
  *
  * A reordenação é por botões subir/descer em vez de arrastar. Arrastar exige
  * alternativa de teclado para ser acessível (§18.1), e o botão **é** essa
  * alternativa — implementar os dois seria trabalho dobrado para o mesmo
  * resultado.
  */
+
+/**
+ * Seções que o site mostra.
+ *
+ * "Eventos" saiu a pedido do dono, junto com a galeria de festas da landing: o
+ * tipo continua no banco, mas o painel não oferece mais subir foto para ele.
+ */
+const SECTIONS = GALLERY_KINDS.filter((kind) => kind !== 'EVENTS');
 
 type FormState = {
   kind: GalleryKind;
@@ -54,7 +62,7 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
-  kind: 'EVENTS',
+  kind: 'VENUE',
   url: '',
   alt: '',
   caption: '',
@@ -101,6 +109,15 @@ export function GalleryPage() {
     setFormOpen(true);
   }
 
+  /** Posição depois da última foto da seção. */
+  function endOf(kind: GalleryKind) {
+    const orders = (gallery.data ?? [])
+      .filter((image) => image.kind === kind)
+      .map((image) => image.sortOrder);
+
+    return orders.length === 0 ? 0 : Math.min(9999, Math.max(...orders) + 1);
+  }
+
   async function submit() {
     const { data, errors: invalid } = validateForm(createGalleryImageBodySchema, {
       kind: form.kind,
@@ -108,6 +125,14 @@ export function GalleryPage() {
       alt: form.alt,
       caption: form.caption,
       active: form.active,
+      /*
+       * A posição vai explícita. Sem ela, o schema completa com 0, e toda foto
+       * salva pelo formulário pulava para o começo da seção, empatada com a
+       * primeira: a ordem montada com as setas se desfazia a cada edição.
+       * Editar sem trocar de seção mantém o lugar; foto nova, ou que mudou de
+       * seção, entra no fim.
+       */
+      sortOrder: editing && editing.kind === form.kind ? editing.sortOrder : endOf(form.kind),
     });
 
     setErrors(invalid ?? {});
@@ -170,7 +195,7 @@ export function GalleryPage() {
     }
   }
 
-  const bySection = GALLERY_KINDS.map((kind) => ({
+  const bySection = SECTIONS.map((kind) => ({
     kind,
     images: (gallery.data ?? []).filter((image) => image.kind === kind),
   }));
@@ -205,6 +230,10 @@ export function GalleryPage() {
                     {images.length === 0
                       ? 'Nenhuma foto nesta seção.'
                       : `${images.length} ${images.length === 1 ? 'foto' : 'fotos'}, na ordem em que aparecem.`}
+                    {/* A landing usa só a primeira: a foto nova entra no fim e não aparece sozinha. */}
+                    {kind === 'HERO' && images.length > 1
+                      ? ' O topo do site mostra só a primeira.'
+                      : null}
                   </p>
                 </div>
 
@@ -320,7 +349,7 @@ export function GalleryPage() {
             onChange={(event) => setForm({ ...form, kind: event.target.value as GalleryKind })}
             error={errors.kind}
           >
-            {GALLERY_KINDS.map((kind) => (
+            {SECTIONS.map((kind) => (
               <option key={kind} value={kind}>
                 {GALLERY_KIND_LABELS[kind]}
               </option>
@@ -342,7 +371,7 @@ export function GalleryPage() {
             value={form.alt}
             onChange={(event) => setForm({ ...form, alt: event.target.value })}
             error={errors.alt}
-            help="O que aparece na foto, para quem não pode vê-la. Ex.: Mesa de doces montada sob o arco de balões."
+            help="O que aparece na foto, para quem não pode vê-la. Em A chácara, é também o nome da área no site, como Salão ou Piscina."
             autoComplete="off"
           />
 
@@ -351,7 +380,7 @@ export function GalleryPage() {
             value={form.caption}
             onChange={(event) => setForm({ ...form, caption: event.target.value })}
             error={errors.caption}
-            help="Opcional, aparece junto da foto na galeria."
+            help="Opcional. Em A chácara, é o texto embaixo do nome da área."
             autoComplete="off"
           />
 

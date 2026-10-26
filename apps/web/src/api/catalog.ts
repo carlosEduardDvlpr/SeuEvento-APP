@@ -14,7 +14,7 @@ import type {
   UpdateItemBody,
   UpdateThemeBody,
 } from '@chacara/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './client';
 
 /**
@@ -193,6 +193,24 @@ export function useDeleteItem() {
 // Galeria
 // ---------------------------------------------------------------------------
 
+/**
+ * Chave da galeria do site (`useGallery`), como prefixo: pega a galeria inteira
+ * e a de cada seção.
+ *
+ * A galeria do painel e a do site são o mesmo recurso, visto de dois lados. Sem
+ * invalidar a do site, a landing aberta na mesma aba seguia com a foto antiga
+ * pelos cinco minutos de cache do catálogo, e a troca do hero parecia não ter
+ * funcionado.
+ */
+const publicGalleryKey = ['gallery'] as const;
+
+function invalidateGallery(client: QueryClient) {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: adminKeys.gallery }),
+    client.invalidateQueries({ queryKey: publicGalleryKey }),
+  ]);
+}
+
 export function useAdminGallery() {
   return useQuery({
     queryKey: adminKeys.gallery,
@@ -206,7 +224,7 @@ export function useCreateGalleryImage() {
   return useMutation({
     mutationFn: (body: CreateGalleryImageBody) =>
       apiFetch<AdminGalleryImage>('/admin/gallery', { method: 'POST', body, auth: true }),
-    onSuccess: () => client.invalidateQueries({ queryKey: adminKeys.gallery }),
+    onSuccess: () => invalidateGallery(client),
   });
 }
 
@@ -216,7 +234,7 @@ export function useUpdateGalleryImage() {
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: UpdateGalleryImageBody }) =>
       apiFetch<AdminGalleryImage>(`/admin/gallery/${id}`, { method: 'PATCH', body, auth: true }),
-    onSuccess: () => client.invalidateQueries({ queryKey: adminKeys.gallery }),
+    onSuccess: () => invalidateGallery(client),
   });
 }
 
@@ -226,7 +244,7 @@ export function useDeleteGalleryImage() {
   return useMutation({
     mutationFn: (id: string) =>
       apiFetch<void>(`/admin/gallery/${id}`, { method: 'DELETE', auth: true }),
-    onSuccess: () => client.invalidateQueries({ queryKey: adminKeys.gallery }),
+    onSuccess: () => invalidateGallery(client),
   });
 }
 
@@ -234,8 +252,9 @@ export function useDeleteGalleryImage() {
  * Reordena uma seção da galeria.
  *
  * A API devolve a galeria inteira já ordenada, então gravamos a resposta no cache
- * em vez de invalidar: reordenar é clique repetido (subir, subir, descer), e uma
- * ida ao servidor a cada clique faria a lista piscar.
+ * do painel em vez de invalidar: reordenar é clique repetido (subir, subir,
+ * descer), e uma ida ao servidor a cada clique faria a lista piscar. A do site
+ * só é marcada como velha: ela não está na tela enquanto o dono reordena.
  */
 export function useReorderGallery() {
   const client = useQueryClient();
@@ -247,6 +266,9 @@ export function useReorderGallery() {
         body,
         auth: true,
       }),
-    onSuccess: (images) => client.setQueryData(adminKeys.gallery, images),
+    onSuccess: (images) => {
+      client.setQueryData(adminKeys.gallery, images);
+      return client.invalidateQueries({ queryKey: publicGalleryKey });
+    },
   });
 }

@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/Toast';
@@ -15,23 +15,34 @@ const CAPA = {
   active: true,
 };
 
-const FESTA_A = {
+const SALAO = {
   id: 'g2',
-  kind: 'EVENTS' as const,
-  url: 'https://exemplo.com/festa-a.webp',
-  alt: 'Mesa de doces sob o arco de balões',
-  caption: 'Chá de bebê',
+  kind: 'VENUE' as const,
+  url: 'https://exemplo.com/salao.webp',
+  alt: 'Salão',
+  caption: 'Espaço coberto para as mesas.',
   sortOrder: 0,
   active: true,
 };
 
-const FESTA_B = {
+const PISCINA = {
   id: 'g3',
-  kind: 'EVENTS' as const,
-  url: 'https://exemplo.com/festa-b.webp',
-  alt: 'Painel de folhagens na área coberta',
+  kind: 'VENUE' as const,
+  url: 'https://exemplo.com/piscina.webp',
+  alt: 'Piscina',
   caption: null,
   sortOrder: 1,
+  active: true,
+};
+
+/** Foto da seção "Eventos", que saiu do site: o banco ainda pode ter. */
+const FESTA = {
+  id: 'g4',
+  kind: 'EVENTS' as const,
+  url: 'https://exemplo.com/festa.webp',
+  alt: 'Mesa de doces sob o arco de balões',
+  caption: 'Chá de bebê',
+  sortOrder: 0,
   active: true,
 };
 
@@ -74,15 +85,31 @@ describe('GalleryPage', () => {
 
   /* A ordem só faz sentido dentro da seção, por isso a tela agrupa. */
   it('separa as fotos por seção', async () => {
-    stubFetch({ 'GET /api/admin/gallery': () => jsonResponse([CAPA, FESTA_A, FESTA_B]) });
+    stubFetch({ 'GET /api/admin/gallery': () => jsonResponse([CAPA, SALAO, PISCINA]) });
     renderPage();
 
     expect(await screen.findByRole('heading', { name: 'Destaque', level: 2 })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'A chácara', level: 2 })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Eventos', level: 2 })).toBeVisible();
 
+    expect(screen.getByText('1 foto, na ordem em que aparecem.')).toBeVisible();
     expect(screen.getByText('2 fotos, na ordem em que aparecem.')).toBeVisible();
-    expect(screen.getAllByText('Nenhuma foto nesta seção.')).toHaveLength(1);
+  });
+
+  /* A galeria de festas saiu do site, e com ela a seção "Eventos" do painel. */
+  it('não oferece mais a seção Eventos', async () => {
+    const user = userEvent.setup();
+    stubFetch({ 'GET /api/admin/gallery': () => jsonResponse([CAPA, SALAO, FESTA]) });
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'Destaque', level: 2 });
+    expect(screen.queryByRole('heading', { name: 'Eventos' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Mesa de doces sob o arco de balões')).not.toBeInTheDocument();
+
+    const buttons = screen.getAllByRole('button', { name: 'Adicionar foto' });
+    await user.click(buttons[0]!);
+
+    const options = within(screen.getByLabelText('Seção')).getAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual(['Destaque', 'A chácara']);
   });
 
   /*
@@ -91,31 +118,25 @@ describe('GalleryPage', () => {
    */
   it('manda a seção inteira ao reordenar, na nova ordem', async () => {
     const calls = stubFetch({
-      'GET /api/admin/gallery': () => jsonResponse([CAPA, FESTA_A, FESTA_B]),
-      'PATCH /api/admin/gallery/order': () => jsonResponse([CAPA, FESTA_B, FESTA_A]),
+      'GET /api/admin/gallery': () => jsonResponse([CAPA, SALAO, PISCINA]),
+      'PATCH /api/admin/gallery/order': () => jsonResponse([CAPA, PISCINA, SALAO]),
     });
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Descer Mesa de doces sob o arco de balões' }),
-    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Descer Salão' }));
 
     await waitFor(() => {
       const patch = calls.find((call) => call.method === 'PATCH');
-      expect(patch?.body).toEqual({ kind: 'EVENTS', ids: ['g3', 'g2'] });
+      expect(patch?.body).toEqual({ kind: 'VENUE', ids: ['g3', 'g2'] });
     });
   });
 
   it('não oferece subir a primeira nem descer a última', async () => {
-    stubFetch({ 'GET /api/admin/gallery': () => jsonResponse([FESTA_A, FESTA_B]) });
+    stubFetch({ 'GET /api/admin/gallery': () => jsonResponse([SALAO, PISCINA]) });
     renderPage();
 
-    expect(
-      await screen.findByRole('button', { name: 'Subir Mesa de doces sob o arco de balões' }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: 'Descer Painel de folhagens na área coberta' }),
-    ).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Subir Salão' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Descer Piscina' })).toBeDisabled();
   });
 
   /* Foto sem descrição deixa de fora quem usa leitor de tela (§18). */
@@ -149,7 +170,7 @@ describe('GalleryPage', () => {
 
   it('mostra a mensagem da API quando reordenar é recusado', async () => {
     stubFetch({
-      'GET /api/admin/gallery': () => jsonResponse([FESTA_A, FESTA_B]),
+      'GET /api/admin/gallery': () => jsonResponse([SALAO, PISCINA]),
       'PATCH /api/admin/gallery/order': () =>
         errorResponse(
           400,
@@ -159,9 +180,7 @@ describe('GalleryPage', () => {
     });
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Descer Mesa de doces sob o arco de balões' }),
-    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Descer Salão' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('A lista de imagens mudou.');
   });

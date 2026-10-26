@@ -14,7 +14,13 @@ export const galleryRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request, reply) => {
-      reply.header('Cache-Control', 'public, max-age=60');
+      /*
+       * `no-cache`, e não o `max-age` do catálogo: a galeria é o que o dono
+       * troca pelo painel para ver no site em seguida, e com cache no navegador a
+       * foto antiga voltava por até um minuto, mesmo recarregando a página. Na
+       * mesma visita, quem evita repetir a requisição é o cache do Query no SPA.
+       */
+      reply.header('Cache-Control', 'no-cache');
       return listPublicGallery(app.prisma, request.query);
     },
   );

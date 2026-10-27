@@ -1,9 +1,10 @@
 /*
  * Vitrine dos itens do pegue e monte.
  *
- * Magenta é a cor da Decoração na identidade da cliente (ver `tokens.css`), e é
- * ele que marca categoria, filtro escolhido e chamada: a seção fala de
- * decoração, não do espaço.
+ * Cada item é a foto na moldura da marca (passe-partout e fio dourado) e três
+ * linhas embaixo, sem caixa em volta: é catálogo de decoração, não lista de
+ * produtos. Magenta é a cor da Decoração na identidade da cliente (ver
+ * `tokens.css`), e é ele que marca categoria, filtro escolhido e chamada.
  */
 
 .filters {
@@ -17,7 +18,7 @@
   align-items: center;
   min-height: var(--touch-target);
   padding: 0 var(--space-16);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--surface);
   color: var(--fg);
@@ -32,8 +33,7 @@
 }
 
 .filter:hover {
-  border-color: var(--line-strong);
-  background: var(--bg-alt);
+  border-color: var(--decor);
 }
 
 /* Escolhido: preenchimento e contraste de texto, além do `aria-pressed` (§14.2). */
@@ -48,8 +48,8 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-12);
-  margin: var(--space-24) 0 0;
+  gap: var(--space-32) var(--space-16);
+  margin: var(--space-32) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -63,21 +63,12 @@
 .link {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
   width: 100%;
-  overflow: hidden;
-  border: 1px solid var(--line);
   border-radius: var(--r-md);
-  background: var(--surface);
   color: inherit;
   text-decoration: none;
-  transition:
-    border-color var(--transition),
-    transform var(--transition);
-}
-
-.link:hover {
-  border-color: var(--decor);
-  transform: translateY(-2px);
 }
 
 .link:focus-visible {
@@ -86,30 +77,19 @@
 }
 
 /*
- * A moldura-assinatura vira o topo do cartão: sem passe-partout, porque o
- * cartão já tem borda. Quadrada, que serve a foto em pé e deitada sem cortar
- * metade de nenhuma.
+ * Quadrada, que serve a foto em pé e deitada sem cortar metade de nenhuma. Dois
+ * seletores para vencer a proporção de retrato que a `PhotoFrame` traz.
  */
-.photo {
+.grid .photo {
   width: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
+  margin-bottom: var(--space-12);
   aspect-ratio: 1 / 1;
+  transition: border-color var(--transition);
 }
 
-.photo > img,
-.photo > div {
-  border-radius: 0;
-}
-
-.content {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-4);
-  padding: var(--space-12);
+/* Resposta ao ponteiro só na cor do fio e no sublinhado: nada se mexe (§14.8). */
+.link:hover .photo {
+  border-color: var(--decor);
 }
 
 .category {
@@ -121,9 +101,15 @@
 .name {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--text-base);
-  line-height: 1.25;
+  font-size: var(--text-lg);
+  line-height: 1.2;
   overflow-wrap: anywhere;
+}
+
+.link:hover .name {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
 }
 
 /* Preço e chamada no pé do cartão, alinhados entre cartões de nome curto e longo. */
@@ -149,8 +135,11 @@
   font-weight: 600;
 }
 
-.link:hover .cta {
-  text-decoration: underline;
+/* O "mostrar mais" centralizado embaixo da vitrine, como o fim de uma página de catálogo. */
+.moreRow {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-48) 0 0;
 }
 
 /* `secondaryAction` foi feito para link; num botão, o navegador poria fundo cinza. */
@@ -164,15 +153,11 @@
 @media (min-width: 760px) {
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-24);
-  }
-
-  .content {
-    padding: var(--space-16);
+    gap: var(--space-48) var(--space-24);
   }
 
   .name {
-    font-size: var(--text-lg);
+    font-size: var(--text-xl);
   }
 }
 

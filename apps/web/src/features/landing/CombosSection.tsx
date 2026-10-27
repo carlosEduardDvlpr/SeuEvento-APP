@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { Money } from '@/components/Money';
 import { PhotoFrame } from '@/components/PhotoFrame';
 import landing from './landing.module.css';
+import { revealOnScroll } from './reveal';
 import styles from './CombosSection.module.css';
 
 /**
@@ -34,7 +35,7 @@ export function CombosSection({ combos }: CombosSectionProps) {
       aria-labelledby="titulo-combos"
     >
       <div className={landing.inner}>
-        <div className={landing.heading}>
+        <div className={landing.heading} ref={revealOnScroll}>
           <h2 className={landing.title} id="titulo-combos">
             Combos que saem mais barato
           </h2>
@@ -46,7 +47,7 @@ export function CombosSection({ combos }: CombosSectionProps) {
 
         <ul className={[landing.body, styles.grid].join(' ')}>
           {highlights.map((combo) => (
-            <li key={combo.id} className={styles.card}>
+            <li key={combo.id} className={styles.card} ref={revealOnScroll}>
               <PhotoFrame
                 className={styles.photo}
                 variant="tall"
@@ -87,7 +88,7 @@ export function CombosSection({ combos }: CombosSectionProps) {
           ))}
         </ul>
 
-        <p className={landing.body}>
+        <p className={landing.body} ref={revealOnScroll}>
           <Link className={landing.secondaryAction} to="/reservar?step=itens">
             Ver todos os combos
           </Link>

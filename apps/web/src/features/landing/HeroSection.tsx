@@ -10,6 +10,14 @@ import styles from './HeroSection.module.css';
  * do wizard. Era um seletor com as próximas datas livres; o dono preferiu uma
  * abertura limpa, com o texto centralizado sobre a foto e um botão só.
  *
+ * O nome é composto como no material da marca: "Espaço" pequeno na serifada e
+ * "Donna Belle" grande na manuscrita, com o fio dourado do hexágono embaixo. É o
+ * texto que o dono escreveu, só com a tipografia do logo; o leitor de tela lê
+ * "Espaço Donna Belle", porque o espaço entre as duas partes fica no texto.
+ *
+ * A foto vem emoldurada por um fio dourado por dentro da borda, o passe-partout
+ * das molduras do site em tamanho de tela inteira.
+ *
  * Sem a agenda aqui, a landing deixou de consultar a disponibilidade: quem
  * mostra os dias livres é o calendário do wizard, que já pede a agenda do mês.
  *
@@ -41,7 +49,12 @@ export function HeroSection({ hero }: HeroSectionProps) {
       <div className={styles.scrim} aria-hidden="true" />
 
       <div className={styles.content}>
-        <h1 className={styles.title}>Espaço Donna Belle</h1>
+        <h1 className={styles.title}>
+          <span className={styles.kicker}>Espaço</span>{' '}
+          <span className={styles.name}>Donna Belle</span>
+        </h1>
+
+        <span className={styles.ornament} aria-hidden="true" />
 
         <p className={styles.lead}>O cenário perfeito para momentos inesquecíveis.</p>
 

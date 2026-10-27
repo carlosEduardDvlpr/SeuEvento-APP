@@ -6,13 +6,6 @@
  * na primeira tela, e o hero precisa crescer em vez de cortá-los.
  */
 .hero {
-  /*
-   * Altura do cabeçalho do `PublicLayout`: o alvo de toque dos controles, o
-   * respiro de cima e de baixo e a borda. Escrita em tokens para acompanhar se
-   * um deles mudar, em vez de virar número órfão.
-   */
-  --header-height: calc(var(--touch-target) + 2 * var(--space-12) + 1px);
-
   position: relative;
   isolation: isolate;
   display: flex;
@@ -23,6 +16,22 @@
   min-height: calc(100svh - var(--header-height));
   overflow: hidden;
   background: var(--bg-dark);
+}
+
+/*
+ * O passe-partout da marca em tamanho de tela: um fio dourado por dentro da
+ * borda da foto, como nas molduras das outras seções e no convite da cliente.
+ * Fica entre o véu e o texto, e não recebe clique.
+ */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: var(--space-16);
+  z-index: -1;
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--r-md);
+  pointer-events: none;
+  animation: hero-fade 700ms ease-out 200ms backwards;
 }
 
 .image,
@@ -62,7 +71,8 @@
 
 /*
  * Centralizado a pedido do dono: são só o nome, uma frase e um botão, a
- * "frase curta de chamada" que a §14.7 deixa centralizar.
+ * "frase curta de chamada" que a §14.7 deixa centralizar. O respiro lateral
+ * mantém o texto longe do fio da moldura.
  */
 .content {
   display: flex;
@@ -70,25 +80,77 @@
   align-items: center;
   width: 100%;
   max-width: var(--container);
-  padding: var(--space-64) var(--space-16);
+  padding: var(--space-64) var(--space-32);
   text-align: center;
 }
 
+/*
+ * O nome em duas partes, como no logo. Em coluna, o espaço entre elas (que está
+ * no texto, para o leitor de tela) não ocupa lugar: em flex, texto só de
+ * espaço entre dois itens não vira caixa.
+ */
 .title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
   margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(var(--text-3xl), 6vw, 3.815rem);
-  line-height: 1.1;
   color: var(--on-brand);
-  text-wrap: balance;
   animation: hero-rise 700ms ease-out 100ms backwards;
 }
 
+.kicker {
+  color: var(--on-brand-soft);
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-lg), 2.6vw, var(--text-2xl));
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+/*
+ * A manuscrita só existe no peso 400: herdar o 600 do `h1` faria o navegador
+ * engrossar a letra à força, e a Parisienne borra. O tamanho vem grande porque
+ * a altura-x dela é baixa.
+ */
+.name {
+  font-family: var(--font-script);
+  font-size: clamp(3.5rem, 11vw, 7.5rem);
+  font-weight: 400;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+/*
+ * Fio, hexágono, fio: o ornamento da marca, em dourado chapado sobre o véu.
+ * Propriedades separadas pelo mesmo motivo do `landing.module.css`: no atalho
+ * `mask`, um valor recusado deixaria uma barra dourada no lugar do desenho.
+ */
+.ornament {
+  display: block;
+  width: 144px;
+  height: 24px;
+  margin-top: var(--space-24);
+  background-color: var(--hairline);
+  -webkit-mask-image: var(--ornament-mask);
+  mask-image: var(--ornament-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  animation: hero-fade 700ms ease-out 150ms backwards;
+}
+
+/* Frase de convite: na serifada do logo, não no texto corrido. */
 .lead {
-  max-width: 40ch;
+  max-width: 34ch;
   margin: var(--space-16) 0 0;
   color: var(--on-brand-soft);
-  font-size: var(--text-lg);
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-lg), 2.4vw, var(--text-2xl));
+  font-weight: 500;
+  line-height: 1.35;
   text-wrap: balance;
   animation: hero-rise 700ms ease-out 200ms backwards;
 }
@@ -131,8 +193,8 @@
 }
 
 /*
- * O momento orquestrado da carga (§14.8): a foto aparece e o texto sobe em
- * sequência, uma vez.
+ * O momento orquestrado da carga (§14.8): a foto aparece, a moldura e o
+ * ornamento acendem e o texto sobe em sequência, uma vez.
  *
  * `backwards`, e não `both`: o elemento fica no primeiro quadro durante o
  * atraso e, terminada a animação, volta aos estilos dele. Com `both`, o
@@ -157,8 +219,10 @@
  * terço de segundo.
  */
 @media (prefers-reduced-motion: reduce) {
+  .hero::after,
   .image,
   .title,
+  .ornament,
   .lead,
   .cta {
     animation: none;
@@ -166,11 +230,11 @@
 }
 
 @media (min-width: 900px) {
-  .content {
-    padding-block: var(--space-96);
+  .hero::after {
+    inset: var(--space-24);
   }
 
-  .lead {
-    font-size: var(--text-xl);
+  .content {
+    padding-block: var(--space-96);
   }
 }

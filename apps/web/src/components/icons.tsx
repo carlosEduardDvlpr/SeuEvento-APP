@@ -253,63 +253,6 @@ export function ArrowRightIcon(props: IconProps) {
   );
 }
 
-/** Aniversário, chá de bebê: tipos de evento no passo 1 (§13.2). */
-export function CakeIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M4 20.5h16M5 20.5v-6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6" />
-      <path d="M12 12.5v-3M12 6.5v.01" />
-      <path d="M5 16.5c1.6 0 1.6-1.2 3.5-1.2s1.9 1.2 3.5 1.2 1.6-1.2 3.5-1.2 1.9 1.2 3.5 1.2" />
-    </Icon>
-  );
-}
-
-export function HeartIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M12 20s-7-4.4-7-9.2A4 4 0 0 1 12 8a4 4 0 0 1 7 2.8C19 15.6 12 20 12 20Z" />
-    </Icon>
-  );
-}
-
-export function StrollerIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M5 5h2l2.5 7.5M6.5 12.5h11a6 6 0 0 0-11 0Z" />
-      <path d="M17.5 12.5V18M6.5 12.5V18" />
-      <circle cx="8" cy="20" r="1.5" />
-      <circle cx="16" cy="20" r="1.5" />
-    </Icon>
-  );
-}
-
-export function GlassIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M8 4h8l-1 6a3 3 0 0 1-6 0Z" />
-      <path d="M12 13v6M9 20h6" />
-    </Icon>
-  );
-}
-
-export function GraduationIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M12 5 3 9l9 4 9-4-9-4Z" />
-      <path d="M7 11v4c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-4" />
-    </Icon>
-  );
-}
-
-export function SparkIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M12 3.5 13.6 9l5.5 1.6-5.5 1.6L12 17.7l-1.6-5.5L4.9 10.6 10.4 9Z" />
-      <path d="M18.5 16.5l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6Z" />
-    </Icon>
-  );
-}
-
 /** A chácara, no seletor do que reservar (T32). */
 export function HouseIcon(props: IconProps) {
   return (
@@ -337,6 +280,61 @@ export function PinIcon(props: IconProps) {
     <Icon {...props}>
       <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" />
       <circle cx="12" cy="10" r="2.5" />
+    </Icon>
+  );
+}
+
+/** Mapa dobrado: abrir o endereço no aplicativo de mapas. */
+export function MapIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M9 4.5 3.5 6.5v13L9 17.5l6 2 5.5-2v-13L15 6.5Z" />
+      <path d="M9 4.5v13M15 6.5v13" />
+    </Icon>
+  );
+}
+
+/**
+ * Conversa pelo WhatsApp: o balão com o fone, desenhado no traço dos outros
+ * ícones. Não é o arquivo da marca, que é chapado e destoaria do conjunto; o
+ * rótulo do botão é que diz o canal.
+ */
+export function WhatsAppIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3.5 20.5 5 16.6A8.5 8.5 0 1 1 8.2 19.3Z" />
+      <path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l.9-1.5-1.9-1.1-.8.8c-.9-.4-1.6-1.1-2-2l.8-.8-1.1-1.9Z" />
+    </Icon>
+  );
+}
+
+/** Entrar na conta: a seta entra pela porta. */
+export function LogInIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14" />
+      <path d="M3.5 12h11M10.5 8l4 4-4 4" />
+    </Icon>
+  );
+}
+
+/** Sair da conta: a seta sai pela porta. */
+export function LogOutIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M10 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10" />
+      <path d="M9 12h11.5M16.5 8l4 4-4 4" />
+    </Icon>
+  );
+}
+
+/** Perfil no Instagram, no rodapé (§13.1, item 10: "redes"). */
+export function InstagramIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M17 7h.01" />
     </Icon>
   );
 }

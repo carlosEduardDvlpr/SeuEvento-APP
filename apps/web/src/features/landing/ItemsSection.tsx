@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { Money } from '@/components/Money';
 import { PhotoFrame } from '@/components/PhotoFrame';
 import landing from './landing.module.css';
+import { revealOnScroll } from './reveal';
 import styles from './ItemsSection.module.css';
 
 /**
@@ -13,9 +14,10 @@ import styles from './ItemsSection.module.css';
  * a dona pode começar o catálogo só com itens e categorias. Sem item nenhum, a
  * seção some, como as outras (§16.6).
  *
- * Cada cartão leva ao wizard com o item já no pedido (`?item=`), do mesmo jeito
- * que o cartão de estilo leva com o filtro aplicado. O preço é o de tabela; o
- * total, com diária e combos, continua saindo do orçamento (§9.7).
+ * Cada item é a foto na moldura da marca, com categoria, nome e preço embaixo,
+ * sem caixa em volta: é catálogo de decoração, não lista de produtos. O cartão
+ * inteiro leva ao wizard com o item já no pedido (`?item=`). O preço é o de
+ * tabela; o total, com diária e combos, continua saindo do orçamento (§9.7).
  */
 
 /** Cartões antes do "mostrar mais": o catálogo inteiro mora no wizard. */
@@ -72,7 +74,7 @@ export function ItemsSection({ items }: ItemsSectionProps) {
   return (
     <section className={landing.section} aria-labelledby="titulo-decoracao">
       <div className={landing.inner}>
-        <div className={landing.heading}>
+        <div className={landing.heading} ref={revealOnScroll}>
           <h2 className={landing.title} id="titulo-decoracao">
             Decorações
           </h2>
@@ -84,6 +86,7 @@ export function ItemsSection({ items }: ItemsSectionProps) {
             className={[landing.body, styles.filters].join(' ')}
             role="group"
             aria-label="Filtrar por categoria"
+            ref={revealOnScroll}
           >
             {[{ id: null, name: 'Todas' }, ...categories].map((option) => {
               const active = categoryId === option.id;
@@ -107,7 +110,7 @@ export function ItemsSection({ items }: ItemsSectionProps) {
 
         <ul className={styles.grid} ref={listRef}>
           {visible.map((item) => (
-            <li key={item.id} className={styles.card}>
+            <li key={item.id} className={styles.card} ref={revealOnScroll}>
               <Link className={styles.link} to={`/reservar?item=${item.id}`}>
                 {/*
                   `alt` vazio de propósito: o nome vem logo abaixo, em texto, e
@@ -115,24 +118,22 @@ export function ItemsSection({ items }: ItemsSectionProps) {
                 */}
                 <PhotoFrame className={styles.photo} src={item.imageUrl} alt="" />
 
-                <div className={styles.content}>
-                  <span className={styles.category}>{item.category.name}</span>
-                  <h3 className={styles.name}>{item.name}</h3>
+                <span className={styles.category}>{item.category.name}</span>
+                <h3 className={styles.name}>{item.name}</h3>
 
-                  <span className={styles.footer}>
-                    <span className={styles.price}>
-                      <Money cents={item.priceCents} />
-                    </span>
-                    <span className={styles.cta}>Reservar</span>
+                <span className={styles.footer}>
+                  <span className={styles.price}>
+                    <Money cents={item.priceCents} />
                   </span>
-                </div>
+                  <span className={styles.cta}>Reservar</span>
+                </span>
               </Link>
             </li>
           ))}
         </ul>
 
         {remaining > 0 ? (
-          <p className={landing.body}>
+          <p className={styles.moreRow} ref={revealOnScroll}>
             <button
               type="button"
               className={[landing.secondaryAction, styles.more].join(' ')}

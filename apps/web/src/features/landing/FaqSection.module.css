@@ -1,28 +1,45 @@
-.list {
+/*
+ * Perguntas como uma lista corrida, separada pelo fio: abrir uma não desalinha
+ * as outras, o que acontecia com a grade de duas colunas.
+ */
+.layout {
   display: grid;
-  max-width: none;
-  margin: var(--space-32) 0 0;
+  gap: var(--space-32);
+}
+
+.list {
+  margin: 0;
   padding: 0;
   list-style: none;
+  border-top: 1px solid var(--line-strong);
 }
 
 .item {
-  height: 100%;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-strong);
 }
 
 /*
  * `summary` com altura de alvo de toque: no celular a FAQ é lida com o dedo, e
- * uma linha de texto fina é difícil de acertar (§14.11).
+ * uma linha de texto fina é difícil de acertar (§14.11). Sem o triângulo do
+ * navegador: quem mostra o estado é o "+".
  */
 .question {
   display: flex;
   align-items: center;
-  min-height: var(--touch-target);
-  padding: var(--space-12) 0;
+  justify-content: space-between;
+  gap: var(--space-16);
+  min-height: 56px;
+  padding: var(--space-16) 0;
   font-family: var(--font-display);
-  font-size: var(--text-base);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.3;
+  list-style: none;
   cursor: pointer;
+}
+
+.question::-webkit-details-marker {
+  display: none;
 }
 
 .question:hover {
@@ -30,40 +47,52 @@
 }
 
 .question:focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
 
+/* O "+" num círculo com o fio dourado; gira para "×" quando a pergunta abre. */
+.toggle {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--brand);
+  transition: transform var(--transition);
+}
+
+.item[open] .toggle {
+  transform: rotate(45deg);
+}
+
 .answer {
-  margin: 0 0 var(--space-16);
+  max-width: 60ch;
+  margin: 0;
+  padding: 0 var(--space-48) var(--space-24) 0;
   color: var(--fg-soft);
 }
 
-.rules {
-  max-width: var(--measure);
-  margin: var(--space-32) 0 0;
-  padding: var(--space-24);
-  border-radius: var(--r-md);
-  background: var(--bg-alt);
+.answer strong {
+  color: var(--fg);
 }
 
-@media (min-width: 800px) {
-  .list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--space-48);
-  }
-
-  .rules {
-    max-width: none;
-    padding: var(--space-32);
-  }
+.rules {
+  margin: var(--space-32) 0 0;
+  padding: var(--space-24);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface);
 }
 
 .rulesTitle {
   margin: 0 0 var(--space-8);
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
 }
 
 .rulesText {
@@ -71,4 +100,22 @@
   color: var(--fg-soft);
   /* O dono escreve com quebras de linha; preservá-las é respeitar o texto dele. */
   white-space: pre-line;
+}
+
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    gap: var(--space-64);
+    align-items: start;
+  }
+
+  /* O título acompanha a rolagem enquanto a pessoa lê as perguntas. */
+  .heading {
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-32));
+  }
+
+  .rules {
+    padding: var(--space-32);
+  }
 }

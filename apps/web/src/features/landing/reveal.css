@@ -1,0 +1,36 @@
+/*
+ * Entrada dos blocos da landing ao rolar (ver `reveal.ts`).
+ *
+ * O estado escondido só existe quando o código marca o elemento, e só na tela
+ * de quem não pediu menos movimento. Sem JavaScript, no pré-render, com
+ * `prefers-reduced-motion: reduce` ou no papel, tudo aparece de uma vez.
+ *
+ * O movimento é o do hero: sobe 16 px e acende em 700 ms, uma vez.
+ */
+@media screen and (prefers-reduced-motion: no-preference) {
+  [data-reveal='hidden'] {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  /* Quem chega pelo teclado nunca encontra o foco num bloco invisível. */
+  [data-reveal='hidden']:focus-within {
+    opacity: 1;
+    transform: none;
+  }
+
+  /*
+   * `backwards`: durante o atraso o bloco fica no primeiro quadro, invisível, e
+   * no fim volta aos estilos dele, sem `transform` preso.
+   */
+  [data-reveal='shown'] {
+    animation: landing-reveal 700ms ease-out var(--reveal-delay, 0ms) backwards;
+  }
+}
+
+@keyframes landing-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}

@@ -410,16 +410,6 @@ describe('perguntas frequentes', () => {
     expect(screen.getByText(/até para hoje/)).toBeVisible();
   });
 
-  /* O prazo do pedido saiu do hero com o seletor de datas; agora só a FAQ o diz. */
-  it('responde quanto tempo a data fica segura com o prazo configurado', async () => {
-    const user = userEvent.setup();
-    renderLanding({ '/api/public/venue': () => jsonResponse({ ...VENUE, holdHours: 24 }) });
-
-    await openQuestion(user, /Quanto tempo a data fica reservada/);
-
-    expect(screen.getByText(/seguras por até 24 horas/)).toBeVisible();
-  });
-
   it('responde o cancelamento com o prazo configurado', async () => {
     const user = userEvent.setup();
     renderLanding();
@@ -427,6 +417,18 @@ describe('perguntas frequentes', () => {
     await openQuestion(user, /Consigo cancelar/);
 
     expect(screen.getByText(/até 7 dias antes do início/)).toBeVisible();
+  });
+
+  /* Aviso do dono, em destaque, nos dois casos de prazo. */
+  it('avisa que o sinal não é devolvido', async () => {
+    const user = userEvent.setup();
+    renderLanding({
+      '/api/public/venue': () => jsonResponse({ ...VENUE, freeCancelUntilDays: 0 }),
+    });
+
+    await openQuestion(user, /Consigo cancelar/);
+
+    expect(screen.getByText('O valor do sinal não é devolvido.')).toBeVisible();
   });
 
   it('deixa claro que o site não cobra nada', async () => {
@@ -454,13 +456,36 @@ describe('perguntas frequentes', () => {
 });
 
 describe('como chegar', () => {
-  it('leva ao mapa por link, não por embed', async () => {
+  it('oferece abrir o endereço no aplicativo de mapas', async () => {
     renderLanding();
 
     expect(await screen.findByRole('link', { name: 'Abrir no mapa' })).toHaveAttribute(
       'href',
       'https://maps.exemplo.com/chacara',
     );
+  });
+
+  /*
+   * Pedido do dono: o mapa embutido na página. Ele sai do endereço cadastrado e
+   * só carrega quando a pessoa chega perto da seção, que é a última da página.
+   */
+  it('mostra o mapa do endereço cadastrado, carregado sob demanda', async () => {
+    renderLanding();
+
+    const map = await screen.findByTitle('Mapa com a localização de Chácara Seu Evento');
+
+    expect(map).toHaveAttribute('src', expect.stringContaining('output=embed'));
+    expect(map).toHaveAttribute('src', expect.stringContaining('q=Estrada+do+Sol%2C+100'));
+    expect(map).toHaveAttribute('loading', 'lazy');
+  });
+
+  it('fica sem mapa quando não há endereço', async () => {
+    renderLanding({
+      '/api/public/venue': () => jsonResponse({ ...VENUE, address: null, mapsUrl: null }),
+    });
+
+    await screen.findByText('Como chegar');
+    expect(screen.queryByTitle(/Mapa com a localização/)).not.toBeInTheDocument();
   });
 
   it('oferece o WhatsApp da chácara com mensagem pronta', async () => {

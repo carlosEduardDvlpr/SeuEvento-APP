@@ -148,7 +148,7 @@ describe('seed', () => {
       }
     });
 
-    it('usa os mesmos slugs que o packages/shared sugere por tipo de evento', async () => {
+    it('usa os mesmos slugs que o packages/shared conhece', async () => {
       await seed();
 
       const slugs = (await prisma.theme.findMany()).map((theme) => theme.slug).sort();
@@ -254,7 +254,7 @@ describe('seed', () => {
 
 describe('dados do seed', () => {
   // Falha aqui significa que alguém mexeu na lista de estilos e esqueceu o
-  // packages/shared, e o wizard passaria a sugerir um slug que não existe.
+  // packages/shared, que deixaria de descrever o que o seed cria.
   it('declara exatamente os slugs que o packages/shared conhece', () => {
     expect(THEMES.map((theme) => theme.slug).sort()).toEqual([...SEEDED_THEME_SLUGS].sort());
   });

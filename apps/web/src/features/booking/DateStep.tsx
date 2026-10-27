@@ -7,14 +7,13 @@ import { Skeleton } from '@/components/Skeleton';
 import { formatDateRange } from '@/lib/format';
 import { dayCount, toCalendarDate, toISODate } from './calendar-dates';
 import type { BookingDraft, DraftAction } from './draft';
-import { EventTypePicker } from './EventTypePicker';
 import { KindPicker } from './KindPicker';
 import { useAvailableDays } from './useAvailableDays';
 import styles from './DateStep.module.css';
 import 'react-day-picker/style.css';
 
 /**
- * Passo 1: o que reservar, datas, tipo de evento e convidados (§13.2).
+ * Passo 1: o que reservar, datas e convidados (§13.2).
  *
  * O calendário é `react-day-picker`, a única exceção de UI do projeto (§3):
  * calendário acessível com seleção de intervalo é caro de fazer à mão e fácil de
@@ -29,7 +28,7 @@ export type DateStepProps = {
   dispatch: (action: DraftAction) => void;
   venue: PublicVenue;
   /** Mostrado quando a pessoa tenta avançar com o passo incompleto. */
-  errors: { range?: string; eventType?: string; guestCount?: string };
+  errors: { range?: string; guestCount?: string };
   /**
    * Recusa do envio que só tem conserto aqui (§13.2).
    *
@@ -217,14 +216,6 @@ export function DateStep({ draft, dispatch, venue, errors, notice }: DateStepPro
             A reserva é de no mínimo {venue.minDays} dias seguidos.
           </p>
         ) : null}
-      </section>
-
-      <section className={styles.block}>
-        <EventTypePicker
-          value={draft.eventType}
-          onChange={(eventType) => dispatch({ type: 'setEventType', eventType })}
-          error={errors.eventType}
-        />
       </section>
 
       {/* Sem a chácara, não há convidados a receber (T32). */}

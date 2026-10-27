@@ -5,7 +5,6 @@ import {
   BOOKING_STATUSES,
   DAY_STATUSES,
   DISCOUNT_TYPES,
-  EVENT_TYPES,
   GALLERY_KINDS,
   ROLES,
 } from './enums.js';
@@ -117,7 +116,6 @@ export type ThemePalette = z.infer<typeof paletteSchema>;
 export const roleSchema = z.enum(ROLES);
 export const bookingStatusSchema = z.enum(BOOKING_STATUSES);
 export const discountTypeSchema = z.enum(DISCOUNT_TYPES);
-export const eventTypeSchema = z.enum(EVENT_TYPES);
 export const galleryKindSchema = z.enum(GALLERY_KINDS);
 export const dayStatusSchema = z.enum(DAY_STATUSES);
 export const bookingKindSchema = z.enum(BOOKING_KINDS);

@@ -46,7 +46,6 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
     kind: 'VENUE',
     startDate: '2026-12-05',
     endDate: '2026-12-06',
-    eventType: 'BABY_SHOWER',
     guestCount: 60,
     status: 'PENDING',
     holdExpiresAt: '2026-10-16T18:00:00.000Z',
@@ -162,7 +161,7 @@ describe('MyBookingsPage', () => {
     expect(screen.getByText('5 a 6 de dezembro de 2026')).toBeVisible();
     expect(screen.getByText('R$ 3.500,00')).toBeVisible();
     // Singular: a tela mostrava "1 itens" antes da revisão da T30.
-    expect(screen.getByText(/Chá de bebê · 60 pessoas · 1 item/)).toBeVisible();
+    expect(screen.getByText(/60 pessoas · 1 item/)).toBeVisible();
   });
 
   /* §13.3: pedido pendente mostra quando as datas deixam de ficar seguras. */

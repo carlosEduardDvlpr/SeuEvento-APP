@@ -72,7 +72,6 @@ const BOOKING: Booking = {
   kind: 'VENUE',
   startDate: '2026-12-05',
   endDate: '2026-12-06',
-  eventType: 'BABY_SHOWER',
   guestCount: 60,
   status: 'PENDING',
   holdExpiresAt: '2026-12-03T21:00:00.000Z',
@@ -158,7 +157,6 @@ function seedDraft(draft: Partial<BookingDraft> = {}) {
     ...EMPTY_DRAFT,
     startDate: '2026-12-05',
     endDate: '2026-12-06',
-    eventType: 'BABY_SHOWER',
     guestCount: 60,
     items: [{ itemId: PAINEL.id, quantity: 2 }],
     ...draft,
@@ -368,8 +366,7 @@ describe('pedido guardado a partir da revisão', () => {
     stubFetch({}, null);
     renderWithProviders(<BookingWizard />, { route: '/reservar?data=2026-12-05' });
 
-    await user.click(await screen.findByLabelText('Chá de bebê'));
-    await user.type(screen.getByLabelText('Número de convidados'), '40');
+    await user.type(await screen.findByLabelText('Número de convidados'), '40');
     await user.click(screen.getByRole('button', { name: /Continuar/ }));
 
     await screen.findByText('Escolha o estilo da festa');
@@ -382,7 +379,6 @@ describe('pedido guardado a partir da revisão', () => {
       expect(storedDraft()).toMatchObject({
         startDate: '2026-12-05',
         endDate: '2026-12-05',
-        eventType: 'BABY_SHOWER',
         guestCount: 40,
         items: [],
       });
@@ -394,8 +390,7 @@ describe('pedido guardado a partir da revisão', () => {
     stubFetch({}, null);
     renderWithProviders(<BookingWizard />, { route: '/reservar?data=2026-12-05' });
 
-    await user.click(await screen.findByLabelText('Chá de bebê'));
-    await user.type(screen.getByLabelText('Número de convidados'), '40');
+    await user.type(await screen.findByLabelText('Número de convidados'), '40');
     await user.click(screen.getByRole('button', { name: /Continuar/ }));
     await screen.findByText('Escolha o estilo da festa');
     await user.click(screen.getByRole('button', { name: /Continuar/ }));
@@ -524,7 +519,6 @@ describe('envio do pedido', () => {
         kind: 'VENUE',
         startDate: '2026-12-05',
         endDate: '2026-12-06',
-        eventType: 'BABY_SHOWER',
         guestCount: 60,
         items: [{ itemId: PAINEL.id, quantity: 2 }],
         customerNotes: null,
@@ -561,7 +555,7 @@ describe('envio do pedido', () => {
 
     const link = await screen.findByRole('link', { name: 'Agilizar pelo WhatsApp' });
     expect(link).toHaveAttribute('href', expect.stringContaining('https://wa.me/5511999990000'));
-    expect(link).toHaveAttribute('href', expect.stringContaining('Ch%C3%A1%20de%20beb%C3%AA'));
+    expect(link).toHaveAttribute('href', expect.stringContaining('(60%20pessoas)'));
   });
 
   /* §13.2: tratamento otimista é proibido; o rascunho só sai depois do 201. */
@@ -716,7 +710,6 @@ describe('reserva só de decoração', () => {
         kind: 'DECORATION',
         startDate: '2026-12-05',
         endDate: '2026-12-05',
-        eventType: 'BABY_SHOWER',
         guestCount: null,
         items: [{ itemId: PAINEL.id, quantity: 2 }],
         customerNotes: null,

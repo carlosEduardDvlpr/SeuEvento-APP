@@ -61,18 +61,6 @@ enum BlockScope {
   BOTH
 }
 
-enum EventType {
-  BIRTHDAY_KIDS // aniversário infantil
-  BIRTHDAY_ADULT // aniversário adulto
-  BABY_SHOWER // chá de bebê
-  GENDER_REVEAL // chá revelação
-  BRIDAL_SHOWER // chá de panela / lingerie
-  WEDDING // casamento, noivado
-  GRADUATION // formatura
-  GET_TOGETHER // confraternização, churrasco
-  OTHER
-}
-
 model User {
   id              String    @id @default(uuid())
   name            String
@@ -247,7 +235,6 @@ model Booking {
   kind          BookingKind   @default(VENUE)
   startDate     DateTime      @db.Date
   endDate       DateTime      @db.Date // inclusivo
-  eventType     EventType
   guestCount    Int? // nulo só em reserva de decoração: sem a chácara, não há convidados a receber
   status        BookingStatus @default(PENDING)
   holdExpiresAt DateTime?     @db.Timestamptz(6) // só enquanto PENDING

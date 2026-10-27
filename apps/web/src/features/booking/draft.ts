@@ -1,4 +1,4 @@
-import type { BookingKind, EventType } from '@chacara/shared';
+import type { BookingKind } from '@chacara/shared';
 import { readJSON, removeKey, writeJSON } from '@/lib/storage';
 
 /**
@@ -30,7 +30,6 @@ export type BookingDraft = {
   startDate: string | null;
   /** Inclusivo. Igual ao início numa reserva de um dia (§7.3). */
   endDate: string | null;
-  eventType: EventType | null;
   /** Só na chácara. Na decoração fica guardado, mas não vai no pedido. */
   guestCount: number | null;
   /** Estilo escolhido no passo de itens. Não vai para a reserva: é só filtro. */
@@ -43,7 +42,6 @@ export const EMPTY_DRAFT: BookingDraft = {
   kind: 'VENUE',
   startDate: null,
   endDate: null,
-  eventType: null,
   guestCount: null,
   themeId: null,
   items: [],
@@ -53,7 +51,6 @@ export const EMPTY_DRAFT: BookingDraft = {
 export type DraftAction =
   | { type: 'setKind'; kind: BookingKind }
   | { type: 'setRange'; startDate: string | null; endDate: string | null }
-  | { type: 'setEventType'; eventType: EventType }
   | { type: 'setGuestCount'; guestCount: number | null }
   | { type: 'setTheme'; themeId: string | null }
   | { type: 'setQuantity'; itemId: string; quantity: number }
@@ -66,7 +63,7 @@ export function draftReducer(draft: BookingDraft, action: DraftAction): BookingD
     /*
      * Decoração é um dia só: o intervalo escolhido para a chácara encolhe para o
      * primeiro dia, que é o da festa. O resto fica — trocar de ideia e voltar não
-     * deveria apagar o tipo de festa nem os itens já escolhidos.
+     * deveria apagar os convidados nem os itens já escolhidos.
      */
     case 'setKind':
       return {
@@ -77,9 +74,6 @@ export function draftReducer(draft: BookingDraft, action: DraftAction): BookingD
 
     case 'setRange':
       return { ...draft, startDate: action.startDate, endDate: action.endDate };
-
-    case 'setEventType':
-      return { ...draft, eventType: action.eventType };
 
     case 'setGuestCount':
       return { ...draft, guestCount: action.guestCount };
@@ -135,7 +129,8 @@ const STORAGE_KEY = 'chacara:booking-draft';
  *
  * Valida campo por campo em vez de confiar no que estava no armazenamento: o
  * conteúdo pode ser de uma versão anterior do formato, ou ter sido editado à mão.
- * Campo estranho volta ao padrão, e o pior caso é a pessoa reescolher.
+ * Campo estranho volta ao padrão, e o pior caso é a pessoa reescolher. Campo que
+ * saiu do formato, como o tipo de festa dos rascunhos antigos, fica para trás.
  */
 export function loadDraft(): BookingDraft | null {
   const stored = readJSON<Partial<BookingDraft>>(STORAGE_KEY);
@@ -155,7 +150,6 @@ export function loadDraft(): BookingDraft | null {
     kind: stored.kind === 'DECORATION' ? 'DECORATION' : 'VENUE',
     startDate: typeof stored.startDate === 'string' ? stored.startDate : null,
     endDate: typeof stored.endDate === 'string' ? stored.endDate : null,
-    eventType: typeof stored.eventType === 'string' ? (stored.eventType as EventType) : null,
     guestCount: typeof stored.guestCount === 'number' ? stored.guestCount : null,
     themeId: typeof stored.themeId === 'string' ? stored.themeId : null,
     items,
@@ -182,7 +176,7 @@ export function hasDates(draft: BookingDraft): boolean {
 }
 
 export function isStepOneComplete(draft: BookingDraft): boolean {
-  if (!hasDates(draft) || draft.eventType === null) return false;
+  if (!hasDates(draft)) return false;
 
   // Decoração não recebe convidados (T32).
   return draft.kind === 'DECORATION' || draft.guestCount !== null;

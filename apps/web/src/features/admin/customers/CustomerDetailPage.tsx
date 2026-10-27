@@ -1,4 +1,3 @@
-import { EVENT_TYPE_LABELS } from '@chacara/shared';
 import { Link, useParams } from 'react-router';
 import { useAdminCustomer } from '@/api/admin-customers';
 import { EmptyState } from '@/components/EmptyState';
@@ -122,7 +121,6 @@ export function CustomerDetailPage() {
                   </span>
 
                   <span className={styles.rowMeta}>
-                    {EVENT_TYPE_LABELS[booking.eventType]} ·{' '}
                     {describeGuests(booking.kind, booking.guestCount)}
                     {booking.createdByAdmin ? ' · lançada por você' : ''}
                   </span>

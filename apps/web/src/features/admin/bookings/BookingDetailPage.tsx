@@ -1,5 +1,5 @@
 import type { AdminBooking, BookingKind, BookingStatus } from '@chacara/shared';
-import { BOOKING_STATUS_LABELS, EVENT_TYPE_LABELS } from '@chacara/shared';
+import { BOOKING_KIND_LABELS, BOOKING_STATUS_LABELS } from '@chacara/shared';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
@@ -169,8 +169,8 @@ export function BookingDetailPage() {
           <h1 className={adminStyles.title}>{dates}</h1>
           <p className={styles.lead}>
             {decoration
-              ? `${EVENT_TYPE_LABELS[data.eventType]} · só a decoração, sem a chácara`
-              : `${EVENT_TYPE_LABELS[data.eventType]} para ${describeGuests(data.kind, data.guestCount)}`}
+              ? 'Só a decoração, sem a chácara'
+              : `${BOOKING_KIND_LABELS[data.kind]} para ${describeGuests(data.kind, data.guestCount)}`}
           </p>
         </div>
 

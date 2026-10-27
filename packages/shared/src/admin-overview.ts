@@ -5,7 +5,6 @@ import {
   bookingStatusSchema,
   centsSchema,
   dayStatusSchema,
-  eventTypeSchema,
   isoDateSchema,
 } from './schemas.js';
 
@@ -57,7 +56,6 @@ export const adminBookingSummarySchema = z.object({
   startDate: isoDateSchema,
   endDate: isoDateSchema,
   status: bookingStatusSchema,
-  eventType: eventTypeSchema,
   /** Nulo na reserva de decoração (T32). */
   guestCount: z.number().int().nullable(),
   totalCents: centsSchema,

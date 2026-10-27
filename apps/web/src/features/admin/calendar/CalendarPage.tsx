@@ -3,7 +3,6 @@ import {
   BLOCK_SCOPES,
   BLOCK_SCOPE_LABELS,
   DAY_STATUS_LABELS,
-  EVENT_TYPE_LABELS,
   blocksKind,
   todayInSaoPaulo,
 } from '@chacara/shared';
@@ -101,7 +100,7 @@ function BookingCard({ booking }: { booking: AdminBookingSummary }) {
 
       <p className={styles.bookingMeta}>
         {formatDateRange(booking.startDate, booking.endDate)} ·{' '}
-        {EVENT_TYPE_LABELS[booking.eventType]} · {describeGuests(booking.kind, booking.guestCount)}
+        {describeGuests(booking.kind, booking.guestCount)}
       </p>
 
       {/* O prazo é o que decide a ordem de atenção do dono (§13.4). */}

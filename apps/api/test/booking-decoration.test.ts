@@ -123,7 +123,6 @@ describe('reserva só de decoração', () => {
       kind: 'DECORATION',
       startDate: DAY,
       endDate: DAY,
-      eventType: 'BABY_SHOWER',
       items: [{ itemId: painelId, quantity: 1 }],
       expectedTotalCents: PAINEL_PRICE,
       ...overrides,
@@ -135,7 +134,6 @@ describe('reserva só de decoração', () => {
     return {
       startDate: DAY,
       endDate: DAY,
-      eventType: 'WEDDING',
       guestCount: 80,
       items: [],
       expectedTotalCents: BASE_DAILY,
@@ -223,7 +221,6 @@ describe('reserva só de decoração', () => {
       const response = await post(token, '/api/bookings', {
         startDate: DAY,
         endDate: DAY,
-        eventType: 'WEDDING',
         items: [],
         expectedTotalCents: BASE_DAILY,
       });
@@ -357,7 +354,6 @@ describe('reserva só de decoração', () => {
           kind: 'DECORATION',
           startDate: parseISODate(DAY),
           endDate: parseISODate(DAY),
-          eventType: 'BABY_SHOWER',
           guestCount: null,
           status: 'PENDING',
           holdExpiresAt: new Date(Date.now() - 60_000),
@@ -449,7 +445,6 @@ describe('reserva só de decoração', () => {
         kind: 'DECORATION',
         startDate: DAY,
         endDate: DAY,
-        eventType: 'BIRTHDAY_KIDS',
         items: [{ itemId: mesaId, quantity: 2 }],
         expectedTotalCents: MESA_PRICE * 2,
         confirmed: true,

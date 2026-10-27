@@ -56,7 +56,6 @@ function createBooking(
       startDate: parseISODate(start),
       endDate: parseISODate(start),
       status,
-      eventType: 'BABY_SHOWER',
       guestCount: 40,
       holdExpiresAt:
         options.holdExpiresAt === undefined

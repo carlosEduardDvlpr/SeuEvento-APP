@@ -18,7 +18,6 @@ const FILLED: BookingDraft = {
   kind: 'VENUE',
   startDate: '2026-12-05',
   endDate: '2026-12-06',
-  eventType: 'BABY_SHOWER',
   guestCount: 60,
   themeId: 't1',
   items: [{ itemId: 'i1', quantity: 2 }],
@@ -121,9 +120,8 @@ describe('hasDates e isStepOneComplete', () => {
     expect(hasDates(FILLED)).toBe(true);
   });
 
-  it('exige datas, tipo de evento e convidados para liberar o passo seguinte', () => {
+  it('exige datas e convidados para liberar o passo seguinte', () => {
     expect(isStepOneComplete(FILLED)).toBe(true);
-    expect(isStepOneComplete({ ...FILLED, eventType: null })).toBe(false);
     expect(isStepOneComplete({ ...FILLED, guestCount: null })).toBe(false);
     expect(isStepOneComplete({ ...FILLED, startDate: null })).toBe(false);
   });
@@ -220,7 +218,7 @@ describe('reserva só de decoração (T32)', () => {
       kind: 'DECORATION',
       startDate: '2026-12-05',
       endDate: '2026-12-05',
-      eventType: 'BABY_SHOWER',
+      guestCount: 60,
     });
     expect(next.items).toEqual(FILLED.items);
   });

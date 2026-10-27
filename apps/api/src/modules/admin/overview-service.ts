@@ -47,7 +47,6 @@ type BookingRow = Prisma.BookingGetPayload<{
     startDate: true;
     endDate: true;
     status: true;
-    eventType: true;
     guestCount: true;
     totalCents: true;
     holdExpiresAt: true;
@@ -64,7 +63,6 @@ const summarySelect = {
   startDate: true,
   endDate: true,
   status: true,
-  eventType: true,
   guestCount: true,
   totalCents: true,
   holdExpiresAt: true,
@@ -80,7 +78,6 @@ function toSummary(row: BookingRow): AdminBookingSummary {
     startDate: toISODate(row.startDate),
     endDate: toISODate(row.endDate),
     status: row.status,
-    eventType: row.eventType,
     guestCount: row.guestCount,
     totalCents: row.totalCents,
     holdExpiresAt: row.holdExpiresAt?.toISOString() ?? null,

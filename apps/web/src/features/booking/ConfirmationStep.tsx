@@ -1,5 +1,4 @@
 import type { Booking, PublicVenue } from '@chacara/shared';
-import { EVENT_TYPE_LABELS } from '@chacara/shared';
 import { Link } from 'react-router';
 import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
@@ -59,8 +58,8 @@ export function ConfirmationStep({ booking, venue, isLoading, error }: Confirmat
   const decoration = booking.kind === 'DECORATION';
 
   const message = decoration
-    ? `Olá! Acabei de enviar um pedido de decoração para ${dates} (${EVENT_TYPE_LABELS[booking.eventType]}). Pode confirmar?`
-    : `Olá! Acabei de enviar um pedido de reserva para ${dates} (${EVENT_TYPE_LABELS[booking.eventType]}, ${describeGuests(booking.kind, booking.guestCount)}). Pode confirmar?`;
+    ? `Olá! Acabei de enviar um pedido de decoração para ${dates}. Pode confirmar?`
+    : `Olá! Acabei de enviar um pedido de reserva para ${dates} (${describeGuests(booking.kind, booking.guestCount)}). Pode confirmar?`;
 
   return (
     <div className={styles.step}>
@@ -88,10 +87,6 @@ export function ConfirmationStep({ booking, venue, isLoading, error }: Confirmat
           <div>
             <dt>{decoration ? 'Dia da festa' : 'Datas'}</dt>
             <dd>{dates}</dd>
-          </div>
-          <div>
-            <dt>Tipo</dt>
-            <dd>{EVENT_TYPE_LABELS[booking.eventType]}</dd>
           </div>
           {decoration ? null : (
             <div>

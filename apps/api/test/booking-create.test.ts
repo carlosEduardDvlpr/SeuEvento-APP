@@ -98,7 +98,6 @@ describe('criação de reserva', () => {
   const TWO_DAYS = {
     startDate: '2027-04-09',
     endDate: '2027-04-10',
-    eventType: 'BABY_SHOWER' as const,
     guestCount: 60,
     expectedTotalCents: BASE_DAILY * 2,
   };
@@ -115,7 +114,6 @@ describe('criação de reserva', () => {
           status: 'PENDING',
           startDate: '2027-04-09',
           endDate: '2027-04-10',
-          eventType: 'BABY_SHOWER',
           guestCount: 60,
           dailyTotalCents: BASE_DAILY * 2,
           itemsTotalCents: 0,
@@ -646,7 +644,6 @@ describe('criação de reserva', () => {
 
       const snapshot = {
         userId: user.id,
-        eventType: 'BABY_SHOWER' as const,
         guestCount: 40,
         status: 'PENDING' as const,
         dailyBreakdown: [],

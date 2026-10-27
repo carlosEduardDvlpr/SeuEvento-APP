@@ -86,7 +86,6 @@ describe('painel: reserva manual, clientes e configurações', () => {
   const TWO_DAYS = {
     startDate: '2027-04-09',
     endDate: '2027-04-10',
-    eventType: 'WEDDING' as const,
     guestCount: 80,
     items: [],
     expectedTotalCents: BASE_DAILY * 2,

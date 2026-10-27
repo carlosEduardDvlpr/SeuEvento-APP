@@ -1,5 +1,5 @@
 import type { Booking } from '@chacara/shared';
-import { EVENT_TYPE_LABELS, todayInSaoPaulo } from '@chacara/shared';
+import { todayInSaoPaulo } from '@chacara/shared';
 import { Link } from 'react-router';
 import { useMyBookings } from '@/api/bookings';
 import { EmptyState } from '@/components/EmptyState';
@@ -34,7 +34,6 @@ function BookingCard({ booking }: { booking: Booking }) {
         <span className={styles.dates}>{formatDateRange(booking.startDate, booking.endDate)}</span>
 
         <span className={styles.meta}>
-          {EVENT_TYPE_LABELS[booking.eventType]} ·{' '}
           {describeGuests(booking.kind, booking.guestCount)} · {describeItems(booking.items.length)}
         </span>
 

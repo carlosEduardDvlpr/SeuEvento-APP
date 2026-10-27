@@ -43,6 +43,13 @@ export default defineConfig({
     deviceScaleFactor: 2,
     isMobile: true,
     hasTouch: true,
+
+    /*
+     * Foto não espera animação. Com menos movimento, a landing mostra todos os
+     * blocos de uma vez em vez de revelá-los ao rolar, e a foto de página
+     * inteira não sai com seções em branco, que ninguém rolou até ver.
+     */
+    reducedMotion: 'reduce',
   },
 
   webServer: webServers,

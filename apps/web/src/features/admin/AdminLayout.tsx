@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router';
+import { useState } from 'react';
+import { type Location, Link, NavLink, Outlet, useLocation } from 'react-router';
+import { Drawer } from '@/components/Drawer';
 import { useAuth } from '@/features/auth/AuthProvider';
 import {
   BoxIcon,
@@ -24,6 +25,11 @@ import styles from './AdminLayout.module.css';
  * lacuna visível é mais honesta que um menu que cresce a cada entrega e esconde o
  * que falta.
  *
+ * No celular, as seções abrem numa gaveta pela esquerda, por cima da tela (a
+ * mesma `components/Drawer` do menu do site), do lado do botão "Menu". Antes o
+ * menu entrava no meio da página e empurrava o conteúdo para baixo. A gaveta
+ * prende o foco, fecha com Escape ou pelo fundo e devolve o foco ao botão.
+ *
  * Combos e Estilos saíram do menu a pedido do dono, que não vai usá-los por
  * enquanto. As telas continuam funcionando em `/admin/combos` e `/admin/temas`,
  * e o que já está cadastrado continua valendo no site.
@@ -47,33 +53,43 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/admin/configuracoes', label: 'Configurações', Icon: GearIcon },
 ];
 
+/** As seções do painel: a mesma lista na lateral do desktop e na gaveta do celular. */
+function SectionLinks({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <ul className={styles.navList}>
+      {NAV_ITEMS.map(({ to, label, Icon }) => (
+        <li key={to}>
+          <NavLink
+            to={to}
+            // `end` só na raiz: sem isso "Visão geral" ficaria ativa em tudo.
+            end={to === '/admin'}
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.navLinkActive : null].filter(Boolean).join(' ')
+            }
+            onClick={onNavigate}
+          >
+            <Icon size={20} />
+            {label}
+          </NavLink>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function AdminLayout() {
   const { user, signOut } = useAuth();
-  const [navOpen, setNavOpen] = useState(false);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const location = useLocation();
 
   /*
-   * Escape fecha a gaveta do celular (§18.1).
-   *
-   * O foco volta para o botão de menu, e isso não é enfeite: a gaveta fechada é
-   * `display: none`, então o foco que estava num link dela iria para o `<body>`
-   * e quem navega por teclado recomeçaria do topo da página.
-   *
-   * O ouvinte só existe enquanto a gaveta está aberta.
+   * A gaveta guarda a página em que foi aberta, e só fica aberta nela: trocar de
+   * página com ela aberta (o voltar do navegador, por exemplo) a fecha. A
+   * comparação é com o objeto da localização, e não com a `key`: cada navegação
+   * cria um objeto novo, inclusive a volta à mesma entrada do histórico, então
+   * avançar de novo até a página não reabre a gaveta.
    */
-  useEffect(() => {
-    if (!navOpen) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return;
-
-      setNavOpen(false);
-      menuButtonRef.current?.focus();
-    }
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [navOpen]);
+  const [menuOpenFor, setMenuOpenFor] = useState<Location | null>(null);
+  const menuOpen = menuOpenFor === location;
 
   return (
     <div className={styles.shell}>
@@ -89,11 +105,10 @@ export function AdminLayout() {
       <header className={styles.topbar}>
         <button
           type="button"
-          ref={menuButtonRef}
           className={styles.menuButton}
-          onClick={() => setNavOpen((open) => !open)}
-          aria-expanded={navOpen}
-          aria-controls="admin-nav"
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpenFor(location)}
         >
           <MenuIcon />
           Menu
@@ -121,31 +136,9 @@ export function AdminLayout() {
       </header>
 
       <div className={styles.body}>
-        <nav
-          id="admin-nav"
-          className={[styles.nav, navOpen ? styles.navOpen : null].filter(Boolean).join(' ')}
-          aria-label="Seções do painel"
-        >
-          <ul className={styles.navList}>
-            {NAV_ITEMS.map(({ to, label, Icon }) => (
-              <li key={to}>
-                <NavLink
-                  to={to}
-                  // `end` só na raiz: sem isso "Visão geral" ficaria ativa em tudo.
-                  end={to === '/admin'}
-                  className={({ isActive }) =>
-                    [styles.navLink, isActive ? styles.navLinkActive : null]
-                      .filter(Boolean)
-                      .join(' ')
-                  }
-                  onClick={() => setNavOpen(false)}
-                >
-                  <Icon size={20} />
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+        {/* Desktop: a lateral fixa. O CSS a esconde no celular, onde quem leva às seções é a gaveta. */}
+        <nav className={styles.nav} aria-label="Seções do painel">
+          <SectionLinks />
 
           {user ? <p className={styles.navUser}>Você está como {user.name}.</p> : null}
         </nav>
@@ -154,6 +147,26 @@ export function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      {menuOpen ? (
+        <Drawer
+          side="left"
+          title="Menu"
+          closeLabel="Fechar o menu"
+          className={styles.drawer}
+          onClose={() => setMenuOpenFor(null)}
+        >
+          {(close) => (
+            <>
+              <nav className={styles.drawerNav} aria-label="Seções do painel">
+                <SectionLinks onNavigate={close} />
+              </nav>
+
+              {user ? <p className={styles.drawerUser}>Você está como {user.name}.</p> : null}
+            </>
+          )}
+        </Drawer>
+      ) : null}
     </div>
   );
 }

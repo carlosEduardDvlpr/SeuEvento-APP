@@ -65,7 +65,7 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
   browser,
 }) => {
   // ----------------------------------------------------------------------
-  // 1. Landing e passo 1: datas, tipo de festa e convidados
+  // 1. Landing e passo 1: datas e convidados
   // ----------------------------------------------------------------------
   const chosenDate = await startFromHero(page);
 
@@ -79,19 +79,6 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
    */
   const dayButton = page.locator(`[data-day="${chosenDate}"] button`);
   await expect(dayButton).toHaveAttribute('aria-label', /selecionado/);
-
-  /*
-   * O clique é no cartão, não no `<input>`: o radio é 1×1 px e fica embaixo do
-   * rótulo (§14.11 — o alvo de toque é o cartão inteiro), então `check()` no
-   * input espera para sempre por um elemento que não recebe o ponteiro. Clicar
-   * onde a pessoa clica e conferir o estado depois é o que o teste deve fazer.
-   */
-  await page
-    .getByRole('group', { name: 'Que festa é?' })
-    .getByText('Chá de bebê', { exact: true })
-    .click();
-
-  await expect(page.getByRole('radio', { name: 'Chá de bebê' })).toBeChecked();
 
   await page.getByLabel('Número de convidados').fill('40');
 
@@ -184,9 +171,10 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
 
   await page.goto(verifyLink);
 
-  // Confirmar já abre a sessão (§10.2, passo 5) e leva para a landing.
+  // Confirmar já abre a sessão (§10.2, passo 5) e leva para a landing. No
+  // desktop as ações do cabeçalho são links, e este só existe para quem entrou.
   await expect(page).toHaveURL(`${WEB_URL}/`);
-  await expect(page.getByRole('link', { name: 'Reservas' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Minhas reservas', exact: true })).toBeVisible();
 
   // ----------------------------------------------------------------------
   // 5. Volta ao pedido e envia
@@ -237,7 +225,9 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
      * uma falha que parecia credencial errada e não era.
      */
     await expect(adminPage).toHaveURL(`${WEB_URL}/`);
-    await expect(adminPage.getByRole('link', { name: 'Reservas' })).toBeVisible();
+    await expect(
+      adminPage.getByRole('link', { name: 'Minhas reservas', exact: true }),
+    ).toBeVisible();
 
     await adminPage.goto('/admin/reservas');
     await expect(adminPage.getByRole('heading', { level: 1, name: 'Reservas' })).toBeVisible();
@@ -248,8 +238,8 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
     await adminPage.getByRole('link').filter({ hasText: CUSTOMER.name }).click();
 
     // O `h1` do detalhe é o período; o que identifica a reserva certa é a linha
-    // com o tipo de festa e o número de convidados que o cliente informou.
-    await expect(adminPage.getByText('Chá de bebê para 40 pessoas')).toBeVisible();
+    // com o produto e o número de convidados que o cliente informou.
+    await expect(adminPage.getByText('Chácara para 40 pessoas')).toBeVisible();
     // `first()` porque o valor aparece no cabeçalho e no quadro de valores: são
     // dois lugares legítimos, e qualquer um deles serve de prova aqui.
     await expect(adminPage.getByText(totalText, { exact: true }).first()).toBeVisible();

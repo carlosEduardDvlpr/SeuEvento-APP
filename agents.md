@@ -100,7 +100,7 @@ O sistema tem \*\*dois ambientes no mesmo SPA React\*\*:
 
 1\. A pessoa chega na landing page, se encanta com as fotos e vê as datas livres.
 
-2\. Escolhe o dia (ou intervalo de dias), o tipo de evento e o número de convidados.
+2\. Escolhe o dia (ou intervalo de dias) e o número de convidados. (O tipo de evento também era perguntado aqui; saiu em outubro de 2026, a pedido do dono, ver o registro na seção 8.)
 
 3\. Escolhe itens "pegue e monte", filtrando por estilo/tema. Combos aplicam desconto automaticamente.
 
@@ -146,7 +146,7 @@ O sistema tem \*\*dois ambientes no mesmo SPA React\*\*:
 
 | Estilo (tema) | `Theme` | Linha estética da festa (Rústico Boho, Nuvens, Tropical...). Agrupa itens e combos |
 
-| Tipo de evento | `EventType` | Aniversário infantil, chá de bebê etc. |
+| Tipo de evento | — | Removido em outubro de 2026 (seção 8): a reserva não guarda mais o tipo de festa. Não use o termo no código novo |
 
 | Pegue e monte | — | Serviço em que o cliente retira os itens e monta a decoração |
 
@@ -392,7 +392,7 @@ O sistema tem \*\*dois ambientes no mesmo SPA React\*\*:
 
 &#x20;   └── shared/
 
-&#x20;       └── src/                 # schemas Zod, enums, labels pt-BR (EventType, status)
+&#x20;       └── src/                 # schemas Zod, enums, labels pt-BR (status, tipo de reserva)
 
 ```
 
@@ -571,6 +571,8 @@ Fonte: `apps/api/prisma/schema.prisma`. Regras gerais: dinheiro em `Int` (centav
 
 
 > \*\*Registro da T32 (outubro de 2026).\*\* A reserva só de decoração acrescentou `Booking.kind` (`VENUE` | `DECORATION`, padrão `VENUE`), `BlockedDate.scope` (`VENUE` | `DECORATION` | `BOTH`, padrão `VENUE`) e tornou `Booking.guestCount` opcional (nulo só na decoração). O bloco abaixo é o da especificação original; a fonte da verdade é o `schema.prisma`, e as regras estão na 9.10.
+
+> \*\*Registro (outubro de 2026): sem tipo de evento.\*\* A pedido do dono, a pergunta "Que festa é?" saiu do wizard e o conceito saiu do sistema inteiro: `Booking.eventType` e o enum `EventType` foram removidos pela migration `20261026225848_drop_event_type` (o tipo das reservas já gravadas se perdeu junto), e com eles `eventTypeSchema`, `EVENT_TYPE_LABELS` e a sugestão de estilo por tipo de evento (15.1). O corpo de `POST /bookings` e da reserva manual não tem mais o campo, e as telas que diziam "Chá de bebê para 40 pessoas" dizem "Chácara para 40 pessoas". Em produção, a API com a migration sobe antes do site: a API antiga exige o campo e recusaria os pedidos do site novo. Os blocos abaixo ainda mostram o campo, como registro da especificação original.
 
 
 
@@ -1568,7 +1570,7 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 
 | Rate limit | `login`: 5/min por IP + e-mail. `register`: 5/h por IP. `resend-verification` e `forgot-password`: 3/h por e-mail. Global: 100/min por IP |
 
-| Helmet | Ativo. CSP restritiva no front (`index.html`/Vercel headers) permitindo só Google Identity e fontes usadas |
+| Helmet | Ativo. CSP restritiva no front (`index.html`/Vercel headers) permitindo só Google Identity e fontes usadas. Desde o mapa do "Como chegar" (13.1), `frame-src` também precisa de `https://maps.google.com` e `https://www.google.com` |
 
 | CORS | Só em dev. Em produção, sem CORS (proxy same-origin) |
 
@@ -1900,7 +1902,7 @@ Nunca inclui nome, e-mail ou detalhe de quem reservou. Cache curto (`Cache-Contr
 
 
 
-Resposta `201` com a reserva completa (status `PENDING`, `holdExpiresAt`, snapshot financeiro). Exige e-mail verificado e telefone no perfil.
+Resposta `201` com a reserva completa (status `PENDING`, `holdExpiresAt`, snapshot financeiro). Exige e-mail verificado e telefone no perfil. (Desde outubro de 2026 o corpo não tem `eventType`, ver seção 8; o exemplo acima ficou como registro.)
 
 
 
@@ -2054,7 +2056,7 @@ Objetivo: fazer a pessoa \*\*sentir a festa na chácara\*\* e chegar às datas e
 
 
 
-1\. \*\*Hero.\*\* Foto grande da chácara em uso (hora dourada, uma festa montada) ocupando a primeira tela, com o nome, uma frase curta e um botão só, "Reservar uma data", que abre o calendário do wizard. Texto centralizado sobre a foto, com entrada em fade na carga (14.8). Mudou em outubro de 2026, a pedido do dono: era o "Hero com verificação de datas", com a foto na moldura em arco e um seletor "Quando é a festa?" com as próximas datas livres. Desde então a landing não consulta a disponibilidade, e o wizard continua aceitando `?data=` para links antigos. O botão é a mesma ação do "Reservar" do cabeçalho, por isso os dois são dourados (exceção à regra de um botão principal por tela da 14.2).
+1\. \*\*Hero.\*\* Foto grande da chácara em uso (hora dourada, uma festa montada) ocupando a primeira tela, com o nome, uma frase curta e um botão só, "Reservar uma data", que abre o calendário do wizard. Texto centralizado sobre a foto, com entrada em fade na carga (14.8). Mudou em outubro de 2026, a pedido do dono: era o "Hero com verificação de datas", com a foto na moldura em arco e um seletor "Quando é a festa?" com as próximas datas livres. Desde então a landing não consulta a disponibilidade, e o wizard continua aceitando `?data=` para links antigos. Com o "Reservar" do cabeçalho virando link (ver o cabeçalho, logo abaixo da lista), o botão do hero é o único dourado da primeira tela, como a 14.2 pede.
 
 2\. \*\*A chácara.\*\* Tour por áreas (salão/área coberta, área verde, cozinha, banheiros, estacionamento etc., com o que existir de verdade): foto + duas linhas cada. Capacidade, horários e endereço em bloco de fatos, sem cara de planilha.
 
@@ -2064,7 +2066,7 @@ Objetivo: fazer a pessoa \*\*sentir a festa na chácara\*\* e chegar às datas e
 
 5\. \*\*Estilos.\*\* Os temas da seção 15 em cartões de arco com paleta e uma foto de kit montado. Clicar leva ao wizard com o filtro de tema aplicado.
 
-5\.1 \*\*Decoração pegue e monte\*\* (acrescentada em outubro de 2026, a pedido do dono; na página, o título é "Decorações", sem frase de abertura). Os itens ativos com estoque, com foto, nome e preço de tabela, filtráveis por categoria; aparece mesmo sem estilo cadastrado. Mostra oito e revela o resto sob pedido. Clicar leva ao wizard com o item já no pedido (`?item=`).
+5\.1 \*\*Decoração pegue e monte\*\* (acrescentada em outubro de 2026, a pedido do dono; na página, o título é "Decorações", sem frase de abertura). Os itens ativos com estoque, com foto, nome e preço de tabela, filtráveis por categoria; aparece mesmo sem estilo cadastrado. Mostra oito e revela o resto sob pedido. Clicar leva ao wizard com o item já no pedido (`?item=`) e, também a pedido do dono, com "Só a decoração" já escolhido no primeiro passo; a chácara continua a um toque no seletor, e trocar não tira o item do pedido.
 
 6\. \*\*Combos.\*\* Os combos ativos mais vantajosos, com quanto o cliente economiza.
 
@@ -2072,13 +2074,19 @@ Objetivo: fazer a pessoa \*\*sentir a festa na chácara\*\* e chegar às datas e
 
 8\. \*\*Perguntas frequentes.\*\* Horário, o que está incluso, pode levar decoração própria, como funciona o cancelamento, forma de pagamento, som/horário limite, animais, capacidade.
 
-9\. \*\*Como chegar.\*\* Endereço, mapa (link para o Maps, sem embed pesado por padrão) e botão de WhatsApp.
+9\. \*\*Como chegar.\*\* Endereço, mapa (link para o Maps, sem embed pesado por padrão) e botão de WhatsApp. (Desde outubro de 2026, a pedido do dono, a seção também embute o mapa do Google, montado a partir do endereço cadastrado, sem chave de API e com `loading="lazy"`; as ações têm ícone. A política de privacidade avisa que o mapa conecta o navegador ao Google.)
 
-10\. \*\*Rodapé.\*\* Contato, redes, termos e privacidade.
+10\. \*\*Rodapé.\*\* Contato, redes, termos e privacidade. (O Instagram da marca, `@donnabelle.decor`, está fixo no `PublicLayout`: `VenueSettings` não tem campo de rede social.)
 
 
 
 Cabeçalho fixo e discreto: logo, "Reservar" (botão principal), "Entrar"/"Minhas reservas". No celular, o botão "Reservar" fica sempre acessível.
+
+> \*\*Registro (outubro de 2026).\*\* A pedido do dono, o cabeçalho mudou:
+>
+> - \*\*No desktop\*\* (a partir de 760 px), as ações são links alinhados, cada um com o seu ícone: "Reservar", "Minhas reservas" (por extenso) e "Sair" para quem entrou, ou "Entrar" para quem não entrou. O "Reservar" deixou de ser botão dourado.
+> - \*\*No celular\*\*, as mesmas ações ficam num menu lateral (`app/layout/SiteMenu.tsx`), aberto pelo botão "Menu". O menu é um `<dialog>` modal, com as regras de gaveta da 14.11: prende o foco, fecha com Escape, pelo fundo ou ao escolher uma opção, e devolve o foco ao botão.
+> - O "Reservar" do celular ficou a um toque, dentro do menu; o caminho imediato na landing é o botão do hero.
 
 
 
@@ -2094,7 +2102,7 @@ Passo na URL (`?step=datas|itens|revisao`) para o botão voltar do navegador fun
 
 |---|---|---|
 
-| \*\*1. Datas\*\* | Calendário de intervalo (`react-day-picker`) com dias `booked`/`blocked`/`past` desabilitados e legenda. Tipo de evento (cartões com ícone). Número de convidados | Respeita `minDays`/`maxDays`. Ao escolher um intervalo com dia indisponível no meio, explica qual dia atrapalha |
+| \*\*1. Datas\*\* | Calendário de intervalo (`react-day-picker`) com dias `booked`/`blocked`/`past` desabilitados e legenda. Número de convidados. (Os cartões de tipo de evento saíram em outubro de 2026, ver seção 8.) | Respeita `minDays`/`maxDays`. Ao escolher um intervalo com dia indisponível no meio, explica qual dia atrapalha |
 
 | \*\*2. Itens\*\* | Filtro por \*\*estilo\*\*, depois por categoria. Cartão do item com foto, preço, quantidade e "dica de montagem". Aba "Combos" com os kits do estilo escolhido | Item sem estoque nas datas escolhidas aparece esmaecido com o motivo. Ao completar um combo, aparece a linha de desconto |
 
@@ -2122,7 +2130,7 @@ Comportamentos obrigatórios:
 
 
 
-Lista por status (próximas, passadas, canceladas) com `StatusBadge`. Detalhe com datas, tipo de evento, itens, combos aplicados, valores (snapshot), observações e o botão "Cancelar reserva" quando permitido, com explicação do prazo quando não. Reserva `PENDING` mostra contagem de quando as datas deixam de ficar seguras.
+Lista por status (próximas, passadas, canceladas) com `StatusBadge`. Detalhe com datas, itens, combos aplicados, valores (snapshot), observações e o botão "Cancelar reserva" quando permitido, com explicação do prazo quando não. Reserva `PENDING` mostra contagem de quando as datas deixam de ficar seguras.
 
 
 
@@ -2130,7 +2138,7 @@ Lista por status (próximas, passadas, canceladas) com `StatusBadge`. Detalhe co
 
 
 
-Ambiente mais denso e funcional que o da landing, com a mesma identidade (tokens), mas sem a moldura em arco e sem ornamento. Navegação lateral no desktop e menu inferior/gaveta no celular (o dono vai usar no celular).
+Ambiente mais denso e funcional que o da landing, com a mesma identidade (tokens), mas sem a moldura em arco e sem ornamento. Navegação lateral no desktop e menu inferior/gaveta no celular (o dono vai usar no celular). No desktop, a navegação lateral fica fixa enquanto o conteúdo rola, e o item da seção atual não muda no hover (outubro de 2026: o hover pintava o fundo de branco por baixo do texto claro do item ativo, e ele sumia). No celular, ela abre numa gaveta pela esquerda, por cima da tela (`components/Drawer`, a mesma do menu do site), em vez de entrar no meio da página e empurrar o conteúdo para baixo, a pedido do dono.
 
 
 
@@ -2144,7 +2152,7 @@ Ambiente mais denso e funcional que o da landing, com a mesma identidade (tokens
 
 | \*\*Reservas\*\* | Tabela com busca (nome, e-mail, telefone), filtro de status e período. Detalhe: cliente (com botão de WhatsApp), datas, itens, totais, observações do cliente, \*\*notas internas\*\*, histórico de status e ações "Confirmar", "Cancelar" (motivo obrigatório) |
 
-| \*\*Reserva manual\*\* | Escolher/criar cliente (nome + telefone), datas, tipo, itens, opção de já confirmar. Mesmo cálculo de preço do cliente, com campo de \*\*ajuste manual de desconto\*\* opcional (fase 6) |
+| \*\*Reserva manual\*\* | Escolher/criar cliente (nome + telefone), datas, itens, opção de já confirmar. Mesmo cálculo de preço do cliente, com campo de \*\*ajuste manual de desconto\*\* opcional (fase 6) |
 
 | \*\*Itens\*\* | Tabela com foto, categoria, temas, preço, estoque, ativo. Formulário com upload/URL da imagem, temas (multi-seleção), dica de montagem |
 
@@ -2178,6 +2186,17 @@ Toda ação destrutiva pede confirmação em diálogo com o resultado explicado 
 
 > \*\*Registro da troca de identidade (outubro de 2026).\*\* O que esta seção descreve — paleta verde de mata, papel claro, amarelo de ipê, Young Serif + Figtree, moldura em \*\*arco\*\* — foi a identidade provisória do MVP, feita antes de haver cliente. Com a chácara real contratada, o site passou a usar a \*\*identidade da Donna Belle\*\*: ameixa `#913271` como marca, dourado `#D9A441` na ação, rosa seco `#B5656F` no que é chácara, magenta `#D14BA8` no que é decoração, fundo rosado `#FDF3F0`, Parisienne (marca) + Cormorant Garamond (títulos) + Montserrat (texto), e \*\*passe-partout com fio dourado\*\* no lugar do arco (o hexágono do logo é a marca, não recorte de foto).
 >
+> \*\*Registro da landing de outubro de 2026.\*\* A pedido do dono, a landing ganhou um acabamento de convite, todo com os elementos que a identidade já tinha:
+>
+> - \*\*Hero:\*\* o nome composto como no logo ("Espaço" na serifada, "Donna Belle" na manuscrita) e um fio dourado por dentro da borda da foto, o passe-partout em tamanho de tela.
+> - \*\*Ornamento da marca\*\* (fio, hexágono, fio; token `--ornament-mask`) embaixo de todo título de seção e entre o nome e a frase do hero. Fica embaixo do título e não é texto, então não é o "rótulo acima do título" da 14.12.
+> - \*\*"Pegue e monte, como funciona"\*\* virou a faixa de ameixa do meio da página: cada número no hexágono dourado, com um fio ligando os passos.
+> - \*\*Fotos de áreas e de itens\*\* na `PhotoFrame`. Os itens ficaram sem caixa em volta, e nenhum cartão se mexe no hover (14.8).
+> - \*\*FAQ\*\* com o título numa coluna que acompanha a rolagem e as perguntas com "+" no fio dourado.
+> - \*\*"Como chegar"\*\* com o mapa na moldura, e o rodapé com contato e Instagram.
+>
+> Os tokens novos são `--hairline-soft`, `--ornament-mask` e `--header-height`.
+
 > O texto abaixo fica como registro do que foi decidido e por quê. \*\*A fonte da verdade da paleta, da tipografia e da forma-assinatura é `apps/web/src/styles/tokens.css`\*\*, que documenta de onde cada cor vem e quais pares de contraste foram conferidos. As \*\*regras\*\* desta seção continuam valendo todas: componente nunca usa hex direto, a cor da festa vem de `Theme.palette` e não dos tokens, status nunca depende só de cor, o painel é seco.
 
 
@@ -2464,9 +2483,9 @@ Wizard no celular:
 
 │                      │
 
-│  Tipo de evento      │
+│  Convidados          │
 
-│  (cartões)           │
+│  (número)            │
 
 ├──────────────────────┤
 
@@ -2489,6 +2508,16 @@ Wizard no celular:
 \- Movimento \*\*em resposta à ação\*\* é bem-vindo e curto (120 a 200 ms): seleção de datas no calendário, abrir/fechar diálogo e gaveta, incremento de quantidade, troca de passo do wizard (fade), toast.
 
 \- \*\*Proibido:\*\* entrada com fade-and-slide em cada seção, hover animado em todo cartão, parallax, carrossel automático.
+
+> \*\*Registro (outubro de 2026): exceção pedida pelo dono.\*\* Na landing, os blocos entram com o mesmo movimento do hero ao aparecer na tela, contrariando a proibição acima: títulos de seção, fatos, fotos das áreas, passos, cartões, perguntas e mapa sobem 16 px e acendem em 700 ms, uma vez cada, e os que entram juntos saem em sequência de 90 ms. Fica em `features/landing/reveal.ts` e `reveal.css`, com cinco garantias:
+>
+> - Nada fica escondido sem JavaScript, no HTML pré-renderizado ou em navegador sem `IntersectionObserver`.
+> - Só se esconde o que está fora da tela: bloco que já está à vista quando aparece fica como está, e quem recarrega no meio da página não vê nada piscar.
+> - Com `prefers-reduced-motion: reduce`, tudo aparece de uma vez.
+> - O foco do teclado nunca cai num bloco invisível.
+> - Revelado, o bloco não some de novo.
+>
+> Não vale para o wizard, a área do cliente nem o painel.
 
 \- Respeitar `prefers-reduced-motion: reduce` (desliga o momento do hero e reduz os demais a troca instantânea).
 
@@ -2536,7 +2565,7 @@ Mesma paleta e tipografia (só Figtree), mais denso: tabelas com linhas de 44 a 
 
 | \*\*StatusBadge\*\* | Texto do status + ícone, cores dos tokens `--st-\*` |
 
-| \*\*Dialog/Drawer\*\* | Foco preso dentro, `Esc` fecha, foco volta ao gatilho, título obrigatório |
+| \*\*Dialog/Drawer\*\* | Foco preso dentro, `Esc` fecha, foco volta ao gatilho, título obrigatório. A gaveta é `components/Drawer.tsx` (`<dialog>` modal presa a uma borda): fecha também pelo fundo e ao escolher uma opção, e trava a rolagem da página enquanto aberta. É o menu do site e o do painel no celular |
 
 | \*\*Toast\*\* | Confirma a ação com o mesmo verbo do botão ("Pedido enviado" após "Solicitar reserva"). Erro persiste até o usuário dispensar |
 
@@ -2564,7 +2593,7 @@ Este projeto \*\*não\*\* deve parecer um template. Evite, mesmo que "fique boni
 
 \- Banco de imagens de "festa feliz" e ícones de confete.
 
-\- Animação de entrada em cada bloco.
+\- Animação de entrada em cada bloco. (Exceção da landing, pedida pelo dono em outubro de 2026: ver o registro na 14.8.)
 
 
 
@@ -2599,6 +2628,8 @@ Um \*\*estilo\*\* é a linha estética de uma festa: paleta, materiais, motivos 
 \### 15.1 Sugestão de estilo por tipo de evento
 
 
+
+> \*\*Removida em outubro de 2026\*\*, junto com o tipo de evento (seção 8): o passo de itens lista os estilos na ordem do admin. A tabela abaixo fica como registro.
 
 Constante em `packages/shared` (`SUGGESTED\_THEMES\_BY\_EVENT`). Depois que o cliente escolhe o tipo de evento no passo 1, o passo 2 mostra primeiro os estilos sugeridos (os demais continuam acessíveis).
 
@@ -2916,7 +2947,7 @@ Uma ação mantém o \*\*mesmo nome em todo o fluxo\*\*: o botão "Solicitar res
 
 
 
-Rótulos de `EventType` vivem em `packages/shared/labels.ts`: Aniversário infantil, Aniversário adulto, Chá de bebê, Chá revelação, Chá de panela, Casamento ou noivado, Formatura, Confraternização, Outro.
+Rótulos de `EventType` viviam em `packages/shared/labels.ts` (Aniversário infantil, Aniversário adulto, Chá de bebê, Chá revelação, Chá de panela, Casamento ou noivado, Formatura, Confraternização, Outro) até o tipo de evento sair do sistema, em outubro de 2026 (seção 8).
 
 
 
@@ -3216,7 +3247,7 @@ Se houver ambiente de homologação, ele espelha a produção com banco separado
 
 
 
-\- Cabeçalhos de segurança (CSP, `X-Content-Type-Options`, `Referrer-Policy`) configurados aqui. A CSP libera apenas o próprio domínio, o Google Identity e o CDN de imagens usado.
+\- Cabeçalhos de segurança (CSP, `X-Content-Type-Options`, `Referrer-Policy`) configurados aqui. A CSP libera apenas o próprio domínio, o Google Identity, o CDN de imagens usado e, em `frame-src`, o mapa do Google (`https://maps.google.com` e `https://www.google.com`, ver 10.7).
 
 
 

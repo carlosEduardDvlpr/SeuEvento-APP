@@ -10,13 +10,7 @@ import {
 import { optionalText } from './catalog.js';
 import { dailyPriceSchema } from './pricing.js';
 import { appliedComboSchema, quoteItemsSchema, quoteLineSchema } from './quote.js';
-import {
-  bookingKindSchema,
-  bookingStatusSchema,
-  centsSchema,
-  eventTypeSchema,
-  isoDateSchema,
-} from './schemas.js';
+import { bookingKindSchema, bookingStatusSchema, centsSchema, isoDateSchema } from './schemas.js';
 
 /**
  * Contrato da reserva (§11.3).
@@ -51,7 +45,6 @@ export const createBookingBodySchema = z
     kind: bookingKindSchema.default('VENUE'),
     startDate: isoDateSchema,
     endDate: isoDateSchema,
-    eventType: eventTypeSchema,
     guestCount: guestCountSchema,
     items: quoteItemsSchema.default([]),
     customerNotes: optionalText(600).default(null),
@@ -78,7 +71,6 @@ export const bookingSchema = z.object({
   startDate: isoDateSchema,
   /** Inclusivo: `startDate === endDate` é uma reserva de um dia (§7.3). */
   endDate: isoDateSchema,
-  eventType: eventTypeSchema,
   /** Nulo na reserva de decoração, que não recebe convidados (T32). */
   guestCount: z.number().int().nullable(),
   status: bookingStatusSchema,

@@ -1,4 +1,4 @@
-import { EVENT_TYPE_LABELS } from '@chacara/shared';
+import { BOOKING_KIND_LABELS } from '@chacara/shared';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useBooking, useCancelBooking } from '@/api/bookings';
@@ -96,8 +96,8 @@ export function BookingDetailPage() {
         <h1 className={styles.title}>{dates}</h1>
         <p className={styles.lead}>
           {decoration
-            ? `${EVENT_TYPE_LABELS[data.eventType]} · só a decoração, sem a chácara`
-            : `${EVENT_TYPE_LABELS[data.eventType]} para ${describeGuests(data.kind, data.guestCount)}`}
+            ? 'Só a decoração, sem a chácara'
+            : `${BOOKING_KIND_LABELS[data.kind]} para ${describeGuests(data.kind, data.guestCount)}`}
         </p>
       </header>
 

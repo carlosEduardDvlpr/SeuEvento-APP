@@ -15,7 +15,6 @@ function booking(
     status,
     startDate,
     endDate,
-    eventType: 'BABY_SHOWER',
     guestCount: 40,
     holdExpiresAt: null,
     canCancel: false,

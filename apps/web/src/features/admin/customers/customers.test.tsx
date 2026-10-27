@@ -44,7 +44,6 @@ const DETALHE: AdminCustomerDetail = {
       startDate: '2026-12-05',
       endDate: '2026-12-06',
       status: 'CONFIRMED',
-      eventType: 'BABY_SHOWER',
       guestCount: 60,
       totalCents: 436_000,
       holdExpiresAt: null,

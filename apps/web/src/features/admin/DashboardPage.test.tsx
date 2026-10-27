@@ -34,7 +34,6 @@ const PEDIDO: AdminBookingSummary = {
   endDate: '2026-12-06',
   status: 'PENDING',
   holdExpiresAt: '2026-11-17T18:00:00.000Z',
-  eventType: 'BABY_SHOWER',
   guestCount: 60,
   totalCents: 436_000,
   createdByAdmin: false,
@@ -138,11 +137,11 @@ describe('DashboardPage', () => {
     expect(await screen.findByText('Responder em 2 dias')).toBeVisible();
   });
 
-  it('mostra cliente, tipo e convidados de cada pedido', async () => {
+  it('mostra cliente e convidados de cada pedido', async () => {
     stubFetch({ ...VAZIO, pending: [PEDIDO] });
     renderDashboard();
 
-    expect(await screen.findByText(/Ana Beatriz · Chá de bebê · 60 pessoas/)).toBeVisible();
+    expect(await screen.findByText(/Ana Beatriz · 60 pessoas/)).toBeVisible();
     expect(screen.getByText('5 a 6 de dezembro de 2026')).toBeVisible();
     expect(screen.getByText('R$ 4.360,00')).toBeVisible();
   });
@@ -169,7 +168,7 @@ describe('DashboardPage', () => {
     stubFetch({ ...VAZIO, upcoming: [CONFIRMADA] });
     renderDashboard();
 
-    await screen.findByText('Bia Costa · Chá de bebê · 60 pessoas');
+    await screen.findByText('Bia Costa · 60 pessoas');
     expect(screen.queryByRole('link', { name: 'WhatsApp' })).not.toBeInTheDocument();
   });
 

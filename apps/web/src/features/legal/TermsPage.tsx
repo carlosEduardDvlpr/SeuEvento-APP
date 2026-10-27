@@ -34,9 +34,8 @@ export function TermsPage() {
           <LegalSection title="Como a reserva funciona">
             <ul className={styles.list}>
               <li>
-                Você escolhe as datas, o tipo de festa, quantas pessoas espera e os itens que vai
-                querer. O valor total aparece antes do envio e é calculado pela chácara, não pelo
-                seu navegador.
+                Você escolhe as datas, quantas pessoas espera e os itens que vai querer. O valor
+                total aparece antes do envio e é calculado pela chácara, não pelo seu navegador.
               </li>
               <li>
                 Ao enviar, o pedido entra como <strong>aguardando confirmação</strong> e as datas

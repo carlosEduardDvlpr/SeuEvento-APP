@@ -17,7 +17,6 @@ import {
   bookingKindSchema,
   bookingStatusSchema,
   centsSchema,
-  eventTypeSchema,
   isoDateSchema,
   roleSchema,
 } from './schemas.js';
@@ -46,7 +45,6 @@ export const adminBookingSchema = z.object({
   startDate: isoDateSchema,
   /** Inclusivo: `startDate === endDate` é uma reserva de um dia (§7.3). */
   endDate: isoDateSchema,
-  eventType: eventTypeSchema,
   /** Nulo na reserva de decoração (T32). */
   guestCount: z.number().int().nullable(),
   status: bookingStatusSchema,
@@ -122,7 +120,6 @@ export const createAdminBookingBodySchema = z
     kind: bookingKindSchema.default('VENUE'),
     startDate: isoDateSchema,
     endDate: isoDateSchema,
-    eventType: eventTypeSchema,
     guestCount: guestCountSchema,
     items: quoteItemsSchema.default([]),
     customerNotes: optionalText(600).default(null),

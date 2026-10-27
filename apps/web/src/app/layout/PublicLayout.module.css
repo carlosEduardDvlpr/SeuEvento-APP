@@ -20,73 +20,151 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-8);
-  /*
-   * §18.1: abaixo de 480 px o nome é escondido e sobra só o ícone de 28 px.
-   * Sem esta altura o alvo principal de volta ao início ficaria fora do piso
-   * justamente no celular, que é o aparelho da maior parte do público (§1.3).
-   */
+  /* O caminho de volta ao início é alvo de toque como qualquer outro (§18.1). */
   min-height: var(--touch-target);
   /*
-   * `flex: none` porque o logo é um item flexível ao lado de uma navegação que
-   * não quebra linha: sem isto ele era comprimido até o ícone virar um risco de
-   * 2 px em 375 px — e ele é o caminho de volta ao início.
+   * `flex: none` porque o logo divide a linha com as ações: sem isto ele era
+   * comprimido até o ícone virar um risco de 2 px em 375 px.
    */
   flex: none;
   padding-inline: var(--space-4);
   color: var(--brand);
   /*
-   * O nome da marca é um dos dois lugares onde a manuscrita entra. Vem um grau
-   * acima na escala porque a Parisienne tem altura-x baixa: no mesmo tamanho da
+   * O nome da marca é um dos lugares onde a manuscrita entra. Vem um grau acima
+   * na escala porque a Parisienne tem altura-x baixa: no mesmo tamanho da
    * serifada ela parece miúda ao lado do hexágono.
    */
   font-family: var(--font-script);
   font-size: var(--text-xl);
   line-height: 1.2;
+  white-space: nowrap;
   text-decoration: none;
 }
 
+.logo svg {
+  flex: none;
+}
+
+/*
+ * Desktop: as ações como links alinhados, todos com a mesma altura e o mesmo
+ * respiro, cada um com o seu ícone. No celular a lista some e quem leva às
+ * ações é o botão "Menu" (ver o fim do arquivo).
+ */
 .nav {
+  display: none;
+}
+
+.navList {
   display: flex;
   align-items: center;
-  gap: var(--space-8);
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .navLink {
   display: inline-flex;
   align-items: center;
+  gap: var(--space-8);
   min-height: var(--touch-target);
   padding: 0 var(--space-12);
-  border: none;
-  background: none;
+  border: 0;
   border-radius: var(--r-sm);
+  background: none;
   color: var(--fg);
-  font-weight: 600;
+  font: inherit;
   font-size: var(--text-base);
-  text-decoration: none;
-  /*
-   * "Minhas reservas" quebrava em duas linhas em 375 px e o cabeçalho virava um
-   * bloco de 115 px de altura. Com o nome da chácara escondido abaixo de 480 px,
-   * os quatro controles cabem numa linha. Achado da revisão da T30.
-   */
+  font-weight: 600;
   white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
+  transition:
+    background-color var(--transition),
+    color var(--transition);
+}
+
+.navLink svg {
+  flex: none;
+  color: var(--brand);
 }
 
 .navLink:hover {
   background: var(--bg-alt);
+  color: var(--brand);
 }
 
-/* O primeiro link da navegação é a ação principal da página (§14.2). O contorno
-   dourado escuro dá a borda que o dourado chapado não dá sobre o fundo rosado. */
-.navLink:first-child {
-  background: var(--action);
-  border: 1px solid var(--action-line);
-  color: var(--action-fg);
-  padding-inline: var(--space-24);
+/* A página atual: cor da marca e o fio dourado embaixo, além do `aria-current`. */
+.navLink[aria-current='page'] {
+  color: var(--brand);
 }
 
-.navLink:first-child:hover {
-  background: var(--action-hover);
+.navLink[aria-current='page'] span {
+  text-decoration: underline;
+  text-decoration-color: var(--hairline);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.45em;
+}
+
+/* Celular: o botão que abre o menu lateral, na mesma altura dos outros controles. */
+.menuButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--brand);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+
+.menuButton:hover {
+  border-color: var(--brand);
+}
+
+@media (min-width: 760px) {
+  .nav {
+    display: block;
+  }
+
+  .menuButton {
+    display: none;
+  }
+}
+
+/*
+ * Celular estreito: o nome da marca fica, e o botão vira só o ícone. "Menu"
+ * sai da vista, não do botão: continua sendo o nome que o leitor de tela lê.
+ */
+@media (max-width: 400px) {
+  .headerInner {
+    gap: var(--space-8);
+  }
+
+  .logo {
+    font-size: var(--text-lg);
+  }
+
+  .menuButton {
+    padding: 0;
+  }
+
+  .menuLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 .footer {
@@ -95,55 +173,98 @@
   color: var(--on-brand);
 }
 
-.footerInner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-16);
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: var(--space-48) var(--space-16);
+/* O azul de `--focus` some sobre a ameixa; no rodapé o anel é claro. */
+.footer :focus-visible {
+  outline-color: var(--on-brand);
 }
 
+.footerInner {
+  display: grid;
+  gap: var(--space-32);
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: var(--space-64) var(--space-16) var(--space-48);
+}
+
+/* O nome na manuscrita do logo, com o hexágono em dourado, como no cabeçalho. */
 .footerBrand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  margin: 0;
   font-family: var(--font-script);
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
   line-height: 1.2;
 }
 
-.footerNav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-24);
+.footerBrand svg {
+  flex: none;
+  color: var(--hairline);
 }
 
-.footerNav a {
-  color: var(--on-brand);
-}
-
-.footerUser {
-  width: 100%;
+.footerAddress {
+  max-width: 40ch;
+  margin: var(--space-12) 0 0;
   color: var(--on-brand-soft);
   font-size: var(--text-sm);
 }
 
-@media (max-width: 480px) {
-  .logo span {
-    /* No celular o espaço é do botão de reservar. */
-    display: none;
+.footerContacts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footerContacts a,
+.footerNav a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--touch-target);
+  color: var(--on-brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footerContacts a:hover,
+.footerNav a:hover {
+  text-decoration: underline;
+}
+
+.footerContacts svg {
+  flex: none;
+  color: var(--hairline);
+}
+
+.footerNav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.footerNav a {
+  color: var(--on-brand-soft);
+  font-weight: 500;
+}
+
+.footerUser {
+  padding-top: var(--space-24);
+  border-top: 1px solid var(--hairline-soft);
+  color: var(--on-brand-soft);
+  font-size: var(--text-sm);
+}
+
+@media (min-width: 760px) {
+  .footerInner {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-48);
+    align-items: start;
   }
 
-  /* Com quatro controles na mesma linha, cada pixel de respiro conta. */
-  .nav {
-    gap: var(--space-4);
-  }
-
-  .navLink {
-    padding-inline: var(--space-8);
-  }
-
-  .navLink:first-child {
-    padding-inline: var(--space-16);
+  .footerUser {
+    grid-column: 1 / -1;
   }
 }

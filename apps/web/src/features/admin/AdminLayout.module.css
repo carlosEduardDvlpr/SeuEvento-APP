@@ -1,4 +1,10 @@
 .shell {
+  /*
+   * Altura da barra do topo: os controles de 44 px e o respiro de cima e de
+   * baixo. O menu lateral desconta dela para ficar parado logo abaixo da barra.
+   */
+  --topbar-height: calc(var(--touch-target) + 2 * var(--space-8));
+
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -114,7 +120,13 @@
   background: var(--surface);
 }
 
-.navLinkActive {
+/*
+ * A seção atual não muda no hover. A regra do hover é mais específica que a do
+ * ativo, então sem o `:hover` aqui o fundo virava o branco do hover com o
+ * texto claro do ativo por cima, e o item sumia.
+ */
+.navLinkActive,
+.navLinkActive:hover {
   background: var(--brand);
   color: var(--on-brand);
 }
@@ -128,6 +140,51 @@
 .main {
   min-width: 0;
   padding: var(--space-24) var(--space-16) var(--space-64);
+}
+
+/*
+ * Desktop: o menu lateral fica parado enquanto o conteúdo rola, logo abaixo da
+ * barra do topo, que também é fixa. `align-self: start` e a altura da janela
+ * são o que deixam o `sticky` funcionar: esticado na altura da página inteira,
+ * ele não teria onde grudar. Se a janela for mais baixa que o menu, ele rola
+ * por dentro.
+ */
+@media (min-width: 861px) {
+  .nav {
+    position: sticky;
+    top: var(--topbar-height);
+    align-self: start;
+    height: calc(100vh - var(--topbar-height));
+    height: calc(100dvh - var(--topbar-height));
+    overflow-y: auto;
+  }
+}
+
+/*
+ * A gaveta do celular, por cima da tela. Fundo e linha do painel, não o fio
+ * dourado do site: o painel não tem ornamento (§14.10), e o título vai na letra
+ * de leitura, como todo título do painel.
+ */
+.drawer {
+  --drawer-bg: var(--bg-alt);
+  --drawer-line: var(--line);
+}
+
+.drawer h2 {
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+}
+
+.drawerNav {
+  margin-top: var(--space-16);
+}
+
+/* No pé da gaveta: o miolo dela é uma coluna da altura da tela. */
+.drawerUser {
+  margin-top: auto;
+  padding-top: var(--space-24);
+  color: var(--fg-soft);
+  font-size: var(--text-xs);
 }
 
 @media (max-width: 860px) {
@@ -149,13 +206,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* No celular as seções moram na gaveta: a lateral não ocupa espaço na página. */
   .nav {
     display: none;
-    border-right: none;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .navOpen {
-    display: block;
   }
 }

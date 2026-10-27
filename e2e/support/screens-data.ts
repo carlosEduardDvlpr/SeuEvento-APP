@@ -97,12 +97,12 @@ async function insertBooking(booking: {
       : [];
 
   await query(
-    `INSERT INTO "Booking" (id, "userId", "startDate", "endDate", "eventType", "guestCount",
+    `INSERT INTO "Booking" (id, "userId", "startDate", "endDate", "guestCount",
                             status, "holdExpiresAt", "dailyBreakdown", "dailyTotalCents",
                             "itemsTotalCents", "discountTotalCents", "totalCents",
                             "appliedCombos", "customerNotes", "adminNotes", "cancelReason",
                             "cancelledBy", "createdByAdmin", "updatedAt")
-     VALUES ($1, $2, $3::date, $4::date, 'BABY_SHOWER', 60, $5::"BookingStatus",
+     VALUES ($1, $2, $3::date, $4::date, 60, $5::"BookingStatus",
              $6, $7::jsonb, $8, $9, $10, $11, $12::jsonb, $13, $14, $15,
              $16::"Role", false, now())`,
     [

@@ -1,0 +1,68 @@
+/*
+ * As ações do menu lateral do site. A gaveta em si (posição, fundo, entrada,
+ * cabeçalho) é do `components/Drawer`.
+ */
+.list {
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list > li + li {
+  border-top: 1px solid var(--line);
+}
+
+/* Linha inteira como alvo de toque, bem acima do piso de 44 px (§18.1). */
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-8) 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.item:hover {
+  color: var(--brand);
+}
+
+/* O ícone num círculo com o fio dourado, como os ícones das seções da landing. */
+.icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--brand);
+}
+
+/* A página atual: cor da marca e o círculo preenchido, além do `aria-current`. */
+.item[aria-current='page'] {
+  color: var(--brand);
+}
+
+.item[aria-current='page'] .icon {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+/* No pé da gaveta: o miolo dela é uma coluna da altura da tela. */
+.user {
+  margin-top: auto;
+  padding-top: var(--space-24);
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}

@@ -1,5 +1,4 @@
 import type { AdminBookingSummary } from '@chacara/shared';
-import { EVENT_TYPE_LABELS } from '@chacara/shared';
 import { Link } from 'react-router';
 import { useAdminDashboard } from '@/api/overview';
 import { useVenue } from '@/api/venue';
@@ -37,8 +36,7 @@ function BookingRow({ booking }: { booking: AdminBookingSummary }) {
       <div className={dashboardStyles.rowMain}>
         <span className={dashboardStyles.rowDates}>{dates}</span>
         <span className={dashboardStyles.rowMeta}>
-          {booking.customer.name} · {EVENT_TYPE_LABELS[booking.eventType]} ·{' '}
-          {describeGuests(booking.kind, booking.guestCount)}
+          {booking.customer.name} · {describeGuests(booking.kind, booking.guestCount)}
         </span>
 
         {booking.status === 'PENDING' && booking.holdExpiresAt ? (

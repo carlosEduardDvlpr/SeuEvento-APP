@@ -2,6 +2,7 @@ import type { Theme } from '@chacara/shared';
 import { Link } from 'react-router';
 import { PhotoFrame } from '@/components/PhotoFrame';
 import landing from './landing.module.css';
+import { revealOnScroll } from './reveal';
 import styles from './ThemesSection.module.css';
 
 /**
@@ -24,7 +25,7 @@ export function ThemesSection({ themes }: ThemesSectionProps) {
   return (
     <section className={landing.section} aria-labelledby="titulo-estilos">
       <div className={landing.inner}>
-        <div className={landing.heading}>
+        <div className={landing.heading} ref={revealOnScroll}>
           <h2 className={landing.title} id="titulo-estilos">
             Escolha um estilo
           </h2>
@@ -36,7 +37,7 @@ export function ThemesSection({ themes }: ThemesSectionProps) {
 
         <ul className={[landing.body, styles.grid].join(' ')}>
           {themes.map((theme, index) => (
-            <li key={theme.id} className={styles.card}>
+            <li key={theme.id} className={styles.card} ref={revealOnScroll}>
               <Link className={styles.link} to={`/reservar?estilo=${theme.id}`}>
                 <PhotoFrame
                   className={styles.photo}

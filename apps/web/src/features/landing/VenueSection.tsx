@@ -1,6 +1,8 @@
 import type { GalleryImage, PublicVenue } from '@chacara/shared';
-import { CalendarIcon, ClockIcon, ImageIcon, PinIcon, UsersIcon } from '@/components/icons';
+import { CalendarIcon, ClockIcon, PinIcon, UsersIcon } from '@/components/icons';
+import { PhotoFrame } from '@/components/PhotoFrame';
 import landing from './landing.module.css';
+import { revealOnScroll } from './reveal';
 import styles from './VenueSection.module.css';
 
 /**
@@ -13,7 +15,8 @@ import styles from './VenueSection.module.css';
  * para uma chácara que não tem um (§16.6). A ordem do tour é a da galeria.
  *
  * O bloco de fatos lê `VenueSettings`, então capacidade, horário e endereço na
- * landing nunca divergem do que o sistema aceita.
+ * landing nunca divergem do que o sistema aceita. Ele vem num cartão com o fio
+ * dourado, como os detalhes de um convite: quanto, quando e onde.
  */
 
 export type VenueSectionProps = {
@@ -25,7 +28,7 @@ type Fact = {
   icon: typeof UsersIcon;
   label: string;
   value: string;
-  /** Ocupa a linha inteira do bloco: o endereço não cabe numa coluna. */
+  /** Ocupa a linha inteira do cartão: o endereço não cabe numa coluna. */
   wide?: boolean;
 };
 
@@ -58,22 +61,27 @@ export function VenueSection({ venue, areas }: VenueSectionProps) {
       aria-labelledby="titulo-chacara"
     >
       <div className={landing.inner}>
-        <div className={landing.heading}>
+        <div className={landing.heading} ref={revealOnScroll}>
           <h2 className={landing.title} id="titulo-chacara">
             A chácara
           </h2>
         </div>
 
-        {/* §14.12: bloco de fatos sem cara de planilha. */}
-        <dl className={[landing.body, styles.facts].join(' ')}>
+        {/*
+          §14.12: bloco de fatos sem cara de planilha. O ícone fica dentro do
+          `dt` porque o `div` de uma lista de definição só aceita `dt` e `dd`.
+        */}
+        <dl className={[landing.body, styles.facts].join(' ')} ref={revealOnScroll}>
           {facts.map(({ icon: FactIcon, label, value, wide }) => (
             <div
               className={[styles.fact, wide && styles.factWide].filter(Boolean).join(' ')}
               key={label}
             >
-              <FactIcon size={22} />
-              <dt>{label}</dt>
-              <dd>{value}</dd>
+              <dt className={styles.factLabel}>
+                <FactIcon size={18} />
+                {label}
+              </dt>
+              <dd className={styles.factValue}>{value}</dd>
             </div>
           ))}
         </dl>
@@ -81,20 +89,14 @@ export function VenueSection({ venue, areas }: VenueSectionProps) {
         {areas.length > 0 ? (
           <ul className={styles.areas}>
             {areas.map((area) => (
-              <li key={area.id} className={styles.area}>
+              <li key={area.id} className={styles.area} ref={revealOnScroll}>
                 {/*
                   `alt=""` de propósito: o `alt` cadastrado é o nome da área, e
                   ele já aparece no `h3` logo abaixo. Repeti-lo na foto faria o
                   leitor de tela anunciar o mesmo nome duas vezes (§18.1) — aqui
                   a imagem ilustra o bloco que o título nomeia.
                 */}
-                <div className={styles.areaPhoto}>
-                  {area.url ? (
-                    <img src={area.url} alt="" loading="lazy" decoding="async" />
-                  ) : (
-                    <ImageIcon size={32} />
-                  )}
-                </div>
+                <PhotoFrame className={styles.areaPhoto} src={area.url || null} alt="" />
 
                 <h3 className={styles.areaTitle}>{area.alt}</h3>
                 {area.caption ? <p className={styles.areaText}>{area.caption}</p> : null}

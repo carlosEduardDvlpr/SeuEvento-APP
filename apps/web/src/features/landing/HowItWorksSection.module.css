@@ -1,41 +1,81 @@
+/*
+ * Os passos como uma linha do tempo, sem cartão: na faixa escura, o que separa
+ * um passo do outro é o fio dourado entre os hexágonos.
+ *
+ * No celular a linha desce (hexágono à esquerda, texto à direita); no desktop
+ * ela corre na horizontal, uma coluna por passo.
+ */
 .steps {
+  --badge: 64px;
+  --gap: var(--space-32);
+
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-16);
-  margin: var(--space-32) 0 0;
+  gap: var(--gap);
+  margin: var(--space-48) 0 0;
   padding: 0;
   list-style: none;
 }
 
 .step {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-12);
-  padding: var(--space-24);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  display: grid;
+  grid-template-columns: var(--badge) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  column-gap: var(--space-24);
+  row-gap: var(--space-8);
 }
 
-/*
- * O número é decorativo: a ordem já está no `<ol>`, e repeti-la para o leitor de
- * tela seria "um, um, escolha os itens". Por isso `aria-hidden` no JSX.
- */
+/* O fio que liga um passo ao seguinte: vertical no celular. */
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--badge) + var(--space-8));
+  bottom: calc(var(--space-8) - var(--gap));
+  left: calc(var(--badge) / 2);
+  width: 1px;
+  background: var(--hairline-soft);
+}
+
+/* O hexágono do logo em dourado, com o número no meio. */
 .number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border: 1px solid var(--decor);
-  border-radius: 50%;
-  background: var(--bg-alt);
-  /* Pegue e monte é decoração: magenta, como nos estilos e nos combos. */
-  color: var(--decor-ink);
-  font-family: var(--font-body);
+  position: relative;
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  width: var(--badge);
+  height: var(--badge);
+  color: var(--hairline);
+}
+
+.number svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.numeral {
+  position: relative;
+  color: var(--on-brand);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
   font-weight: 600;
-  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+/* Desce até a altura do meio do hexágono, para o título ler junto com ele. */
+.stepTitle {
+  margin: var(--space-16) 0 0;
+  color: var(--on-brand);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: 1.2;
+}
+
+.stepText {
+  margin: 0;
+  max-width: 32ch;
+  color: var(--on-brand-soft);
 }
 
 @media (min-width: 900px) {
@@ -44,31 +84,32 @@
    * uma vez (eram quatro). Com colunas fixas, sobrava uma vazia à direita.
    */
   .steps {
-    grid-template-columns: none;
+    --gap: var(--space-48);
+
     grid-auto-columns: minmax(0, 1fr);
     grid-auto-flow: column;
   }
 
-  .step:not(:last-child)::after {
-    position: absolute;
-    top: 47px;
-    right: calc(0px - var(--space-16) - 1px);
-    z-index: 1;
-    width: var(--space-16);
-    border-top: 1px solid var(--decor);
-    content: '';
+  .step {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
   }
-}
 
-.stepTitle {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  line-height: 1.2;
-}
+  .number {
+    grid-row: auto;
+  }
 
-.stepText {
-  margin: 0;
-  color: var(--fg-soft);
-  font-size: var(--text-sm);
+  .stepTitle {
+    margin-top: var(--space-24);
+  }
+
+  /* Na horizontal, o fio sai do hexágono e para antes do próximo. */
+  .step:not(:last-child)::after {
+    top: calc(var(--badge) / 2);
+    right: calc(var(--space-16) - var(--gap));
+    bottom: auto;
+    left: calc(var(--badge) + var(--space-16));
+    width: auto;
+    height: 1px;
+  }
 }

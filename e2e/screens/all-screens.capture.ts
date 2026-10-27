@@ -1,7 +1,7 @@
 ﻿import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { ADMIN } from '../support/env.js';
+import { ADMIN, WEB_URL } from '../support/env.js';
 import { SCREEN_CLIENT, seedScreens } from '../support/screens-data.js';
 
 /**
@@ -112,7 +112,32 @@ async function signIn(page: Page, email: string, password: string): Promise<void
   await page.getByLabel('E-mail').fill(email);
   await page.getByLabel('Senha').fill(password);
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page.getByRole('link', { name: 'Reservas' })).toBeVisible();
+
+  /*
+   * Em 375 px as ações do cabeçalho moram no menu lateral, então a sessão aberta
+   * se confere lá, pela opção que só existe para quem entrou. A espera pela URL
+   * vem antes: o menu fecha a cada navegação, e abri-lo no meio do redirecionamento
+   * do login o fecharia de novo.
+   */
+  await expect(page).toHaveURL(`${WEB_URL}/`);
+  await page.getByRole('button', { name: 'Menu' }).click();
+
+  const menu = page.getByRole('dialog', { name: 'Menu' });
+  await expect(menu.getByRole('link', { name: 'Minhas reservas', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+}
+
+/**
+ * Espera as animações em curso terminarem.
+ *
+ * A gaveta do menu entra deslizando pela direita: medida no meio do caminho,
+ * ela apareceria como transbordo horizontal que não existe.
+ */
+async function settleAnimations(page: Page): Promise<void> {
+  await page.waitForFunction(() =>
+    document.getAnimations().every((animation) => animation.playState !== 'running'),
+  );
 }
 
 /** Abre o primeiro botão de criação da tela, que é onde vive o formulário. */
@@ -139,16 +164,19 @@ test('fotografa todas as telas em 375 px', async ({ page, browser }) => {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await capture(page, '01-landing');
 
+  // O menu lateral do celular, com as ações de quem ainda não entrou.
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
+  await settleAnimations(page);
+  await captureDialog(page, '01-landing-menu');
+  await page.keyboard.press('Escape');
+
   await page.goto('/reservar');
   await expect(page.getByRole('heading', { name: 'Quando é a festa?' })).toBeVisible();
   await capture(page, '02-wizard-datas');
 
   // Avança o wizard para fotografar os passos de itens e de revisão.
   await page.locator('[data-day] button:not([disabled])').first().click();
-  await page
-    .getByRole('group', { name: 'Que festa é?' })
-    .getByText('Chá de bebê', { exact: true })
-    .click();
   await page.getByLabel('Número de convidados').fill('60');
   await page.getByRole('button', { name: 'Continuar' }).click();
 
@@ -212,6 +240,8 @@ test('fotografa todas as telas em 375 px', async ({ page, browser }) => {
     hasTouch: true,
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
+    // Como no `use` da configuração: foto não espera animação.
+    reducedMotion: 'reduce',
   });
 
   const adminPage = await adminContext.newPage();
@@ -225,9 +255,12 @@ test('fotografa todas as telas em 375 px', async ({ page, browser }) => {
 
     // A gaveta de navegação é o controle mais usado do painel no celular.
     await adminPage.getByRole('button', { name: 'Menu' }).click();
-    await expect(adminPage.getByRole('link', { name: 'Configurações' })).toBeVisible();
-    await capture(adminPage, '18-admin-menu-aberto');
+    const adminMenu = adminPage.getByRole('dialog', { name: 'Menu' });
+    await expect(adminMenu.getByRole('link', { name: 'Configurações' })).toBeVisible();
+    await settleAnimations(adminPage);
+    await captureDialog(adminPage, '18-admin-menu-aberto');
     await adminPage.keyboard.press('Escape');
+    await expect(adminMenu).toBeHidden();
 
     await adminPage.goto('/admin/calendario');
     await expect(adminPage.getByRole('heading', { level: 1 })).toBeVisible();

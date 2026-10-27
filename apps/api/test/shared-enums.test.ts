@@ -7,8 +7,6 @@ import {
   BOOKING_STATUSES,
   BOOKING_STATUS_LABELS,
   DISCOUNT_TYPES,
-  EVENT_TYPES,
-  EVENT_TYPE_LABELS,
   GALLERY_KINDS,
   GALLERY_KIND_LABELS,
   ROLES,
@@ -18,7 +16,6 @@ import {
   BookingKind,
   BookingStatus,
   DiscountType,
-  EventType,
   GalleryKind,
   Role,
 } from '../src/generated/prisma/enums.js';
@@ -39,7 +36,6 @@ describe('enums compartilhados x schema do Prisma', () => {
     ['BookingStatus', BOOKING_STATUSES, BookingStatus],
     ['DiscountType', DISCOUNT_TYPES, DiscountType],
     ['GalleryKind', GALLERY_KINDS, GalleryKind],
-    ['EventType', EVENT_TYPES, EventType],
     ['BookingKind', BOOKING_KINDS, BookingKind],
     ['BlockScope', BLOCK_SCOPES, BlockScope],
   ];
@@ -53,12 +49,6 @@ describe('rótulos pt-BR', () => {
   it('tem rótulo para todo status de reserva', () => {
     for (const status of BOOKING_STATUSES) {
       expect(BOOKING_STATUS_LABELS[status]).toBeTruthy();
-    }
-  });
-
-  it('tem rótulo para todo tipo de evento', () => {
-    for (const eventType of EVENT_TYPES) {
-      expect(EVENT_TYPE_LABELS[eventType]).toBeTruthy();
     }
   });
 

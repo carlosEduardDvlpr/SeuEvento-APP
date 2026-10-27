@@ -19,7 +19,6 @@ const RESERVA: AdminBookingSummary = {
   startDate: '2026-11-20',
   endDate: '2026-11-21',
   status: 'CONFIRMED',
-  eventType: 'BABY_SHOWER',
   guestCount: 60,
   totalCents: 436_000,
   holdExpiresAt: null,

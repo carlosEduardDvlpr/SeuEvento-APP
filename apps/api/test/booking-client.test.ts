@@ -157,7 +157,6 @@ describe('reservas do cliente', () => {
         userId: user.id,
         startDate: '2027-04-09',
         endDate: '2027-04-10',
-        eventType: 'WEDDING',
         guestCount: 80,
       });
 
@@ -169,7 +168,6 @@ describe('reservas do cliente', () => {
           id: booking.id,
           startDate: '2027-04-09',
           endDate: '2027-04-10',
-          eventType: 'WEDDING',
           guestCount: 80,
           status: 'PENDING',
         }),
@@ -680,7 +678,6 @@ describe('reservas do cliente', () => {
         payload: {
           startDate: '2027-04-09',
           endDate: '2027-04-10',
-          eventType: 'BABY_SHOWER',
           guestCount: 60,
           expectedTotalCents: 300000,
         },

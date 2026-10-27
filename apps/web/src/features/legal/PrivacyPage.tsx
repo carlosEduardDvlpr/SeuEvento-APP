@@ -47,8 +47,8 @@ export function PrivacyPage() {
                 possível voltar à senha original. Nem a chácara consegue ver a sua.
               </li>
               <li>
-                <strong>Reserva:</strong> datas, tipo de festa, número de convidados, itens
-                escolhidos, valores e o que você escrever no campo de observações.
+                <strong>Reserva:</strong> datas, número de convidados, itens escolhidos, valores e o
+                que você escrever no campo de observações.
               </li>
               <li>
                 <strong>Login com o Google:</strong> se você entrar por aí, recebemos do Google o
@@ -101,13 +101,20 @@ export function PrivacyPage() {
               navegador, para você não perder o que escolheu se precisar entrar na conta no meio do
               caminho. Esse rascunho não sai do seu aparelho e se apaga ao fechar a aba.
             </p>
+            <p>
+              O mapa da seção “Como chegar”, na página inicial, é do Google Maps. Ele só carrega
+              quando você chega perto dele na página, e aí o seu navegador se conecta ao Google, que
+              pode registrar o acesso e gravar cookies próprios, conforme a política de privacidade
+              do Google.
+            </p>
           </LegalSection>
 
           <LegalSection title="Com quem compartilhamos">
             <p>
               Só com quem é necessário para o site funcionar: o serviço que entrega os e-mails, a
               hospedagem do site e do banco de dados e, se você escolher entrar com o Google, o
-              próprio Google. Esses serviços podem manter servidores fora do Brasil.
+              próprio Google. O mapa do Google na página inicial também conecta o seu navegador ao
+              Google. Esses serviços podem manter servidores fora do Brasil.
             </p>
             <p>
               Fora disso, seus dados de reserva aparecem apenas para você e para a administração da

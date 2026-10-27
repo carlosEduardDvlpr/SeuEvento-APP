@@ -1,5 +1,5 @@
 import type { AdminBookingSummary, BookingStatus } from '@chacara/shared';
-import { BOOKING_STATUS_LABELS, BOOKING_STATUSES, EVENT_TYPE_LABELS } from '@chacara/shared';
+import { BOOKING_STATUS_LABELS, BOOKING_STATUSES } from '@chacara/shared';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { useAdminBookings, type BookingFilters } from '@/api/admin-bookings';
@@ -64,7 +64,6 @@ function BookingCard({ booking }: { booking: AdminBookingSummary }) {
         </span>
 
         <span className={styles.meta}>
-          {EVENT_TYPE_LABELS[booking.eventType]} ·{' '}
           {describeGuests(booking.kind, booking.guestCount)} · pedido de{' '}
           {formatDateShort(booking.createdAt.slice(0, 10))}
         </span>

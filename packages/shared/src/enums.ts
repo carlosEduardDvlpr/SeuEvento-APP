@@ -29,19 +29,6 @@ export type BookingKind = (typeof BOOKING_KINDS)[number];
 export const BLOCK_SCOPES = ['VENUE', 'DECORATION', 'BOTH'] as const;
 export type BlockScope = (typeof BLOCK_SCOPES)[number];
 
-export const EVENT_TYPES = [
-  'BIRTHDAY_KIDS',
-  'BIRTHDAY_ADULT',
-  'BABY_SHOWER',
-  'GENDER_REVEAL',
-  'BRIDAL_SHOWER',
-  'WEDDING',
-  'GRADUATION',
-  'GET_TOGETHER',
-  'OTHER',
-] as const;
-export type EventType = (typeof EVENT_TYPES)[number];
-
 /**
  * Estado de um dia na resposta de disponibilidade (§9.1).
  *

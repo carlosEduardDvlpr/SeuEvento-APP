@@ -184,7 +184,6 @@ function seedDraft(draft: Partial<BookingDraft> = {}) {
     ...EMPTY_DRAFT,
     startDate: '2026-12-05',
     endDate: '2026-12-06',
-    eventType: 'BABY_SHOWER',
     guestCount: 60,
     ...draft,
   });
@@ -256,8 +255,7 @@ describe('BookingWizard', () => {
       renderWizard('/reservar?data=2026-12-09');
 
       expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
-      // O tipo de festa e os convidados eram do pedido guardado, e ficaram com ele.
-      expect(screen.getByLabelText('Chá de bebê')).not.toBeChecked();
+      // Os convidados eram do pedido guardado, e ficaram com ele.
       expect(screen.getByLabelText('Número de convidados')).toHaveValue(null);
 
       // E o pedido antigo não volta depois pelo "Reservar" do cabeçalho.
@@ -315,11 +313,20 @@ describe('BookingWizard', () => {
      */
     const VITRINE: CatalogItem = { ...PAINEL, id: '00000000-0000-4000-8000-000000000001' };
 
-    it('põe no pedido, com uma unidade, o item que veio da vitrine', async () => {
+    /*
+     * Pedido do dono: quem clica numa peça da vitrine está alugando a decoração,
+     * e o wizard já abre em "Só a decoração", com o item no pedido.
+     */
+    it('abre em "só a decoração", com uma unidade do item que veio da vitrine', async () => {
       stubFetch({ '/api/items': [VITRINE, MESA] });
       renderWizard(`/reservar?item=${VITRINE.id}`);
 
-      expect(await screen.findByText('Itens escolhidos (1)')).toBeVisible();
+      expect(await screen.findByText('Qual é o dia da festa?')).toBeVisible();
+      expect(screen.getByRole('radio', { name: /Só a decoração/ })).toBeChecked();
+      // Sem a chácara, não há convidados a perguntar.
+      expect(screen.queryByLabelText('Número de convidados')).not.toBeInTheDocument();
+
+      expect(screen.getByText('Itens escolhidos (1)')).toBeVisible();
       expect(await screen.findByText('R$ 120,00')).toBeVisible();
     });
 
@@ -370,7 +377,6 @@ describe('BookingWizard', () => {
     await user.click(screen.getByRole('button', { name: /Continuar/ }));
 
     expect(await screen.findByText('Escolha as datas da festa.')).toBeVisible();
-    expect(screen.getByText('Escolha o tipo de festa.')).toBeVisible();
     expect(screen.getByText('Informe quantas pessoas são esperadas.')).toBeVisible();
     // Continua no passo 1: nada de pular para uma tela que não sabe as datas.
     expect(screen.getByText('Quando é a festa?')).toBeVisible();
@@ -403,7 +409,6 @@ describe('BookingWizard', () => {
 
     // 5 a 6 de dezembro de 2026, sem repetir o mês.
     expect(await screen.findByText(/5 a 6 de dezembro de 2026/)).toBeVisible();
-    expect(screen.getByLabelText('Chá de bebê')).toBeChecked();
     expect(screen.getByLabelText('Número de convidados')).toHaveValue(60);
   });
 
@@ -418,14 +423,15 @@ describe('BookingWizard', () => {
     const first = renderWizard();
 
     await screen.findByText('Quando é a festa?');
-    await user.click(screen.getByLabelText('Casamento ou noivado'));
+    await user.click(await screen.findByRole('button', { name: DIA_9 }));
     await user.type(screen.getByLabelText('Número de convidados'), '80');
+    expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
 
     first.unmount();
     renderWizard();
 
-    expect(await screen.findByLabelText('Casamento ou noivado')).not.toBeChecked();
-    expect(screen.getByLabelText('Número de convidados')).toHaveValue(null);
+    expect(await screen.findByLabelText('Número de convidados')).toHaveValue(null);
+    expect(screen.queryByText('9 de dezembro de 2026')).not.toBeInTheDocument();
     expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 

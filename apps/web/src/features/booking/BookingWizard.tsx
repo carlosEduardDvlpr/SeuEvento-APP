@@ -72,10 +72,15 @@ function landingChoice(params: URLSearchParams): LandingChoice | null {
  * item somava ao que tinha sobrado da visita anterior, como num carrinho, e
  * quem voltava à landing e escolhia outro caía na reserva com dois.
  *
+ * O pedido do item já abre em **só a decoração** (T32), a pedido do dono: quem
+ * clica numa peça da vitrine está alugando a decoração. A chácara continua a um
+ * toque, no seletor do primeiro passo, e trocar não tira o item do pedido.
+ *
  * `?estilo=` vem de um cartão de estilo e só preenche o filtro do passo de
  * itens. `?data=` vem dos links de data do hero antigo, que podem estar salvos
  * por aí: preenche as duas pontas, porque um clique é uma festa de um dia
- * (§7.3), e fica na chácara, que é de onde eram aquelas datas (T32).
+ * (§7.3), e fica na chácara, que é de onde eram aquelas datas, a menos que o
+ * link traga também um item.
  *
  * Só o formato é conferido aqui. Item que saiu do catálogo cai fora no passo de
  * itens, pelo mesmo caminho de qualquer item desativado.
@@ -89,7 +94,7 @@ function draftFromLanding(choice: LandingChoice): BookingDraft {
     ...EMPTY_DRAFT,
     ...(date ? { startDate: date, endDate: date } : {}),
     ...(choice.themeId ? { themeId: choice.themeId } : {}),
-    ...(itemId ? { items: [{ itemId, quantity: 1 }] } : {}),
+    ...(itemId ? { kind: 'DECORATION' as const, items: [{ itemId, quantity: 1 }] } : {}),
   };
 }
 
@@ -271,12 +276,10 @@ export function BookingWizard() {
   }
 
   async function handleSubmit() {
-    if (!draft.startDate || !draft.endDate || !draft.eventType || !isStepOneComplete(draft)) {
+    if (!draft.startDate || !draft.endDate || !isStepOneComplete(draft)) {
       setBlocker({
         step: 'datas',
-        message: decoration
-          ? 'Confira o dia e o tipo de festa.'
-          : 'Confira as datas, o tipo de festa e os convidados.',
+        message: decoration ? 'Confira o dia da festa.' : 'Confira as datas e os convidados.',
       });
       goTo('datas');
       return;
@@ -305,7 +308,6 @@ export function BookingWizard() {
         kind: draft.kind,
         startDate: draft.startDate,
         endDate: draft.endDate,
-        eventType: draft.eventType,
         // O número fica no rascunho para quem volta à chácara, mas não vai no pedido.
         guestCount: decoration ? null : draft.guestCount,
         items: draft.items,
@@ -383,7 +385,6 @@ export function BookingWizard() {
           : decoration
             ? 'Escolha o dia da festa.'
             : 'Escolha as datas da festa.',
-        eventType: draft.eventType ? undefined : 'Escolha o tipo de festa.',
         guestCount:
           decoration || draft.guestCount ? undefined : 'Informe quantas pessoas são esperadas.',
       }

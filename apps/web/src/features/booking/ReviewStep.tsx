@@ -1,5 +1,4 @@
 import type { PublicVenue, Quote, QuoteIssue } from '@chacara/shared';
-import { EVENT_TYPE_LABELS } from '@chacara/shared';
 import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { Textarea } from '@/components/Textarea';
@@ -108,10 +107,6 @@ export function ReviewStep({
           <div className={styles.fact}>
             <dt>{decoration ? 'Dia da festa' : 'Datas'}</dt>
             <dd>{hasDates ? formatDateRange(draft.startDate!, draft.endDate!) : '—'}</dd>
-          </div>
-          <div className={styles.fact}>
-            <dt>Tipo</dt>
-            <dd>{draft.eventType ? EVENT_TYPE_LABELS[draft.eventType] : '—'}</dd>
           </div>
           {decoration ? (
             <div className={styles.fact}>

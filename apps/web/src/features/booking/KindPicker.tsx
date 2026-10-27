@@ -8,11 +8,12 @@ import styles from './KindPicker.module.css';
  * É a primeira escolha do wizard porque muda tudo o que vem depois: a agenda que
  * o calendário mostra, se o pedido tem um dia ou vários, e se há convidados.
  *
- * Mesmo padrão do `EventTypePicker`: grupo de rádio de verdade, com o input
- * visualmente oculto e o cartão inteiro clicável. A cor do cartão escolhido é a
- * do produto na identidade da dona — rosa para o Espaço, magenta para a
- * Decoração — e nunca vem sozinha: borda mais grossa e texto em negrito também
- * marcam a escolha (§14.2).
+ * É um grupo de rádio de verdade (`fieldset` com inputs `radio`), e não botões:
+ * a navegação por setas e o anúncio de "1 de 2" vêm de graça, e o teclado
+ * funciona sem código nosso (§18.1). O input fica visualmente oculto e o cartão
+ * inteiro é clicável. A cor do cartão escolhido é a do produto na identidade da
+ * dona — rosa para o Espaço, magenta para a Decoração — e nunca vem sozinha:
+ * borda mais grossa e texto em negrito também marcam a escolha (§14.2).
  */
 
 const OPTIONS: { kind: BookingKind; title: string; text: string; Icon: typeof HouseIcon }[] = [

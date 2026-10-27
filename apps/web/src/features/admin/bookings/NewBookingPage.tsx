@@ -4,7 +4,7 @@ import type {
   CreateAdminBookingBody,
   QuoteRequest,
 } from '@chacara/shared';
-import { EVENT_TYPES, EVENT_TYPE_LABELS, createAdminBookingBodySchema } from '@chacara/shared';
+import { createAdminBookingBodySchema } from '@chacara/shared';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAdminCustomers, useCreateManualBooking } from '@/api/admin-customers';
@@ -14,7 +14,6 @@ import { Button } from '@/components/Button';
 import { Field } from '@/components/Field';
 import { Money } from '@/components/Money';
 import { QuantityStepper } from '@/components/QuantityStepper';
-import { Select } from '@/components/Select';
 import { Textarea } from '@/components/Textarea';
 import { useToast } from '@/components/Toast';
 import { ArrowLeftIcon } from '@/components/icons';
@@ -56,7 +55,6 @@ export function NewBookingPage() {
   const [kind, setKind] = useState<BookingKind>('VENUE');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [eventType, setEventType] = useState<string>('BIRTHDAY_ADULT');
   const [guestCount, setGuestCount] = useState('');
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [customerNotes, setCustomerNotes] = useState('');
@@ -123,7 +121,6 @@ export function NewBookingPage() {
       kind,
       startDate,
       endDate: lastDay,
-      eventType,
       // Na decoração não há convidados; na chácara, vazio vira NaN e o schema avisa.
       guestCount: decoration ? null : guestCount.trim() === '' ? Number.NaN : Number(guestCount),
       items,
@@ -340,19 +337,6 @@ export function NewBookingPage() {
                 onChange={(event) => setEndDate(event.target.value)}
               />
             )}
-
-            <Select
-              label="Tipo de festa"
-              value={eventType}
-              error={fieldErrors.eventType}
-              onChange={(event) => setEventType(event.target.value)}
-            >
-              {EVENT_TYPES.map((value) => (
-                <option key={value} value={value}>
-                  {EVENT_TYPE_LABELS[value]}
-                </option>
-              ))}
-            </Select>
 
             {decoration ? null : (
               <Field

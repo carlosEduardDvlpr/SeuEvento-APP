@@ -1,11 +1,4 @@
-import type {
-  BlockScope,
-  BookingKind,
-  BookingStatus,
-  DayStatus,
-  EventType,
-  GalleryKind,
-} from './enums.js';
+import type { BlockScope, BookingKind, BookingStatus, DayStatus, GalleryKind } from './enums.js';
 
 /**
  * Rótulos em pt-BR (§16). Ficam aqui para que a mesma palavra apareça na tela,
@@ -19,18 +12,6 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   CONFIRMED: 'Confirmada',
   CANCELLED: 'Cancelada',
   COMPLETED: 'Concluída',
-};
-
-export const EVENT_TYPE_LABELS: Record<EventType, string> = {
-  BIRTHDAY_KIDS: 'Aniversário infantil',
-  BIRTHDAY_ADULT: 'Aniversário adulto',
-  BABY_SHOWER: 'Chá de bebê',
-  GENDER_REVEAL: 'Chá revelação',
-  BRIDAL_SHOWER: 'Chá de panela',
-  WEDDING: 'Casamento ou noivado',
-  GRADUATION: 'Formatura',
-  GET_TOGETHER: 'Confraternização',
-  OTHER: 'Outro',
 };
 
 /** Legenda do calendário. §14.11: status nunca é comunicado só por cor. */

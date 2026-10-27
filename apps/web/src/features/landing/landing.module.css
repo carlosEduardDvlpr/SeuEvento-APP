@@ -3,7 +3,8 @@
  *
  * Uma seção é uma faixa de largura total com conteúdo centralizado em
  * `--container`. As faixas alternam fundo para separar os assuntos sem precisar
- * de linha divisória — é o respiro que a §14.7 pede.
+ * de linha divisória — é o respiro que a §14.7 pede. A faixa de ameixa
+ * (`sectionDark`) é a pausa no meio da página, e o rodapé fecha no mesmo tom.
  */
 
 .section {
@@ -12,6 +13,20 @@
 
 .sectionAlt {
   background: var(--bg-alt);
+}
+
+.sectionDark {
+  background: var(--bg-dark);
+  color: var(--on-brand);
+}
+
+/*
+ * Estilos e combos somem quando o painel não tem nenhum, e duas faixas do mesmo
+ * fundo podem acabar vizinhas. Um fio entre elas mantém os assuntos separados.
+ */
+.section:not(.sectionAlt):not(.sectionDark) + .section:not(.sectionAlt):not(.sectionDark),
+.sectionAlt + .sectionAlt {
+  border-top: 1px solid var(--line);
 }
 
 .inner {
@@ -26,16 +41,55 @@
 .title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(var(--text-2xl), 4vw, var(--text-4xl));
+  font-size: clamp(var(--text-2xl), 4.5vw, var(--text-4xl));
   line-height: 1.08;
   text-wrap: balance;
 }
 
+/*
+ * O ornamento da marca embaixo de todo título de seção: fio dourado com o
+ * hexágono do logo. É a mesma linha fina da moldura das fotos, e é o que faz
+ * cada seção parecer parte do mesmo convite. Decorativo: não entra no texto.
+ *
+ * Propriedades separadas, e não o atalho `mask`: com `var()` no atalho, um
+ * valor recusado anularia a máscara inteira, e o ornamento viraria uma barra
+ * dourada chapada.
+ */
+.title::after {
+  content: '';
+  display: block;
+  width: 96px;
+  height: 16px;
+  margin-top: var(--space-16);
+  background-color: var(--hairline);
+  -webkit-mask-image: var(--ornament-mask);
+  mask-image: var(--ornament-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: left center;
+  mask-position: left center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
 .lead {
-  margin: var(--space-12) 0 0;
+  margin: var(--space-16) 0 0;
   color: var(--fg-soft);
   font-size: var(--text-lg);
   line-height: 1.65;
+}
+
+.sectionDark .title {
+  color: var(--on-brand);
+}
+
+.sectionDark .lead {
+  color: var(--on-brand-soft);
+}
+
+/* O azul de `--focus` some sobre a ameixa; ali o anel é claro. */
+.sectionDark :focus-visible {
+  outline-color: var(--on-brand);
 }
 
 /* Espaço entre o cabeçalho da seção e o conteúdo dela. */
@@ -50,6 +104,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-8);
   min-height: var(--touch-target);
   padding: 0 var(--space-32);
   border: 1px solid var(--action-line);
@@ -69,6 +124,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-8);
   min-height: var(--touch-target);
   padding: 0 var(--space-24);
   border: 1px solid var(--brand);
@@ -76,6 +132,7 @@
   color: var(--brand);
   font-weight: 700;
   text-decoration: none;
+  transition: background-color var(--transition);
 }
 
 .secondaryAction:hover {

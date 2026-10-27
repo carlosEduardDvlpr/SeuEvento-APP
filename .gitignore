@@ -27,3 +27,10 @@ PROGRESSO.md
 # Fica fora do repositório: é arte dela, e o que o código precisa saber sobre
 # essas peças já está em `apps/web/src/styles/tokens.css`.
 referencias/
+
+# Fotos do catálogo servidas em dev (`/catalogo/...`). Ficam fora até decidir
+# onde elas moram em produção: são da cliente e pesam no repositório.
+apps/web/public/catalogo/
+
+# Cópias do banco (pg_dump). Têm dado pessoal de clientes: nunca versionar.
+*.dump

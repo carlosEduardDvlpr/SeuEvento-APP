@@ -1,10 +1,5 @@
 import { parseISODate, type ISODate } from '../../src/lib/dates.js';
-import type {
-  BookingStatus,
-  EventType,
-  GalleryKind,
-  Role,
-} from '../../src/generated/prisma/enums.js';
+import type { BookingStatus, GalleryKind, Role } from '../../src/generated/prisma/enums.js';
 import { prisma } from './db.js';
 
 let sequence = 0;
@@ -30,7 +25,6 @@ type BookingInput = {
   /** Dia de saída, inclusivo (§7.3). */
   endDate: ISODate;
   status?: BookingStatus;
-  eventType?: EventType;
   guestCount?: number;
   holdExpiresAt?: Date | null;
   /** Só onde o valor aparece na resposta, como nos resumos do painel. */
@@ -53,7 +47,6 @@ export function createBooking(input: BookingInput) {
       startDate: parseISODate(input.startDate),
       endDate: parseISODate(input.endDate),
       status: input.status ?? 'PENDING',
-      eventType: input.eventType ?? 'BABY_SHOWER',
       guestCount: input.guestCount ?? 40,
       holdExpiresAt: input.holdExpiresAt ?? null,
       createdByAdmin: input.createdByAdmin ?? false,

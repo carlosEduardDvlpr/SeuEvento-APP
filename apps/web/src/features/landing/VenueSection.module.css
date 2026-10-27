@@ -1,55 +1,66 @@
+/*
+ * Os fatos num cartão com o fio dourado, como os detalhes de um convite.
+ *
+ * Rosa, não ameixa, nos ícones: esta seção fala do **espaço**, e o rosa é a cor
+ * que a identidade da cliente usa no material do Espaço. A decoração usa
+ * magenta (ver `ItemsSection` e `HowItWorksSection`), e é esse par que diz, sem
+ * legenda, de qual dos dois produtos a seção está falando.
+ */
 .facts {
   display: grid;
-  gap: var(--space-24);
   margin: var(--space-32) 0 0;
+  padding: var(--space-8) var(--space-24);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface);
 }
 
 .fact {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: var(--space-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-16) 0;
+}
+
+.fact + .fact {
+  border-top: 1px solid var(--line);
+}
+
+.factLabel {
+  display: flex;
   align-items: center;
-  padding-bottom: var(--space-16);
-  border-bottom: 1px solid var(--line-strong);
-  /*
-   * Rosa, não ameixa: esta seção fala do **espaço**, e o rosa é a cor que a
-   * identidade da cliente usa no material do Espaço. A decoração usa magenta
-   * (ver `ThemesSection` e `CombosSection`), e é esse par que diz, sem legenda,
-   * de qual dos dois produtos a seção está falando.
-   */
-  color: var(--venue-ink);
-}
-
-/* O endereço é longo: ganha a linha inteira em vez de espremer uma coluna. */
-.factWide {
-  grid-column: 1 / -1;
-}
-
-.fact svg {
-  grid-row: span 2;
-}
-
-.fact dt {
+  gap: var(--space-8);
   color: var(--fg-soft);
   font-size: var(--text-sm);
 }
 
-.fact dd {
+.factLabel svg {
+  flex: none;
+  color: var(--venue-ink);
+}
+
+/* O número na serifada do logo: é o que a pessoa procura no cartão. */
+.factValue {
   margin: 0;
   color: var(--fg);
-  font-size: var(--text-lg);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
   font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Endereço é texto, não número: volta para a letra de leitura. */
+.factWide .factValue {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.45;
 }
 
 /*
  * Tour por áreas: foto e duas linhas por área (§13.1).
  *
  * Grade em que nenhuma linha fica pela metade, com qualquer número de áreas: o
- * dono tira e põe foto pelo painel, e a seção precisa continuar arrumada. A
- * foto em destaque de antes ocupava duas linhas, mas as duas áreas empilhadas
- * ao lado ficavam mais altas que ela, e sobrava um vão embaixo; com cinco
- * áreas, a última linha ainda saía com um buraco.
+ * dono tira e põe foto pelo painel, e a seção precisa continuar arrumada.
  *
  * Duas colunas já no celular, para o passeio não virar uma rolagem de fotos
  * inteiras; linhas de três no desktop.
@@ -57,7 +68,7 @@
 .areas {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-24) var(--space-16);
+  gap: var(--space-32) var(--space-16);
   margin: var(--space-48) 0 0;
   padding: 0;
   list-style: none;
@@ -68,6 +79,7 @@
   --area-ratio: 4 / 3;
 
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: var(--space-8);
 }
@@ -81,25 +93,15 @@
   }
 }
 
-.areaPhoto {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Proporção reservada para a troca por foto real não saltar (§14.9). */
-  aspect-ratio: var(--area-ratio);
-  overflow: hidden;
-  /* Mesmo fio dourado da moldura-assinatura, para a grade de áreas não ficar
-     com cara de bloco solto no meio das seções emolduradas. */
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--bg);
-  color: var(--fg-muted);
-}
-
-.areaPhoto img {
+/*
+ * A moldura-assinatura em cada foto: passe-partout branco e fio dourado. Dois
+ * seletores para vencer a proporção de retrato que a `PhotoFrame` traz.
+ * Proporção reservada para a troca por foto real não saltar (§14.9).
+ */
+.areas .areaPhoto {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  margin-bottom: var(--space-4);
+  aspect-ratio: var(--area-ratio);
 }
 
 .areaTitle {
@@ -117,13 +119,31 @@
 
 @media (min-width: 900px) {
   .facts {
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-32);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: var(--space-32) 0;
+  }
+
+  .fact {
+    padding: 0 var(--space-32);
+  }
+
+  /* Lado a lado, o fio separa as colunas em vez das linhas. */
+  .fact + .fact {
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+
+  .fact.factWide {
+    grid-column: 1 / -1;
+    margin: var(--space-24) var(--space-32) 0;
+    padding: var(--space-24) 0 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
   }
 
   .areas {
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: var(--space-32) var(--space-24);
+    gap: var(--space-48) var(--space-24);
   }
 
   .area {

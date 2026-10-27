@@ -107,7 +107,6 @@ function toBooking(row: BookingRow, cancelRules: CancelRules): Booking {
     kind: row.kind,
     startDate,
     endDate: toISODate(row.endDate),
-    eventType: row.eventType,
     guestCount: row.guestCount,
     status: row.status,
     holdExpiresAt: row.holdExpiresAt?.toISOString() ?? null,
@@ -521,7 +520,6 @@ export async function createBooking({
             kind: body.kind,
             startDate: parseISODate(body.startDate),
             endDate: parseISODate(body.endDate),
-            eventType: body.eventType,
             // Decoração não recebe convidados: o número, se veio, não vale (T32).
             guestCount: isVenue ? body.guestCount : null,
             status: confirmedByAdmin ? 'CONFIRMED' : 'PENDING',

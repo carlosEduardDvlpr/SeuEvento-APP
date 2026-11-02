@@ -1,6 +1,6 @@
 import type { PublicVenue } from '@chacara/shared';
 import { Link } from 'react-router';
-import { CalendarIcon, MapIcon, PinIcon, WhatsAppIcon } from '@/components/icons';
+import { CalendarIcon, PinIcon, WhatsAppIcon } from '@/components/icons';
 import { whatsappUrl } from '@/lib/whatsapp';
 import landing from './landing.module.css';
 import { revealOnScroll } from './reveal';
@@ -9,29 +9,32 @@ import styles from './DirectionsSection.module.css';
 /**
  * Como chegar (§13.1, item 9).
  *
- * Endereço, o mapa da região, o link para abrir no aplicativo de mapas e o botão
- * de WhatsApp. O mapa embutido entrou em outubro de 2026, a pedido do dono; a
- * especificação original pedia só o link, pelo peso do iframe. Dois cuidados
- * seguram esse peso: `loading="lazy"` (a seção é a última da página, então o
- * iframe só carrega quando a pessoa chega perto) e nenhum script nosso.
+ * Endereço, o mapa e o botão de WhatsApp. O mapa embutido entrou em outubro de
+ * 2026, a pedido do dono; a especificação original pedia só o link, pelo peso do
+ * iframe. Dois cuidados seguram esse peso: `loading="lazy"` (a seção é a última
+ * da página, então o iframe só carrega quando a pessoa chega perto) e nenhum
+ * script nosso.
  *
- * O mapa sai do **endereço** cadastrado, pela busca do Google Maps em modo de
- * incorporação, que dispensa chave de API. O link "Abrir no mapa" continua sendo
- * o `mapsUrl` que o dono cadastrou, que pode apontar para a ficha do lugar.
+ * Desde novembro de 2026 o mapa é a ficha da Donna Belle no Google, e não mais
+ * a busca pelo endereço cadastrado: a ficha tem o pino no lugar certo e o nome
+ * do espaço. Com ela saiu o link "Abrir no mapa", porque a própria ficha já leva
+ * ao Google Maps. O `mapsUrl` continua no cadastro e na API, sem uso aqui.
  *
  * Sem endereço nem WhatsApp cadastrados, a seção não aparece: um "como chegar"
- * vazio é pior que nenhum (§16.6).
+ * vazio é pior que nenhum (§16.6). Sem endereço, o mapa também não aparece.
  */
+
+/**
+ * Incorporação da ficha no Google Maps (Compartilhar › Incorporar um mapa). É
+ * fixa porque aponta para o lugar, e não para um texto de endereço: trocar o
+ * endereço no painel não move o pino. Se o espaço mudar de lugar, é aqui.
+ */
+const MAP_EMBED_URL =
+  'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3671.654059627431!2d-46.53414819999999!3d-23.0364708!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94cec79c8e7b457f%3A0x64b9412fe70ec5f1!2sDonna%20Belle%20Espa%C3%A7o%20de%20Eventos%20e%20Decora%C3%A7%C3%B5es!5e0!3m2!1spt-BR!2sbr!4v1793115202947!5m2!1spt-BR!2sbr';
 
 export type DirectionsSectionProps = {
   venue: PublicVenue;
 };
-
-/** O endereço no mapa incorporável do Google, em português e na altura da rua. */
-function mapEmbedUrl(address: string): string {
-  const params = new URLSearchParams({ q: address, hl: 'pt-BR', z: '16', output: 'embed' });
-  return `https://maps.google.com/maps?${params.toString()}`;
-}
 
 export function DirectionsSection({ venue }: DirectionsSectionProps) {
   if (!venue.address && !venue.whatsapp) return null;
@@ -57,18 +60,6 @@ export function DirectionsSection({ venue }: DirectionsSectionProps) {
 
           {/* Os ícones são decorativos: o nome de cada ação é o texto do botão. */}
           <div className={styles.actions}>
-            {venue.mapsUrl ? (
-              <a
-                className={landing.secondaryAction}
-                href={venue.mapsUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <MapIcon size={20} />
-                Abrir no mapa
-              </a>
-            ) : null}
-
             {venue.whatsapp ? (
               <a
                 className={landing.secondaryAction}
@@ -92,7 +83,7 @@ export function DirectionsSection({ venue }: DirectionsSectionProps) {
           <div className={styles.map} ref={revealOnScroll}>
             <iframe
               title={`Mapa com a localização de ${venue.name}`}
-              src={mapEmbedUrl(venue.address)}
+              src={MAP_EMBED_URL}
               loading="lazy"
             />
           </div>

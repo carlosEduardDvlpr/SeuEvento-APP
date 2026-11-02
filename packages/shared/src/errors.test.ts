@@ -17,6 +17,7 @@ describe('contrato de erro da API', () => {
         'INVALID_TOKEN',
         'INVALID_TRANSITION',
         'NOT_FOUND',
+        'PAYMENT_PLAN_LOCKED',
         'PRICE_CHANGED',
         'RATE_LIMITED',
         'STOCK_INSUFFICIENT',

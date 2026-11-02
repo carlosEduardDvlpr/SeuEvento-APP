@@ -1,5 +1,6 @@
 export * from './admin-bookings.js';
 export * from './admin-customers.js';
+export * from './admin-finance.js';
 export * from './admin-overview.js';
 export * from './admin-settings.js';
 export * from './auth.js';

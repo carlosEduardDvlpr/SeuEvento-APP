@@ -61,6 +61,12 @@ enum BlockScope {
   BOTH
 }
 
+/// Uma linha do plano de pagamento da reserva (§9.11).
+enum PaymentKind {
+  DEPOSIT // sinal
+  INSTALLMENT // parcela (ou pagamento à vista, quando é a única)
+}
+
 model User {
   id              String    @id @default(uuid())
   name            String
@@ -255,8 +261,9 @@ model Booking {
   createdAt      DateTime @default(now()) @db.Timestamptz(6)
   updatedAt      DateTime @updatedAt @db.Timestamptz(6)
 
-  user  User          @relation(fields: [userId], references: [id])
-  items BookingItem[]
+  user     User          @relation(fields: [userId], references: [id])
+  items    BookingItem[]
+  payments Payment[]
 
   @@index([status, startDate])
   @@index([userId])
@@ -275,6 +282,35 @@ model BookingItem {
 
   @@index([bookingId])
   @@index([itemId])
+}
+
+/// Um recebimento do plano de pagamento: o sinal ou uma parcela (§9.11).
+///
+/// É anotação do dono, não pagamento online: o cliente paga por fora (Pix,
+/// dinheiro) e o dono registra aqui quanto vence, quando, e o dia em que recebeu.
+/// A situação (a receber, em atraso, recebido) não é coluna: depende do dia de
+/// hoje e do status da reserva, e por isso é calculada na consulta.
+///
+/// Valor positivo, número de 0 a 12 e sinal com o número 0 são CHECKs da
+/// migration `payment_plan`, porque o Prisma não os expressa.
+model Payment {
+  id          String      @id @default(uuid())
+  bookingId   String
+  kind        PaymentKind
+  number      Int // 0 = sinal; 1..12 = parcelas, na ordem de vencimento
+  dueDate     DateTime    @db.Date
+  amountCents Int
+  paidOn      DateTime?   @db.Date // dia em que o dono recebeu; nulo = a receber
+  createdAt   DateTime    @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime    @updatedAt @db.Timestamptz(6)
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  /// Um número por reserva. Como começa pelo `bookingId`, o mesmo índice atende a
+  /// busca das linhas de uma reserva, e um `@@index([bookingId])` seria repetido.
+  @@unique([bookingId, number])
+  /// O financeiro do mês filtra pelo vencimento (§18.2).
+  @@index([dueDate])
 }
 
 model BlockedDate {

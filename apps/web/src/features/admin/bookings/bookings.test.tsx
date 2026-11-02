@@ -1,4 +1,9 @@
-import type { AdminBooking, AdminBookingSummary, AdminBookingsPage } from '@chacara/shared';
+import type {
+  AdminBooking,
+  AdminBookingSummary,
+  AdminBookingsPage,
+  PaymentPlan,
+} from '@chacara/shared';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router';
@@ -74,6 +79,17 @@ const DETALHE: AdminBooking = {
   updatedAt: '2026-11-14T12:00:00.000Z',
   customer: { id: 'u-1', name: 'Ana Beatriz', email: 'ana@exemplo.com', phone: '11988887777' },
   allowedTransitions: ['CONFIRMED', 'CANCELLED'],
+};
+
+const SEM_PLANO: PaymentPlan = {
+  bookingId: 'b-1',
+  totalCents: 350_000,
+  payments: [],
+  paidCents: 0,
+  pendingCents: 0,
+  overdueCents: 0,
+  canEdit: true,
+  canDelete: false,
 };
 
 type Call = { url: string; method: string; body: unknown };
@@ -321,6 +337,8 @@ describe('BookingsPage', () => {
 describe('BookingDetailPage, painel', () => {
   function renderDetail(booking: AdminBooking | null, routes: Record<string, Handler> = {}) {
     const calls = stubFetch({
+      // O cartão de pagamento tem consulta própria; os testes dele moram em finance/.
+      'GET /api/admin/bookings/b-1/payments': () => jsonResponse(SEM_PLANO),
       'GET /api/admin/bookings/b-1': () =>
         booking
           ? jsonResponse(booking)

@@ -7,6 +7,7 @@ import { BookingDetailPage } from './bookings/BookingDetailPage';
 import { BookingsPage } from './bookings/BookingsPage';
 import { NewBookingPage } from './bookings/NewBookingPage';
 import { CalendarPage } from './calendar/CalendarPage';
+import { FinancePage } from './finance/FinancePage';
 import { CategoriesPage } from './catalog/CategoriesPage';
 import { CustomerDetailPage } from './customers/CustomerDetailPage';
 import { CustomersPage } from './customers/CustomersPage';
@@ -45,6 +46,7 @@ export default function AdminRoutes() {
           {/* Antes de `:id`, senão "nova" cairia no detalhe de uma reserva. */}
           <Route path="reservas/nova" element={<NewBookingPage />} />
           <Route path="reservas/:id" element={<BookingDetailPage />} />
+          <Route path="financeiro" element={<FinancePage />} />
 
           <Route path="clientes" element={<CustomersPage />} />
           <Route path="clientes/:id" element={<CustomerDetailPage />} />

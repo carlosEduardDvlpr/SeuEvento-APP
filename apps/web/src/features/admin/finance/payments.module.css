@@ -1,0 +1,171 @@
+/*
+ * Plano de pagamento: o cartão no detalhe da reserva e o editor (§9.11).
+ *
+ * O cartão usa as classes do detalhe (`card`, `cardTitle`, `hint`) para ficar
+ * igual às outras seções; aqui mora só o que é dele.
+ */
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.payments {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Em cima, o que é e quanto; embaixo, quando vence e o que fazer. */
+.payment {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4) var(--space-16);
+  padding: var(--space-12) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+
+.payment:last-child {
+  border-bottom: 0;
+}
+
+.paymentName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.paymentValue {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.paymentWhen {
+  color: var(--fg-soft);
+}
+
+.paymentAction {
+  justify-self: end;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-12);
+  margin: 0;
+  padding-top: var(--space-12);
+  border-top: 2px solid var(--line);
+}
+
+.totals dt {
+  color: var(--fg-soft);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.totals dd {
+  margin: 2px 0 0;
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Em atraso: a cor acompanha o rótulo, nunca o substitui (§14.2). */
+.overdue dd {
+  color: var(--danger);
+}
+
+/* ------------------------------------------------------------------ editor */
+
+.planTotal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-16);
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--r-sm);
+  background: var(--bg-alt);
+}
+
+.planTotal strong {
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+.lockedList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lockedLine,
+.single {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-12);
+  margin: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.rowLegend {
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* A soma ao vivo diz em texto o que falta: a cor só reforça (§14.2). */
+.sumOk,
+.sumOff {
+  margin: 0;
+  padding: var(--space-12);
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.sumOk {
+  background: var(--st-confirmed-bg);
+  color: var(--st-confirmed-fg);
+}
+
+.sumOff {
+  background: var(--st-pending-bg);
+  color: var(--st-pending-fg);
+}

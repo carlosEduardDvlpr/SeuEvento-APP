@@ -13,6 +13,7 @@ import {
   MenuIcon,
   MoneyIcon,
   UsersIcon,
+  WalletIcon,
 } from '@/components/icons';
 import styles from './AdminLayout.module.css';
 
@@ -45,6 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/admin', label: 'Visão geral', Icon: GridIcon },
   { to: '/admin/calendario', label: 'Calendário', Icon: CalendarIcon },
   { to: '/admin/reservas', label: 'Reservas', Icon: ListIcon },
+  { to: '/admin/financeiro', label: 'Financeiro', Icon: WalletIcon },
   { to: '/admin/itens', label: 'Itens', Icon: BoxIcon },
   { to: '/admin/categorias', label: 'Categorias', Icon: GridIcon },
   { to: '/admin/precos', label: 'Preços', Icon: MoneyIcon },
@@ -95,7 +97,7 @@ export function AdminLayout() {
     <div className={styles.shell}>
       {/*
         O painel também precisa do atalho (§18.1): sem ele, cada troca de página
-        obriga a passar pelos 3 controles da topbar e pelos 9 itens do menu
+        obriga a passar pelos 3 controles da topbar e pelos 10 itens do menu
         antes de chegar ao conteúdo.
       */}
       <a className="skip-link" href="#admin-conteudo">

@@ -302,16 +302,6 @@ export function SettingsPage() {
               error={fieldErrors.address}
               onChange={(event) => set({ address: event.target.value })}
             />
-
-            <Field
-              label="Link do mapa"
-              help="Endereço https do Google Maps. Opcional."
-              type="url"
-              inputMode="url"
-              value={values.mapsUrl}
-              error={fieldErrors.mapsUrl}
-              onChange={(event) => set({ mapsUrl: event.target.value })}
-            />
           </div>
 
           <Textarea

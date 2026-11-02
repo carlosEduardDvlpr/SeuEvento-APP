@@ -66,6 +66,16 @@ export function FlagIcon(props: IconProps) {
   );
 }
 
+/** Em atraso: o recebimento venceu e o dinheiro não entrou (§9.11). */
+export function AlertIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M10.3 4.4 2.9 17.6a2 2 0 0 0 1.7 2.9h14.8a2 2 0 0 0 1.7-2.9L13.7 4.4a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9.5v4M12 17h.01" />
+    </Icon>
+  );
+}
+
 export function MenuIcon(props: IconProps) {
   return (
     <Icon {...props}>
@@ -200,6 +210,17 @@ export function MoneyIcon(props: IconProps) {
   );
 }
 
+/** Financeiro do painel: o que entra de sinal e parcelas. A nota (`MoneyIcon`) é dos preços. */
+export function WalletIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M18.5 7.5V5.5A1.5 1.5 0 0 0 17 4H6a2.5 2.5 0 0 0 0 5" />
+      <path d="M3.5 6.5v11A2.5 2.5 0 0 0 6 20h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 19 9H6" />
+      <path d="M16 14.5h.01" />
+    </Icon>
+  );
+}
+
 export function BoxIcon(props: IconProps) {
   return (
     <Icon {...props}>
@@ -280,16 +301,6 @@ export function PinIcon(props: IconProps) {
     <Icon {...props}>
       <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" />
       <circle cx="12" cy="10" r="2.5" />
-    </Icon>
-  );
-}
-
-/** Mapa dobrado: abrir o endereço no aplicativo de mapas. */
-export function MapIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M9 4.5 3.5 6.5v13L9 17.5l6 2 5.5-2v-13L15 6.5Z" />
-      <path d="M9 4.5v13M15 6.5v13" />
     </Icon>
   );
 }

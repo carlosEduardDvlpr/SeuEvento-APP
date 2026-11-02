@@ -56,8 +56,11 @@ type BookingRow = Prisma.BookingGetPayload<{
   };
 }>;
 
-/** Campos do resumo, num lugar só: o calendário e a visão geral usam o mesmo. */
-const summarySelect = {
+/**
+ * Campos do resumo, num lugar só: o calendário, a visão geral e o financeiro
+ * (as reservas ainda sem plano de pagamento) usam o mesmo.
+ */
+export const summarySelect = {
   id: true,
   kind: true,
   startDate: true,
@@ -71,7 +74,7 @@ const summarySelect = {
   user: { select: { id: true, name: true, email: true, phone: true } },
 } as const;
 
-function toSummary(row: BookingRow): AdminBookingSummary {
+export function toSummary(row: BookingRow): AdminBookingSummary {
   return {
     id: row.id,
     kind: row.kind,

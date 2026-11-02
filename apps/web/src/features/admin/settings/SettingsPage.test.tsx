@@ -224,20 +224,6 @@ describe('SettingsPage', () => {
     expect(calls.some((call) => call.method === 'PUT')).toBe(false);
   });
 
-  /* O link vai para a landing; `http` ali viraria aviso de conteúdo misto. */
-  it('recusa link de mapa que não seja https', async () => {
-    const user = userEvent.setup();
-    const calls = renderSettings();
-
-    await user.type(await screen.findByLabelText('Link do mapa'), 'http://maps.exemplo.com/x');
-    await user.click(screen.getByRole('button', { name: 'Salvar configurações' }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/precisa começar com https/)).toBeVisible();
-    });
-    expect(calls.some((call) => call.method === 'PUT')).toBe(false);
-  });
-
   it('deixa limpar os campos opcionais', async () => {
     const user = userEvent.setup();
     const calls = renderSettings();

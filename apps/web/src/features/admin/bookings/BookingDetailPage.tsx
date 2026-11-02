@@ -26,6 +26,7 @@ import {
 } from '@/lib/format';
 import { whatsappUrl } from '@/lib/whatsapp';
 import adminStyles from '../admin.module.css';
+import { PaymentCard } from '../finance/PaymentCard';
 import styles from './BookingDetailPage.module.css';
 
 /**
@@ -316,6 +317,9 @@ export function BookingDetailPage() {
           </strong>
         </p>
       </section>
+
+      {/* §9.11: do total, quanto já entrou e quanto falta. */}
+      <PaymentCard booking={data} />
 
       {data.customerNotes ? (
         <section className={styles.card}>

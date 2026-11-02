@@ -94,6 +94,7 @@ describe('seoForPath', () => {
       '/admin',
       '/admin/calendario',
       '/admin/reservas',
+      '/admin/financeiro',
       '/admin/itens',
       '/admin/combos',
       '/admin/temas',

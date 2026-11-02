@@ -9,6 +9,9 @@ import {
   DISCOUNT_TYPES,
   GALLERY_KINDS,
   GALLERY_KIND_LABELS,
+  PAYMENT_KINDS,
+  PAYMENT_STATUSES,
+  PAYMENT_STATUS_LABELS,
   ROLES,
 } from '@chacara/shared';
 import {
@@ -17,6 +20,7 @@ import {
   BookingStatus,
   DiscountType,
   GalleryKind,
+  PaymentKind,
   Role,
 } from '../src/generated/prisma/enums.js';
 
@@ -38,6 +42,7 @@ describe('enums compartilhados x schema do Prisma', () => {
     ['GalleryKind', GALLERY_KINDS, GalleryKind],
     ['BookingKind', BOOKING_KINDS, BookingKind],
     ['BlockScope', BLOCK_SCOPES, BlockScope],
+    ['PaymentKind', PAYMENT_KINDS, PaymentKind],
   ];
 
   it.each(cases)('%s tem os mesmos valores nas duas pontas', (_name, shared, prisma) => {
@@ -65,6 +70,16 @@ describe('rótulos pt-BR', () => {
 
     for (const scope of BLOCK_SCOPES) {
       expect(BLOCK_SCOPE_LABELS[scope]).toBeTruthy();
+    }
+  });
+
+  /*
+   * A situação do recebimento não é enum de banco (é calculada na consulta),
+   * então não entra na comparação acima. O rótulo é o que o painel mostra.
+   */
+  it('tem rótulo para toda situação de recebimento', () => {
+    for (const status of PAYMENT_STATUSES) {
+      expect(PAYMENT_STATUS_LABELS[status]).toBeTruthy();
     }
   });
 

@@ -26,6 +26,7 @@ const FRAMEWORK_MESSAGES: Record<ApiErrorCode, string> = {
   INVALID_TRANSITION: 'Esta reserva não pode mudar para esse status.',
   CANCEL_WINDOW_CLOSED: 'O prazo para cancelar pelo site terminou. Fale com a gente pelo WhatsApp.',
   TOO_MANY_PENDING: 'Você já tem pedidos aguardando confirmação. Espere a resposta da chácara.',
+  PAYMENT_PLAN_LOCKED: 'Este plano de pagamento não pode ser alterado agora.',
   RATE_LIMITED: 'Muitas tentativas. Tente de novo em alguns minutos.',
   INTERNAL: 'Algo deu errado do nosso lado. Tente de novo em instantes.',
 };

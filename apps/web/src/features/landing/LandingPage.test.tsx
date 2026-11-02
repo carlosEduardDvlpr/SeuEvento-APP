@@ -456,27 +456,23 @@ describe('perguntas frequentes', () => {
 });
 
 describe('como chegar', () => {
-  it('oferece abrir o endereço no aplicativo de mapas', async () => {
-    renderLanding();
-
-    expect(await screen.findByRole('link', { name: 'Abrir no mapa' })).toHaveAttribute(
-      'href',
-      'https://maps.exemplo.com/chacara',
-    );
-  });
-
   /*
-   * Pedido do dono: o mapa embutido na página. Ele sai do endereço cadastrado e
-   * só carrega quando a pessoa chega perto da seção, que é a última da página.
+   * Pedido do dono: o mapa embutido é a ficha do lugar no Google, e não mais a
+   * busca pelo endereço. Só carrega quando a pessoa chega perto da seção, que é
+   * a última da página. O link "Abrir no mapa" saiu junto: a ficha já leva ao
+   * Google Maps.
    */
-  it('mostra o mapa do endereço cadastrado, carregado sob demanda', async () => {
+  it('mostra a ficha da chácara no Google, carregada sob demanda', async () => {
     renderLanding();
 
     const map = await screen.findByTitle('Mapa com a localização de Chácara Seu Evento');
 
-    expect(map).toHaveAttribute('src', expect.stringContaining('output=embed'));
-    expect(map).toHaveAttribute('src', expect.stringContaining('q=Estrada+do+Sol%2C+100'));
+    expect(map).toHaveAttribute(
+      'src',
+      expect.stringMatching(/^https:\/\/www\.google\.com\/maps\/embed\?pb=/),
+    );
     expect(map).toHaveAttribute('loading', 'lazy');
+    expect(screen.queryByRole('link', { name: 'Abrir no mapa' })).not.toBeInTheDocument();
   });
 
   it('fica sem mapa quando não há endereço', async () => {
@@ -505,14 +501,6 @@ describe('como chegar', () => {
 
     await screen.findByRole('heading', { level: 1 });
     expect(screen.queryByText('Como chegar')).not.toBeInTheDocument();
-  });
-
-  it('esconde só o link do mapa quando não há URL', async () => {
-    renderLanding({ '/api/public/venue': () => jsonResponse({ ...VENUE, mapsUrl: null }) });
-
-    await screen.findByText('Como chegar');
-    expect(screen.queryByRole('link', { name: 'Abrir no mapa' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Falar pelo WhatsApp' })).toBeVisible();
   });
 });
 

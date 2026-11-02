@@ -4,6 +4,7 @@ import { adminBookingRoutes } from './bookings.js';
 import { adminCategoryRoutes } from './categories.js';
 import { adminComboRoutes } from './combos.js';
 import { adminCustomerRoutes } from './customers.js';
+import { adminFinanceRoutes } from './finance.js';
 import { adminGalleryRoutes } from './gallery.js';
 import { adminItemRoutes } from './items.js';
 import { adminOverviewRoutes } from './overview.js';
@@ -27,6 +28,7 @@ export const adminRoutes: FastifyPluginAsyncZod = async (app) => {
 
   await app.register(adminOverviewRoutes);
   await app.register(adminBookingRoutes);
+  await app.register(adminFinanceRoutes);
   await app.register(adminBlockedDateRoutes);
   await app.register(adminCategoryRoutes);
   await app.register(adminThemeRoutes);

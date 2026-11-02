@@ -29,6 +29,20 @@ export type BookingKind = (typeof BOOKING_KINDS)[number];
 export const BLOCK_SCOPES = ['VENUE', 'DECORATION', 'BOTH'] as const;
 export type BlockScope = (typeof BLOCK_SCOPES)[number];
 
+/** Um recebimento do plano de pagamento (§9.11): o sinal ou uma parcela. */
+export const PAYMENT_KINDS = ['DEPOSIT', 'INSTALLMENT'] as const;
+export type PaymentKind = (typeof PAYMENT_KINDS)[number];
+
+/**
+ * Situação de um recebimento (§9.11).
+ *
+ * Não é enum de banco: depende do dia de hoje e do status da reserva, então é
+ * derivada na consulta. `CANCELLED` é a parcela em aberto de uma reserva
+ * cancelada, que deixou de ser cobrada; o que já foi recebido continua `PAID`.
+ */
+export const PAYMENT_STATUSES = ['PENDING', 'OVERDUE', 'PAID', 'CANCELLED'] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
 /**
  * Estado de um dia na resposta de disponibilidade (§9.1).
  *

@@ -6,6 +6,8 @@ import {
   DAY_STATUSES,
   DISCOUNT_TYPES,
   GALLERY_KINDS,
+  PAYMENT_KINDS,
+  PAYMENT_STATUSES,
   ROLES,
 } from './enums.js';
 
@@ -120,6 +122,8 @@ export const galleryKindSchema = z.enum(GALLERY_KINDS);
 export const dayStatusSchema = z.enum(DAY_STATUSES);
 export const bookingKindSchema = z.enum(BOOKING_KINDS);
 export const blockScopeSchema = z.enum(BLOCK_SCOPES);
+export const paymentKindSchema = z.enum(PAYMENT_KINDS);
+export const paymentStatusSchema = z.enum(PAYMENT_STATUSES);
 
 /** Paginação das listas do admin (§11.1). */
 export const paginationSchema = z.object({

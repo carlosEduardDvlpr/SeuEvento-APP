@@ -156,6 +156,16 @@ O sistema tem \*\*dois ambientes no mesmo SPA React\*\*:
 
 | Pedido de reserva | — | Como a UI chama a reserva enquanto está `PENDING` |
 
+| Sinal | `Payment` (`DEPOSIT`) | Primeiro valor que o cliente paga, anotado pelo dono no plano de pagamento (9.11) |
+
+| Parcela | `Payment` (`INSTALLMENT`) | Cada parte do que falta depois do sinal. Quando é uma só, chama "À vista" (sem sinal) ou "Restante" (depois do sinal) |
+
+| Plano de pagamento | `PaymentPlan` | O sinal e as parcelas de uma reserva, que somam o total dela (9.11) |
+
+| Recebimento | `paidOn` | O dia em que o dinheiro de um sinal ou de uma parcela entrou, anotado pelo dono |
+
+| Financeiro | — | Tela do painel com os vencimentos do mês, o que está em atraso e as reservas sem pagamento anotado (13.4) |
+
 
 
 \---
@@ -380,7 +390,7 @@ O sistema tem \*\*dois ambientes no mesmo SPA React\*\*:
 
 │           │   ├── account/     # minhas reservas
 
-│           │   └── admin/       # dashboard, calendar, bookings, items, combos, themes, prices, gallery, customers, settings
+│           │   └── admin/       # dashboard, calendar, bookings, finance, items, combos, themes, prices, gallery, customers, settings
 
 │           ├── components/      # Button, Field, Dialog, Toast, ArchFrame, Money, StatusBadge...
 
@@ -573,6 +583,8 @@ Fonte: `apps/api/prisma/schema.prisma`. Regras gerais: dinheiro em `Int` (centav
 > \*\*Registro da T32 (outubro de 2026).\*\* A reserva só de decoração acrescentou `Booking.kind` (`VENUE` | `DECORATION`, padrão `VENUE`), `BlockedDate.scope` (`VENUE` | `DECORATION` | `BOTH`, padrão `VENUE`) e tornou `Booking.guestCount` opcional (nulo só na decoração). O bloco abaixo é o da especificação original; a fonte da verdade é o `schema.prisma`, e as regras estão na 9.10.
 
 > \*\*Registro (outubro de 2026): sem tipo de evento.\*\* A pedido do dono, a pergunta "Que festa é?" saiu do wizard e o conceito saiu do sistema inteiro: `Booking.eventType` e o enum `EventType` foram removidos pela migration `20261026225848_drop_event_type` (o tipo das reservas já gravadas se perdeu junto), e com eles `eventTypeSchema`, `EVENT_TYPE_LABELS` e a sugestão de estilo por tipo de evento (15.1). O corpo de `POST /bookings` e da reserva manual não tem mais o campo, e as telas que diziam "Chá de bebê para 40 pessoas" dizem "Chácara para 40 pessoas". Em produção, a API com a migration sobe antes do site: a API antiga exige o campo e recusaria os pedidos do site novo. Os blocos abaixo ainda mostram o campo, como registro da especificação original.
+
+> \*\*Registro (novembro de 2026): plano de pagamento.\*\* A pedido do dono, o painel passou a anotar o sinal e as parcelas de cada reserva. A migration `20261102002222_payment_plan` criou o enum `PaymentKind` (`DEPOSIT` | `INSTALLMENT`) e a tabela `Payment` (`bookingId`, `kind`, `number`, `dueDate`, `amountCents`, `paidOn`; as duas datas em `@db.Date`), com único em (`bookingId`, `number`), índice em `dueDate`, `onDelete: Cascade` a partir da reserva e três CHECKs manuais: valor maior que zero, número de 0 a 12, e o número 0 só para o sinal. A reserva não mudou: o plano divide o total dela no tempo. As regras estão na 9.11. Em produção, a API com a migration sobe antes do site, que chama as rotas novas.
 
 
 
@@ -1452,6 +1464,48 @@ Decisões da dona: o bloqueio de data é só da chácara; a antecedência mínim
 
 
 
+\### 9.11 Plano de pagamento e financeiro (novembro de 2026)
+
+
+
+O cliente paga por fora (Pix, dinheiro, transferência) e o dono anota no painel o que combinou e o que recebeu. É \*\*controle do dono, não pagamento online\*\*: o site não cobra, não mostra o plano ao cliente e não manda lembrete (seção 22). O caso que originou o pedido: reserva de R$ 500, sinal de R$ 300 abatido na hora, e os R$ 200 que faltam numa data que o dono escolhe.
+
+
+
+| Regra | Como funciona |
+
+|---|---|
+
+| Linhas | No máximo um sinal (`DEPOSIT`, número 0) e de 0 a 12 parcelas (`INSTALLMENT`, números 1 a 12), com pelo menos uma linha |
+
+| Soma | Sinal + parcelas = `Booking.totalCents`, ao centavo. O total é o snapshot da reserva e não muda (2.1) |
+
+| Numeração | As parcelas são numeradas pelo vencimento a cada salvamento; no mesmo dia, fica a ordem em que vieram |
+
+| Nome | "Sinal"; uma parcela só é "À vista" (sem sinal) ou "Restante" (depois do sinal); com mais de uma, "Parcela 2 de 3" (`paymentLabel`, em `packages/shared`) |
+
+| Recebimento | `paidOn` é o dia em que o dinheiro entrou, nunca depois de hoje no fuso da chácara (7.3) |
+
+| Situação | Calculada na leitura, nunca gravada: `PAID` com `paidOn`; `CANCELLED` se a reserva foi cancelada e o dinheiro não entrou; `OVERDUE` se venceu antes de hoje; senão `PENDING`. Vencer hoje ainda não é atraso |
+
+| Quando | Plano em reserva `PENDING` (o sinal costuma vir antes da confirmação), `CONFIRMED` e `COMPLETED`. A `CANCELLED` não aceita plano novo (`PAYMENT\_PLAN\_LOCKED`), mas aceita anotar recebimento, porque o sinal pode ter entrado antes |
+
+| Excluir | Só sem recebimento anotado (`PAYMENT\_PLAN\_LOCKED` se houver): apagar seria perder o registro de dinheiro que entrou |
+
+
+
+\*\*O plano é salvo inteiro.\*\* O painel manda o sinal e todas as parcelas, e a API troca as linhas da reserva numa transação que primeiro trava a linha da reserva (`SELECT ... FOR UPDATE`): dois salvamentos ao mesmo tempo terminam em "o último vence", e não em erro do índice único. Anotar ou desfazer um recebimento mexe numa linha só (`PATCH /admin/payments/:id`) e passa pela mesma trava, para não cruzar com uma exclusão.
+
+
+
+\*\*O editor sugere, a API decide.\*\* O painel divide o que falta em partes iguais, com o centavo que sobra na primeira, e um vencimento por mês a partir da primeira data (dia 31 vira o último dia do mês curto, contado sempre da primeira). A primeira data sugerida é o dia da festa, ou hoje se ela já passou. O dono muda a data e o valor de cada parcela; mudar o número de vezes, a primeira data ou o sinal refaz a sugestão. O que já foi recebido quando o editor abriu fica travado: para mudar, desfaz-se o recebimento no cartão. A API confere a soma, as datas e os limites.
+
+
+
+\*\*O financeiro do mês conta pelo vencimento\*\*, não pelo dia em que o dinheiro entrou: a parcela de dezembro recebida em novembro entra em dezembro. A parcela em aberto de reserva cancelada não entra em nada; a recebida continua contando, porque o dinheiro entrou. "Em atraso" junta todos os meses. "Sem pagamento registrado" lista as reservas `CONFIRMED` ou `COMPLETED` que começam no mês, com total maior que zero e sem nenhuma linha: é o que o dono ainda não anotou, inclusive o pagamento à vista, que não vira plano sozinho ao confirmar.
+
+
+
 \---
 
 
@@ -1570,7 +1624,7 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 
 | Rate limit | `login`: 5/min por IP + e-mail. `register`: 5/h por IP. `resend-verification` e `forgot-password`: 3/h por e-mail. Global: 100/min por IP |
 
-| Helmet | Ativo. CSP restritiva no front (`index.html`/Vercel headers) permitindo só Google Identity e fontes usadas. Desde o mapa do "Como chegar" (13.1), `frame-src` também precisa de `https://maps.google.com` e `https://www.google.com` |
+| Helmet | Ativo. CSP restritiva no front (`index.html`/Vercel headers) permitindo só Google Identity e fontes usadas. Desde o mapa do "Como chegar" (13.1), `frame-src` também precisa de `https://www.google.com`, de onde vem a ficha incorporada (`/maps/embed`). O `https://maps.google.com` da busca por endereço deixou de ser usado em novembro de 2026 |
 
 | CORS | Só em dev. Em produção, sem CORS (proxy same-origin) |
 
@@ -1674,6 +1728,8 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 
 | `TOO\_MANY\_PENDING` | 422 | Passou de `maxPendingPerUser` |
 
+| `PAYMENT\_PLAN\_LOCKED` | 422 | Plano de pagamento de reserva cancelada, ou exclusão de plano com recebimento anotado (9.11) |
+
 | `RATE\_LIMITED` | 429 | Rate limit |
 
 | `INTERNAL` | 500 | Qualquer outra coisa (mensagem genérica) |
@@ -1759,6 +1815,8 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 | Reservas | `GET /admin/bookings` (filtros `status`, `from`, `to`, `q`), `GET /admin/bookings/:id`, `POST /admin/bookings` (manual), `PATCH /admin/bookings/:id/status`, `PATCH /admin/bookings/:id/notes` |
 
 | Calendário | `GET /admin/calendar?month=YYYY-MM` (reservas + bloqueios), `POST /admin/blocked-dates`, `DELETE /admin/blocked-dates/:date` |
+
+| Pagamentos (9.11) | `GET`, `PUT` (troca o plano inteiro) e `DELETE /admin/bookings/:id/payments`, `PATCH /admin/payments/:id` (`{ paidOn }` registra ou desfaz o recebimento), `GET /admin/finance?month=YYYY-MM` (vencimentos do mês, atrasados de todos os meses, reservas sem pagamento) |
 
 | Itens | CRUD `/admin/items` (incl. `themeIds`), CRUD `/admin/categories` |
 
@@ -1964,6 +2022,8 @@ Resposta `201` com a reserva completa (status `PENDING`, `holdExpiresAt`, snapsh
 
 /admin/reservas          /admin/reservas/:id    /admin/reservas/nova
 
+/admin/financeiro
+
 /admin/itens             /admin/combos          /admin/temas
 
 /admin/precos            /admin/galeria
@@ -2074,7 +2134,7 @@ Objetivo: fazer a pessoa \*\*sentir a festa na chácara\*\* e chegar às datas e
 
 8\. \*\*Perguntas frequentes.\*\* Horário, o que está incluso, pode levar decoração própria, como funciona o cancelamento, forma de pagamento, som/horário limite, animais, capacidade.
 
-9\. \*\*Como chegar.\*\* Endereço, mapa (link para o Maps, sem embed pesado por padrão) e botão de WhatsApp. (Desde outubro de 2026, a pedido do dono, a seção também embute o mapa do Google, montado a partir do endereço cadastrado, sem chave de API e com `loading="lazy"`; as ações têm ícone. A política de privacidade avisa que o mapa conecta o navegador ao Google.)
+9\. \*\*Como chegar.\*\* Endereço, mapa (link para o Maps, sem embed pesado por padrão) e botão de WhatsApp. (Desde outubro de 2026, a pedido do dono, a seção também embute o mapa do Google, sem chave de API e com `loading="lazy"`; as ações têm ícone. A política de privacidade avisa que o mapa conecta o navegador ao Google. Em novembro de 2026 o mapa passou a ser a ficha da Donna Belle no Google, incorporada com endereço fixo em `DirectionsSection.tsx`, em vez da busca pelo endereço cadastrado; com isso saíram o link "Abrir no mapa" da landing e o campo "Link do mapa" das configurações. O `mapsUrl` continua no banco e na API, sem uso na tela.)
 
 10\. \*\*Rodapé.\*\* Contato, redes, termos e privacidade. (O Instagram da marca, `@donnabelle.decor`, está fixo no `PublicLayout`: `VenueSettings` não tem campo de rede social.)
 
@@ -2150,7 +2210,9 @@ Ambiente mais denso e funcional que o da landing, com a mesma identidade (tokens
 
 | \*\*Calendário\*\* | Grade mensal. Dias coloridos por status (ver StatusBadge). Clicar num dia abre gaveta com as reservas do dia, e ações "Bloquear dia"/"Desbloquear" (com motivo) |
 
-| \*\*Reservas\*\* | Tabela com busca (nome, e-mail, telefone), filtro de status e período. Detalhe: cliente (com botão de WhatsApp), datas, itens, totais, observações do cliente, \*\*notas internas\*\*, histórico de status e ações "Confirmar", "Cancelar" (motivo obrigatório) |
+| \*\*Reservas\*\* | Tabela com busca (nome, e-mail, telefone), filtro de status e período. Detalhe: cliente (com botão de WhatsApp), datas, itens, totais, observações do cliente, \*\*notas internas\*\*, histórico de status e ações "Confirmar", "Cancelar" (motivo obrigatório). Logo depois dos valores, o cartão \*\*Pagamento\*\* (9.11): o sinal e as parcelas com a situação de cada um, o recebido e o que falta, "Registrar pagamento"/"Editar pagamento" (o editor do plano), "Registrar recebimento", "Desfazer" e "Excluir plano" (só sem recebimento) |
+
+| \*\*Financeiro\*\* | Números do mês pelo vencimento (previsto, recebido, a receber) e o total em atraso de todos os meses. Grade mensal com os dias que têm sinal ou parcela, marcados por cor, ícone e texto (a receber, em atraso, recebido); tocar num dia filtra a lista de vencimentos logo abaixo. Cada vencimento tem "Registrar recebimento" (com o dia, hoje por padrão), "Desfazer", o link da reserva e "Cobrar pelo WhatsApp" com mensagem pronta. Depois vêm "Em atraso" e as reservas fechadas do mês sem pagamento registrado |
 
 | \*\*Reserva manual\*\* | Escolher/criar cliente (nome + telefone), datas, itens, opção de já confirmar. Mesmo cálculo de preço do cliente, com campo de \*\*ajuste manual de desconto\*\* opcional (fase 6) |
 
@@ -2947,6 +3009,24 @@ Uma ação mantém o \*\*mesmo nome em todo o fluxo\*\*: o botão "Solicitar res
 
 
 
+Situação de um recebimento do plano de pagamento (9.11), só no painel. No masculino, porque o sujeito é o pagamento. "Pendente" fica de fora pela 16.2: a mesma tela mostra o status da reserva ao lado, e "a receber" diz, do ponto de vista do dono, o que ainda falta entrar.
+
+
+
+| Situação | Rótulo |
+
+|---|---|
+
+| `PENDING` | A receber |
+
+| `OVERDUE` | Em atraso |
+
+| `PAID` | Recebido |
+
+| `CANCELLED` | Cancelado (o valor em aberto de reserva cancelada, que deixou de ser cobrado) |
+
+
+
 Rótulos de `EventType` viviam em `packages/shared/labels.ts` (Aniversário infantil, Aniversário adulto, Chá de bebê, Chá revelação, Chá de panela, Casamento ou noivado, Formatura, Confraternização, Outro) até o tipo de evento sair do sistema, em outubro de 2026 (seção 8).
 
 
@@ -2978,6 +3058,8 @@ Erro diz \*\*o que aconteceu e o que fazer\*\*, no tom da interface (sem pedir d
 | `CANCEL\_WINDOW\_CLOSED` | O prazo para cancelar pelo site terminou. Fale com a gente pelo WhatsApp. |
 
 | `TOO\_MANY\_PENDING` | Você já tem 3 pedidos aguardando confirmação. Espere a resposta da chácara para enviar outro. |
+
+| `PAYMENT\_PLAN\_LOCKED` | Esta reserva foi cancelada: o plano de pagamento não pode mais ser alterado. Ao excluir: Há recebimentos registrados neste plano. Desfaça-os antes de excluir. |
 
 | `RATE\_LIMITED` | Muitas tentativas. Tente de novo em alguns minutos. |
 
@@ -3171,6 +3253,26 @@ Casos de preço que \*\*precisam\*\* existir como teste (cada um com o resultado
 
 
 
+Casos do plano de pagamento (9.11) que \*\*precisam\*\* existir como teste (em `apps/api/test/admin-finance.test.ts`):
+
+
+
+1\. Soma diferente do total da reserva é recusada, e o plano anterior fica como estava.
+
+2\. As parcelas são numeradas pelo vencimento, venham na ordem que vierem.
+
+3\. Recebimento com data depois de hoje é recusado.
+
+4\. Reserva cancelada não aceita plano novo, mas aceita anotar recebimento; o que estava em aberto vira `CANCELLED` e sai do financeiro, e o recebido continua contando.
+
+5\. Plano com recebimento anotado não pode ser excluído.
+
+6\. Salvamentos simultâneos do mesmo plano terminam todos, e o último vence.
+
+7\. O financeiro conta o mês pelo vencimento e junta os atrasados de todos os meses.
+
+
+
 Regras: testes de integração usam banco próprio (`DATABASE\_URL` de teste), migrations aplicadas e limpeza entre testes. Nada de mock do Prisma, o valor está em testar a constraint e a transação de verdade.
 
 
@@ -3247,7 +3349,7 @@ Se houver ambiente de homologação, ele espelha a produção com banco separado
 
 
 
-\- Cabeçalhos de segurança (CSP, `X-Content-Type-Options`, `Referrer-Policy`) configurados aqui. A CSP libera apenas o próprio domínio, o Google Identity, o CDN de imagens usado e, em `frame-src`, o mapa do Google (`https://maps.google.com` e `https://www.google.com`, ver 10.7).
+\- Cabeçalhos de segurança (CSP, `X-Content-Type-Options`, `Referrer-Policy`) configurados aqui. A CSP libera apenas o próprio domínio, o Google Identity, o CDN de imagens usado e, em `frame-src`, o mapa do Google (`https://www.google.com`, ver 10.7).
 
 
 
@@ -3343,7 +3445,7 @@ Fora do MVP (não implemente sem pedido explícito):
 
 
 
-\- \*\*Pagamento online\*\* (sinal via Pix/cartão). A reserva nasce `PENDING` e o dono combina o sinal por fora.
+\- \*\*Pagamento online\*\* (sinal via Pix/cartão). A reserva nasce `PENDING` e o dono combina o sinal por fora. Desde novembro de 2026 o painel \*\*anota\*\* o sinal e as parcelas combinados por fora (9.11), sem cobrar nada pelo site.
 
 \- \*\*Notificações por WhatsApp\*\* automáticas (o MVP usa link para conversa manual).
 

@@ -1,0 +1,48 @@
+/*
+ * Formulário do endereço de entrega (§9.12), dentro do `Dialog`.
+ *
+ * Os campos curtos andam em pares (número e complemento, cidade e estado) para
+ * o formulário caber na tela do celular sem rolar tanto. Onde dois campos de
+ * 150 px não cabem lado a lado, cada um volta a ocupar a linha inteira.
+ */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.lead {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+.cep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Andamento da busca do CEP: texto, além da cor (§14.2). */
+.lookup {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-16);
+}
+
+/* Resumo do erro que não pertence a um campo, anunciado na hora (§18.1). */
+.formError {
+  margin: 0;
+  padding: var(--space-12);
+  border-radius: var(--r-sm);
+  background: var(--st-cancelled-bg);
+  color: var(--st-cancelled-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

@@ -10,10 +10,10 @@ import styles from './DeleteAccountSection.module.css';
 /**
  * Remoção da conta pelo próprio cliente (§10.8).
  *
- * Fica no fim de "Minhas reservas" por decisão de hierarquia: é uma ação que
- * precisa ser **encontrável**, não oferecida. Esconder atrás de contato por
- * e-mail transformaria um direito em obstáculo; pôr no cabeçalho, ao lado das
- * reservas, seria convidar ao clique errado.
+ * Fica no fim da aba "Meu perfil", em Minhas reservas, por decisão de
+ * hierarquia: é uma ação que precisa ser **encontrável**, não oferecida.
+ * Esconder atrás de contato por e-mail transformaria um direito em obstáculo;
+ * pôr no cabeçalho, ao lado das reservas, seria convidar ao clique errado.
  *
  * O texto diz o que sai e o que fica antes de qualquer botão, porque é isso que
  * a pessoa precisa para decidir — e porque a §10.8 mantém as reservas, o que

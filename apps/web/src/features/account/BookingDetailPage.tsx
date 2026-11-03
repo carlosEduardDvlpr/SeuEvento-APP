@@ -1,4 +1,5 @@
-import { BOOKING_KIND_LABELS } from '@chacara/shared';
+import type { FulfillmentMethod } from '@chacara/shared';
+import { BOOKING_KIND_LABELS, FULFILLMENT_LABELS } from '@chacara/shared';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useBooking, useCancelBooking } from '@/api/bookings';
@@ -13,6 +14,7 @@ import { ArrowLeftIcon } from '@/components/icons';
 import { formErrorMessage } from '@/lib/form';
 import {
   describeGuests,
+  formatAddress,
   formatDateLong,
   formatDateRange,
   formatDeadline,
@@ -70,6 +72,12 @@ export function BookingDetailPage() {
   const dates = formatDateRange(data.startDate, data.endDate);
   /** Só a decoração (T32): sem diária, sem horário de entrada, itens em vez de datas. */
   const decoration = data.kind === 'DECORATION';
+  /*
+   * Retirada ou entrega (§9.12). Decoração sem a escolha gravada é de antes de a
+   * entrega existir, e até ali toda decoração saía por retirada.
+   */
+  const fulfillment: FulfillmentMethod = data.fulfillment ?? 'PICKUP';
+  const delivery = decoration && fulfillment === 'DELIVERY';
 
   async function handleCancel() {
     try {
@@ -135,8 +143,8 @@ export function BookingDetailPage() {
                 <dd>{formatDateLong(data.startDate)}</dd>
               </div>
               <div>
-                <dt>Retirada e devolução</dt>
-                <dd>combinadas com a gente</dd>
+                <dt>Como a decoração chega</dt>
+                <dd>{FULFILLMENT_LABELS[fulfillment]}</dd>
               </div>
             </>
           ) : (
@@ -159,7 +167,22 @@ export function BookingDetailPage() {
             <dt>Pedido feito em</dt>
             <dd>{formatDeadline(data.createdAt)}</dd>
           </div>
+          {/* O endereço que a reserva guardou no envio: mudar o do perfil depois não muda este. */}
+          {delivery && data.deliveryAddress ? (
+            <div className={styles.factWide}>
+              <dt>Endereço de entrega</dt>
+              <dd>{formatAddress(data.deliveryAddress)}</dd>
+            </div>
+          ) : null}
         </dl>
+
+        {decoration ? (
+          <p className={styles.hint}>
+            {delivery
+              ? 'A taxa de entrega é combinada com a chácara.'
+              : 'O dia e o horário da retirada e da devolução são combinados com a chácara.'}
+          </p>
+        ) : null}
       </section>
 
       <section className={styles.card}>

@@ -1,8 +1,8 @@
-import type { Booking, BookingStatus, PublicVenue, SessionUser } from '@chacara/shared';
+import type { Address, Booking, BookingStatus, PublicVenue, SessionUser } from '@chacara/shared';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Route, Routes } from 'react-router';
+import { Route, Routes, useLocation } from 'react-router';
 import { errorResponse, jsonResponse, renderWithProviders } from '../../../test/helpers/render';
 import { BookingDetailPage } from './BookingDetailPage';
 import { MyBookingsPage } from './MyBookingsPage';
@@ -38,6 +38,18 @@ const USER: SessionUser = {
   phone: '11999990000',
   role: 'CLIENT',
   emailVerified: true,
+  address: null,
+  hasPassword: true,
+};
+
+const ADDRESS: Address = {
+  cep: '12954000',
+  street: 'Rua das Orquídeas',
+  number: '265',
+  complement: 'casa 2',
+  district: 'Chácaras Fernão Dias',
+  city: 'Atibaia',
+  state: 'SP',
 };
 
 function makeBooking(overrides: Partial<Booking> = {}): Booking {
@@ -69,11 +81,31 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
     combos: [{ comboId: 'c-1', name: 'Combo Nuvens', times: 1, discountCents: 4_000 }],
     discountTotalCents: 4_000,
     totalCents: 350_000,
+    // Na chácara a decoração já está lá: nem retirada, nem entrega (§9.12).
+    fulfillment: null,
+    deliveryAddress: null,
     customerNotes: null,
     cancelReason: null,
     createdAt: '2026-10-14T12:00:00.000Z',
     ...overrides,
   };
+}
+
+/** Só a decoração, de um dia, sem diária (T32). */
+function makeDecoration(overrides: Partial<Booking> = {}): Booking {
+  return makeBooking({
+    kind: 'DECORATION',
+    startDate: '2026-12-05',
+    endDate: '2026-12-05',
+    guestCount: null,
+    days: [],
+    dailyTotalCents: 0,
+    combos: [],
+    discountTotalCents: 0,
+    totalCents: 24_000,
+    fulfillment: 'PICKUP',
+    ...overrides,
+  });
 }
 
 type Call = { url: string; method: string; body: unknown };
@@ -213,6 +245,104 @@ describe('MyBookingsPage', () => {
     renderWithProviders(<MyBookingsPage />, { route: '/minhas-reservas' });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Algo deu errado do nosso lado.');
+  });
+});
+
+/*
+ * Duas abas na área do cliente (novembro de 2026): as reservas e "Meu perfil".
+ * A aba aberta vai na URL, para o link direto funcionar.
+ */
+describe('abas da área do cliente', () => {
+  /** Mostra o endereço atual: o `MemoryRouter` não mexe em `window.location`. */
+  function CurrentUrl() {
+    const location = useLocation();
+    return <p>Endereço: {`${location.pathname}${location.search}`}</p>;
+  }
+
+  function renderTabs(route = '/minhas-reservas') {
+    stubFetch({ 'GET /api/bookings/me': () => jsonResponse([]) });
+    return renderWithProviders(
+      <>
+        <MyBookingsPage />
+        <CurrentUrl />
+      </>,
+      { route },
+    );
+  }
+
+  it('começa nas reservas, com o título da página de sempre', async () => {
+    renderTabs();
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Minhas reservas' })).toBeVisible();
+    expect(screen.getByRole('tab', { name: 'Minhas reservas' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: 'Meu perfil' })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+    expect(screen.getByRole('tabpanel', { name: 'Minhas reservas' })).toBeVisible();
+    expect(await screen.findByText('Você ainda não tem reservas')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Seus dados' })).not.toBeInTheDocument();
+  });
+
+  it('abre o perfil pela aba e guarda a escolha na URL', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderTabs();
+
+    await user.click(screen.getByRole('tab', { name: 'Meu perfil' }));
+
+    expect(screen.getByRole('tab', { name: 'Meu perfil' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('tabpanel', { name: 'Meu perfil' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Seus dados' })).toBeVisible();
+    expect(screen.getByText('Endereço: /minhas-reservas?aba=perfil')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Minhas reservas' }));
+
+    expect(screen.getByText('Endereço: /minhas-reservas')).toBeInTheDocument();
+  });
+
+  it('abre direto no perfil pelo link com ?aba=perfil', async () => {
+    renderTabs('/minhas-reservas?aba=perfil');
+
+    expect(screen.getByRole('tab', { name: 'Meu perfil' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(await screen.findByRole('heading', { name: 'Seus dados' })).toBeVisible();
+    // O painel das reservas continua na página, escondido: fora do alcance do leitor de tela.
+    expect(screen.queryByRole('tabpanel', { name: 'Minhas reservas' })).not.toBeInTheDocument();
+  });
+
+  /* WAI-ARIA: as setas andam entre as abas, e só a escolhida entra na ordem do Tab. */
+  it('anda entre as abas com as setas do teclado', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderTabs();
+
+    const reservas = screen.getByRole('tab', { name: 'Minhas reservas' });
+    const perfil = screen.getByRole('tab', { name: 'Meu perfil' });
+    expect(reservas).toHaveAttribute('tabindex', '0');
+    expect(perfil).toHaveAttribute('tabindex', '-1');
+
+    await user.click(reservas);
+    await user.keyboard('{ArrowRight}');
+
+    expect(perfil).toHaveFocus();
+    expect(perfil).toHaveAttribute('aria-selected', 'true');
+    expect(perfil).toHaveAttribute('tabindex', '0');
+
+    await user.keyboard('{ArrowLeft}');
+
+    expect(reservas).toHaveFocus();
+    expect(reservas).toHaveAttribute('aria-selected', 'true');
+
+    // As setas dão a volta: da primeira, a da esquerda leva à última.
+    await user.keyboard('{ArrowLeft}');
+    expect(perfil).toHaveFocus();
   });
 });
 
@@ -401,6 +531,43 @@ describe('BookingDetailPage', () => {
     const link = await screen.findByRole('link', { name: 'Falar pelo WhatsApp' });
     expect(link).toHaveAttribute('href', expect.stringContaining('wa.me/5511999990000'));
     expect(link).toHaveAttribute('href', expect.stringContaining('5%20a%206%20de%20dezembro'));
+  });
+
+  /* §9.12: na decoração, a pessoa vê se retira na chácara ou recebe no endereço. */
+  describe('como a decoração chega', () => {
+    it('mostra a entrega, com o endereço guardado na reserva e a taxa a combinar', async () => {
+      renderDetail(
+        makeDecoration({
+          status: 'CONFIRMED',
+          holdExpiresAt: null,
+          fulfillment: 'DELIVERY',
+          deliveryAddress: ADDRESS,
+        }),
+      );
+
+      expect(await screen.findByText('Entrega no endereço')).toBeVisible();
+      expect(
+        screen.getByText(
+          'Rua das Orquídeas, 265, casa 2 – Chácaras Fernão Dias, Atibaia/SP – CEP 12954-000',
+        ),
+      ).toBeVisible();
+      expect(screen.getByText('A taxa de entrega é combinada com a chácara.')).toBeVisible();
+    });
+
+    it('mostra a retirada na chácara, sem endereço nem taxa', async () => {
+      renderDetail(makeDecoration({ status: 'CONFIRMED', holdExpiresAt: null }));
+
+      expect(await screen.findByText('Retirada na chácara')).toBeVisible();
+      expect(screen.queryByText('Endereço de entrega')).not.toBeInTheDocument();
+      expect(screen.queryByText(/taxa de entrega/)).not.toBeInTheDocument();
+    });
+
+    it('não fala de retirada nem de entrega na reserva da chácara', async () => {
+      renderDetail(makeBooking({ status: 'CONFIRMED' }));
+
+      await screen.findByText('Valores');
+      expect(screen.queryByText('Como a decoração chega')).not.toBeInTheDocument();
+    });
   });
 
   /* §10.6: reserva de outra pessoa responde 404, e a tela não insinua o contrário. */

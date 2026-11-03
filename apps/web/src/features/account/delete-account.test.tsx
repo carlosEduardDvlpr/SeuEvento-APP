@@ -21,6 +21,8 @@ const USER: SessionUser = {
   phone: '11999990000',
   role: 'CLIENT',
   emailVerified: true,
+  address: null,
+  hasPassword: true,
 };
 
 const VENUE: PublicVenue = {
@@ -74,15 +76,15 @@ function stubFetch(routes: Record<string, () => Response> = {}) {
  *
  * O `MemoryRouter` não mexe em `window.location`, então afirmar o endereço final
  * pela URL passaria de graça; o que prova a navegação é a tela de destino
- * aparecer.
+ * aparecer. Começa na aba "Meu perfil", que é onde a remoção mora.
  */
-function renderAccount() {
+function renderAccount(route = '/minhas-reservas?aba=perfil') {
   return renderWithProviders(
     <Routes>
       <Route path="/minhas-reservas" element={<MyBookingsPage />} />
       <Route path="/entrar" element={<p>Tela de entrar</p>} />
     </Routes>,
-    { route: '/minhas-reservas' },
+    { route },
   );
 }
 
@@ -95,6 +97,15 @@ describe('remoção da conta', () => {
 
   beforeEach(() => {
     calls = stubFetch();
+  });
+
+  /* Desde a aba "Meu perfil" (novembro de 2026), a remoção fica no fim dela. */
+  it('fica na aba Meu perfil, a um clique das reservas', async () => {
+    renderAccount('/minhas-reservas');
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Meu perfil' }));
+
+    expect(await screen.findByRole('heading', { name: 'Sua conta' })).toBeInTheDocument();
   });
 
   it('oferece a ação na própria área do cliente, dizendo o que sai e o que fica', async () => {

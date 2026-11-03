@@ -3,6 +3,7 @@ export * from './admin-customers.js';
 export * from './admin-finance.js';
 export * from './admin-overview.js';
 export * from './admin-settings.js';
+export * from './address.js';
 export * from './auth.js';
 export * from './availability.js';
 export * from './booking.js';

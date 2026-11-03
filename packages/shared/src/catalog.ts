@@ -190,12 +190,25 @@ const stockSchema = z
   .min(0, { error: 'O estoque não pode ser negativo.' })
   .max(9999, { error: 'O estoque máximo é 9999.' });
 
+/**
+ * Preço da decoração quando ela sai junto com a chácara (novembro de 2026).
+ *
+ * É o lugar dos combos: em vez de desconto por conjunto de itens, cada
+ * decoração tem dois preços, o avulso e o promocional de quem aluga a chácara
+ * junto. Nunca passa do avulso, e o mesmo valor nos dois é "sem promoção".
+ */
+export const VENUE_PRICE_ABOVE_PRICE_ERROR =
+  'O preço com a chácara não pode passar do preço avulso.';
+
 export const catalogItemSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().nullable(),
   imageUrl: z.string().nullable(),
+  /** Preço avulso: a decoração sozinha, sem a chácara. */
   priceCents: centsSchema,
+  /** Preço com a chácara: o que vale quando a reserva é da chácara. */
+  venuePriceCents: centsSchema,
   stock: z.number().int(),
   assemblyNotes: z.string().nullable(),
   sortOrder: z.number().int(),
@@ -206,31 +219,50 @@ export const catalogItemSchema = z.object({
 
 export const adminItemSchema = catalogItemSchema.extend({ active: z.boolean() });
 
-export const createItemBodySchema = z.object({
-  categoryId: idSchema,
-  name: itemNameSchema,
-  description: optionalText(600).default(null),
-  imageUrl: optionalImageUrlSchema.default(null),
-  priceCents: centsSchema,
-  stock: stockSchema,
-  assemblyNotes: optionalText(600).default(null),
-  themeIds: z.array(idSchema).default([]),
-  sortOrder: sortOrderSchema.default(0),
-  active: z.boolean().default(true),
-});
+export const createItemBodySchema = z
+  .object({
+    categoryId: idSchema,
+    name: itemNameSchema,
+    description: optionalText(600).default(null),
+    imageUrl: optionalImageUrlSchema.default(null),
+    priceCents: centsSchema,
+    venuePriceCents: centsSchema,
+    stock: stockSchema,
+    assemblyNotes: optionalText(600).default(null),
+    themeIds: z.array(idSchema).default([]),
+    sortOrder: sortOrderSchema.default(0),
+    active: z.boolean().default(true),
+  })
+  .refine((body) => body.venuePriceCents <= body.priceCents, {
+    error: VENUE_PRICE_ABOVE_PRICE_ERROR,
+    path: ['venuePriceCents'],
+  });
 
-export const updateItemBodySchema = z.object({
-  categoryId: idSchema.optional(),
-  name: itemNameSchema.optional(),
-  description: optionalText(600).optional(),
-  imageUrl: optionalImageUrlSchema.optional(),
-  priceCents: centsSchema.optional(),
-  stock: stockSchema.optional(),
-  assemblyNotes: optionalText(600).optional(),
-  themeIds: z.array(idSchema).optional(),
-  sortOrder: sortOrderSchema.optional(),
-  active: z.boolean().optional(),
-});
+/**
+ * A comparação dos dois preços só cabe aqui quando os dois vêm no corpo. Com um
+ * só, quem compara com o valor gravado é a API, que é quem o conhece.
+ */
+export const updateItemBodySchema = z
+  .object({
+    categoryId: idSchema.optional(),
+    name: itemNameSchema.optional(),
+    description: optionalText(600).optional(),
+    imageUrl: optionalImageUrlSchema.optional(),
+    priceCents: centsSchema.optional(),
+    venuePriceCents: centsSchema.optional(),
+    stock: stockSchema.optional(),
+    assemblyNotes: optionalText(600).optional(),
+    themeIds: z.array(idSchema).optional(),
+    sortOrder: sortOrderSchema.optional(),
+    active: z.boolean().optional(),
+  })
+  .refine(
+    (body) =>
+      body.priceCents === undefined ||
+      body.venuePriceCents === undefined ||
+      body.venuePriceCents <= body.priceCents,
+    { error: VENUE_PRICE_ABOVE_PRICE_ERROR, path: ['venuePriceCents'] },
+  );
 
 /** Filtros da vitrine (§11.2). */
 export const itemsQuerySchema = z.object({

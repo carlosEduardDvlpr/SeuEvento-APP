@@ -1,4 +1,4 @@
-import type { CatalogItem, Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
+import type { CatalogItem, GalleryImage, PublicVenue } from '@chacara/shared';
 import type { QueryClient } from '@tanstack/react-query';
 
 /**
@@ -6,9 +6,14 @@ import type { QueryClient } from '@tanstack/react-query';
  *
  * O pré-renderizador do build grava este pacote no HTML, e o SPA o carrega no
  * cache do Query antes do primeiro desenho. São duas vantagens de uma vez: a
- * primeira pintura não espera cinco requisições, e o HTML que o React
+ * primeira pintura não espera três requisições, e o HTML que o React
  * hidrata é idêntico ao que ele renderizaria — sem isso a hidratação acusaria
  * divergência e jogaria o HTML pré-renderizado fora.
+ *
+ * Estilos e combos saíram do pacote em novembro de 2026, junto com as seções
+ * deles na landing: cada decoração passou a ser completa, com o preço avulso e
+ * o preço com a chácara. Pacote antigo, que ainda os traga, continua valendo: o
+ * que sobra é ignorado.
  *
  * **A disponibilidade fica de fora de propósito.** Ela depende de que dia é
  * hoje e do que foi reservado neste instante; vinda do build, mostraria datas
@@ -18,9 +23,7 @@ import type { QueryClient } from '@tanstack/react-query';
 export type AppSeed = {
   venue: PublicVenue;
   gallery: GalleryImage[];
-  themes: Theme[];
-  combos: Combo[];
-  /** A vitrine de itens da landing. Preço de tabela, que muda pelo painel. */
+  /** A vitrine de decorações da landing. Preços de tabela, que mudam pelo painel. */
   items: CatalogItem[];
 };
 
@@ -42,8 +45,6 @@ export const SEED_GLOBAL = '__CHACARA_SEED__';
 export function applySeed(client: QueryClient, seed: AppSeed): void {
   client.setQueryData(['venue'], seed.venue);
   client.setQueryData(['gallery', 'all'], seed.gallery);
-  client.setQueryData(['themes'], seed.themes);
-  client.setQueryData(['combos', {}], seed.combos);
   client.setQueryData(['items', {}], seed.items);
 }
 
@@ -61,7 +62,6 @@ export function readSeed(scope: Record<string, unknown>): AppSeed | null {
    * velho ou o campo ter sido renomeado.
    */
   if (!seed.venue || !Array.isArray(seed.gallery)) return null;
-  if (!Array.isArray(seed.themes) || !Array.isArray(seed.combos)) return null;
   if (!Array.isArray(seed.items)) return null;
 
   return seed as AppSeed;

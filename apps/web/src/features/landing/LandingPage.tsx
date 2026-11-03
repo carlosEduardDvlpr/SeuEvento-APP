@@ -1,14 +1,12 @@
-import { useCombos, useGallery, useItems, useThemes } from '@/api/storefront';
+import { useGallery, useItems } from '@/api/storefront';
 import { useVenue } from '@/api/venue';
 import { Skeleton } from '@/components/Skeleton';
 import { formErrorMessage } from '@/lib/form';
-import { CombosSection } from './CombosSection';
 import { DirectionsSection } from './DirectionsSection';
 import { FaqSection } from './FaqSection';
 import { HeroSection } from './HeroSection';
 import { HowItWorksSection } from './HowItWorksSection';
 import { ItemsSection } from './ItemsSection';
-import { ThemesSection } from './ThemesSection';
 import { VenueSection } from './VenueSection';
 import styles from './LandingPage.module.css';
 
@@ -20,15 +18,16 @@ import styles from './LandingPage.module.css';
  * datas em um gesto, e é por isso que o hero tem um botão só, o que leva ao
  * calendário.
  *
- * A vitrine de itens (`ItemsSection`) entrou depois, a pedido do dono, entre os
- * estilos e os combos: é o bloco da decoração, e ela precisa aparecer mesmo
- * quando ainda não há estilo cadastrado. A galeria de festas ("Festas que já
- * aconteceram aqui") saiu, também a pedido do dono: fotos da seção "Eventos"
- * que ainda existam no banco são ignoradas.
+ * A vitrine de itens (`ItemsSection`) entrou depois, a pedido do dono: é o bloco
+ * da decoração. Em novembro de 2026, também a pedido do dono, cada decoração
+ * passou a ser completa, com dois preços (avulsa e com a chácara), e as seções
+ * de estilos e de combos saíram da landing. A galeria de festas ("Festas que já
+ * aconteceram aqui") saiu antes, em outubro: fotos da seção "Eventos" que ainda
+ * existam no banco são ignoradas.
  *
- * **Seção sem conteúdo não aparece.** Estilos, itens e combos se escondem
- * sozinhos quando o painel ainda não tem nada: a §16.6 proíbe inventar
- * conteúdo, e uma seção vazia é pior que a ausência dela.
+ * **Seção sem conteúdo não aparece.** A vitrine se esconde sozinha quando o
+ * painel ainda não tem decoração: a §16.6 proíbe inventar conteúdo, e uma seção
+ * vazia é pior que a ausência dela.
  *
  * Os depoimentos da §13.1 (item 7) ficam de fora por decisão consciente: a §13.1
  * exige depoimento **real, com nome e tipo de evento**, e não há onde guardá-los
@@ -41,9 +40,7 @@ import styles from './LandingPage.module.css';
 export function LandingPage() {
   const venue = useVenue();
   const gallery = useGallery();
-  const themes = useThemes();
   const items = useItems();
-  const combos = useCombos();
 
   if (venue.isPending) {
     return (
@@ -71,9 +68,7 @@ export function LandingPage() {
       <HeroSection hero={hero} />
       <VenueSection venue={venue.data} areas={areas} />
       <HowItWorksSection />
-      <ThemesSection themes={themes.data ?? []} />
       <ItemsSection items={items.data ?? []} />
-      <CombosSection combos={combos.data ?? []} />
       <FaqSection venue={venue.data} />
       <DirectionsSection venue={venue.data} />
     </>

@@ -21,8 +21,9 @@
 }
 
 /*
- * Estilos e combos somem quando o painel não tem nenhum, e duas faixas do mesmo
- * fundo podem acabar vizinhas. Um fio entre elas mantém os assuntos separados.
+ * Seção sem conteúdo some (a vitrine sem decoração, o "como chegar" sem
+ * endereço nem WhatsApp), e duas faixas do mesmo fundo podem acabar vizinhas.
+ * Um fio entre elas mantém os assuntos separados.
  */
 .section:not(.sectionAlt):not(.sectionDark) + .section:not(.sectionAlt):not(.sectionDark),
 .sectionAlt + .sectionAlt {

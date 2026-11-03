@@ -1,8 +1,8 @@
 import type { GalleryImage, PublicVenue } from '@chacara/shared';
 import { CalendarIcon, ClockIcon, PinIcon, UsersIcon } from '@/components/icons';
-import { PhotoFrame } from '@/components/PhotoFrame';
 import landing from './landing.module.css';
 import { revealOnScroll } from './reveal';
+import { VenueCarousel } from './VenueCarousel';
 import styles from './VenueSection.module.css';
 
 /**
@@ -13,6 +13,8 @@ import styles from './VenueSection.module.css';
  * propósito — assim o dono descreve as áreas que **existem de verdade** pelo
  * painel, sem ninguém mexer em código, e nós não inventamos "salão de festas"
  * para uma chácara que não tem um (§16.6). A ordem do tour é a da galeria.
+ * Desde novembro de 2026 o tour é um carrossel (`VenueCarousel`), a pedido do
+ * dono, no lugar da grade.
  *
  * O bloco de fatos lê `VenueSettings`, então capacidade, horário e endereço na
  * landing nunca divergem do que o sistema aceita. Ele vem num cartão com o fio
@@ -86,24 +88,7 @@ export function VenueSection({ venue, areas }: VenueSectionProps) {
           ))}
         </dl>
 
-        {areas.length > 0 ? (
-          <ul className={styles.areas}>
-            {areas.map((area) => (
-              <li key={area.id} className={styles.area} ref={revealOnScroll}>
-                {/*
-                  `alt=""` de propósito: o `alt` cadastrado é o nome da área, e
-                  ele já aparece no `h3` logo abaixo. Repeti-lo na foto faria o
-                  leitor de tela anunciar o mesmo nome duas vezes (§18.1) — aqui
-                  a imagem ilustra o bloco que o título nomeia.
-                */}
-                <PhotoFrame className={styles.areaPhoto} src={area.url || null} alt="" />
-
-                <h3 className={styles.areaTitle}>{area.alt}</h3>
-                {area.caption ? <p className={styles.areaText}>{area.caption}</p> : null}
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        {areas.length > 0 ? <VenueCarousel areas={areas} /> : null}
       </div>
     </section>
   );

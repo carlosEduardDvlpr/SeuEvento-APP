@@ -1,0 +1,235 @@
+/*
+ * Carrossel das áreas da chácara (§13.1, item 2).
+ *
+ * Uma faixa que rola de verdade, com encaixe no centro: a foto da vez fica
+ * inteira e as vizinhas espiam nas bordas. No celular a faixa vai de uma borda
+ * da tela à outra, e a vizinha encostada na borda é o convite para arrastar.
+ *
+ * As medidas são em `cqw`, a largura do próprio carrossel (que é um
+ * contêiner): a faixa precisa de um respiro de cada lado exatamente do tamanho
+ * que falta para a primeira e a última foto também poderem ficar no centro.
+ * No navegador a lista vem em três cópias (ver `VenueCarousel.tsx`) e o
+ * passeio fica na do meio, longe das pontas: o respiro serve ao HTML
+ * pré-renderizado, que tem uma cópia só.
+ */
+.carousel {
+  container-type: inline-size;
+  margin: var(--space-48) calc(-1 * var(--space-16)) 0;
+}
+
+.track {
+  --slide: 82cqw;
+
+  /* `offsetLeft` das fotos passa a contar a partir da faixa, que é quem rola. */
+  position: relative;
+  display: grid;
+  grid-auto-columns: var(--slide);
+  grid-auto-flow: column;
+  gap: var(--space-12);
+  padding: var(--space-4) calc((100cqw - var(--slide)) / 2) var(--space-8);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  /* As setas e os pontos fazem o papel da barra, que só riscaria a faixa. */
+  scrollbar-width: none;
+  /*
+   * Tocar numa vizinha a traz para o centro. O cursor fica na faixa, e não em
+   * cada foto, porque as cópias são `inert` e o ponteiro passa através delas.
+   */
+  cursor: pointer;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+/* `always`: um gesto, uma foto. É um passeio, não uma lista para atravessar. */
+.slide {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-16);
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
+.slideActive {
+  cursor: auto;
+}
+
+/*
+ * A moldura-assinatura em cada foto. Dois seletores para vencer a proporção de
+ * retrato que a `PhotoFrame` traz; a proporção reservada evita salto quando a
+ * foto chega (§14.9).
+ */
+.track .photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  transition:
+    opacity 450ms ease,
+    transform 450ms ease;
+}
+
+/* As vizinhas recuam um pouco: a foto da vez é a que fala. */
+.slide:not(.slideActive) .photo {
+  opacity: 0.55;
+  transform: scale(0.92);
+}
+
+.caption {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-inline: var(--space-4);
+  transition: opacity 450ms ease;
+}
+
+.slide:not(.slideActive) .caption {
+  opacity: 0.35;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: 1.2;
+}
+
+.text {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+/*
+ * No celular, setas e pontos numa linha e a pausa sozinha na de baixo: com nove
+ * fotos, as setas e os pontos já ocupam a largura, e os alvos não encolhem
+ * abaixo do mínimo de toque (§18.1). A ordem na tela é a mesma do teclado.
+ */
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  margin-top: var(--space-24);
+  padding-inline: var(--space-16);
+}
+
+/* Setas e pausa no círculo com o fio dourado, no rosa do Espaço (ver `VenueSection`). */
+.control {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--venue-ink);
+  cursor: pointer;
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    color var(--transition);
+}
+
+.control:hover {
+  border-color: var(--venue-ink);
+  background: var(--venue-ink);
+  color: var(--on-brand);
+}
+
+.toggle {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+.dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Alvo de 24 × 32 px, o mínimo da WCAG 2.5.8; o ponto é desenhado dentro dele. */
+.dot {
+  position: relative;
+  width: 24px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.dot::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  transform: translate(-50%, -50%);
+  transition:
+    width var(--transition),
+    background-color var(--transition);
+}
+
+.dot:hover::before {
+  background: var(--venue);
+}
+
+/* A foto da vez vira um traço: forma, além da cor (§14.2). */
+.dotActive::before,
+.dotActive:hover::before {
+  width: 20px;
+  background: var(--venue-ink);
+}
+
+/* Só no desktop: no celular, as setas e os nove pontos já ocupam a linha. */
+.counter {
+  display: none;
+  min-width: 5ch;
+  margin: 0 var(--space-8);
+  color: var(--fg-soft);
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+@media (min-width: 900px) {
+  .carousel {
+    margin-top: var(--space-64);
+  }
+
+  .track {
+    --slide: min(62cqw, 760px);
+
+    gap: var(--space-24);
+  }
+
+  .track .photo {
+    aspect-ratio: 3 / 2;
+  }
+
+  .title {
+    font-size: var(--text-xl);
+  }
+
+  /* No desktop cabe tudo numa linha, com a pausa um pouco afastada das setas. */
+  .controls {
+    display: flex;
+  }
+
+  .toggle {
+    margin-left: var(--space-16);
+  }
+
+  .counter {
+    display: block;
+  }
+}

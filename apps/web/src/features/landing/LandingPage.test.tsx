@@ -1,9 +1,10 @@
-import type { CatalogItem, Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
-import { screen, within } from '@testing-library/react';
+import type { CatalogItem, GalleryImage, PublicVenue } from '@chacara/shared';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { errorResponse, jsonResponse, renderWithProviders } from '../../../test/helpers/render';
 import { LandingPage } from './LandingPage';
+import { resetRevealForTests } from './reveal';
 
 /**
  * Landing (§13.1).
@@ -46,6 +47,9 @@ const AREA: GalleryImage = {
   sortOrder: 1,
 };
 
+/** Segunda área, para o carrossel ter para onde ir. */
+const PISCINA: GalleryImage = { ...AREA, id: 'g-5', alt: 'Piscina', caption: null };
+
 const EVENT_PHOTOS: GalleryImage[] = [
   {
     id: 'g-3',
@@ -65,49 +69,6 @@ const EVENT_PHOTOS: GalleryImage[] = [
   },
 ];
 
-const THEME: Theme = {
-  id: 't-1',
-  slug: 'rustico-boho',
-  name: 'Rústico boho',
-  tagline: 'Tons naturais e trama de palha.',
-  description: null,
-  palette: [
-    { name: 'Sálvia', hex: '#A7B8A1' },
-    { name: 'Palha', hex: '#D8C7A3' },
-  ],
-  coverImageUrl: null,
-  sortOrder: 1,
-};
-
-const COMBO: Combo = {
-  id: 'c-1',
-  name: 'Mesa do bolo boho',
-  description: 'Mesa, toalha e arranjo.',
-  imageUrl: null,
-  themeId: THEME.id,
-  discountType: 'PERCENT',
-  discountValue: 20,
-  items: [
-    {
-      itemId: 'i-1',
-      name: 'Mesa rústica',
-      quantity: 1,
-      unitPriceCents: 20_000,
-      totalCents: 20_000,
-    },
-    {
-      itemId: 'i-2',
-      name: 'Arranjo de flores',
-      quantity: 2,
-      unitPriceCents: 15_000,
-      totalCents: 30_000,
-    },
-  ],
-  itemsTotalCents: 50_000,
-  discountCents: 10_000,
-  priceCents: 40_000,
-};
-
 const CASAMENTO = { id: 'cat-casamento', name: 'Casamento', sortOrder: 0 };
 const CHA_DE_BEBE = { id: 'cat-cha', name: 'Chá de bebê', sortOrder: 1 };
 
@@ -117,8 +78,9 @@ function vitrine(number: number, category: typeof CASAMENTO, stock = 1): Catalog
     name: `Decoração ${category.name.toLowerCase()} ${number}`,
     description: null,
     imageUrl: `/catalogo/${category.id}/${number}.jpg`,
-    // Diferente do preço do combo de exemplo: o teste de combos procura o dele na página.
     priceCents: 35_000,
+    // O mesmo valor nos dois preços é "sem promoção" (§13.1, item 5.1).
+    venuePriceCents: 35_000,
     stock,
     assemblyNotes: null,
     sortOrder: number,
@@ -127,9 +89,13 @@ function vitrine(number: number, category: typeof CASAMENTO, stock = 1): Catalog
   };
 }
 
-/** Nove itens em duas categorias, e um décimo sem estoque, que não pode aparecer. */
+/**
+ * Nove itens em duas categorias, e um décimo sem estoque, que não pode aparecer.
+ * O primeiro sai mais barato junto com a chácara.
+ */
 const ITEMS: CatalogItem[] = [
-  ...[1, 2, 3, 4, 5, 6].map((number) => vitrine(number, CASAMENTO)),
+  { ...vitrine(1, CASAMENTO), venuePriceCents: 30_000 },
+  ...[2, 3, 4, 5, 6].map((number) => vitrine(number, CASAMENTO)),
   ...[7, 8, 9].map((number) => vitrine(number, CHA_DE_BEBE)),
   vitrine(10, CHA_DE_BEBE, 0),
 ];
@@ -142,9 +108,7 @@ function stubFetch(routes: Routes = {}) {
   const base: Routes = {
     '/api/public/venue': () => jsonResponse(VENUE),
     '/api/gallery': () => jsonResponse([HERO, AREA, ...EVENT_PHOTOS]),
-    '/api/themes': () => jsonResponse([THEME]),
     '/api/items': () => jsonResponse(ITEMS),
-    '/api/combos': () => jsonResponse([COMBO]),
     ...routes,
   };
 
@@ -193,7 +157,7 @@ describe('LandingPage', () => {
   it('segue a ordem de seções da §13.1', async () => {
     renderLanding();
 
-    await screen.findByRole('heading', { level: 1 });
+    await screen.findByRole('heading', { name: 'Decorações' });
 
     const titles = screen
       .getAllByRole('heading', { level: 2 })
@@ -203,13 +167,22 @@ describe('LandingPage', () => {
     expect(titles).toEqual([
       'A chácara',
       'Pegue e monte: como funciona',
-      'Escolha um estilo',
-      // A vitrine de itens entrou depois, a pedido do dono, no bloco da decoração.
+      // A vitrine entrou depois, a pedido do dono; estilos e combos saíram em novembro de 2026.
       'Decorações',
-      'Combos que saem mais barato',
       'Perguntas frequentes',
       'Como chegar',
     ]);
+  });
+
+  /* Cada decoração é completa e tem os dois preços: a landing não pede mais estilos nem combos. */
+  it('não busca estilos nem combos', async () => {
+    const urls = renderLanding();
+
+    await screen.findByRole('heading', { name: 'Decorações' });
+
+    expect(urls.filter((url) => /^\/api\/(themes|combos)/.test(url))).toEqual([]);
+    expect(screen.queryByText('Escolha um estilo')).not.toBeInTheDocument();
+    expect(screen.queryByText('Combos que saem mais barato')).not.toBeInTheDocument();
   });
 });
 
@@ -240,8 +213,8 @@ describe('hero', () => {
   it('não consulta a agenda', async () => {
     const urls = renderLanding();
 
-    // Quando os combos aparecem, a página inteira já montou: o pedido já teria saído.
-    await screen.findByText('Combos que saem mais barato');
+    // Quando a vitrine aparece, a página inteira já montou: o pedido já teria saído.
+    await screen.findByRole('heading', { name: 'Decorações' });
 
     expect(urls.filter((url) => url.startsWith('/api/availability'))).toEqual([]);
   });
@@ -283,6 +256,219 @@ describe('a chácara', () => {
     expect(screen.getByText(/Mesas para 60 pessoas/)).toBeVisible();
   });
 
+  /* Pedido do dono (novembro de 2026): as áreas num carrossel, uma foto por vez. */
+  it('passa as áreas pelo carrossel, com as setas e com os pontos', async () => {
+    const user = userEvent.setup();
+    renderLanding({ '/api/gallery': () => jsonResponse([HERO, AREA, PISCINA]) });
+
+    const carousel = within(await screen.findByRole('region', { name: 'Fotos da chácara' }));
+    expect(carousel.getByRole('group', { name: '1 de 2' })).toHaveTextContent('Área coberta');
+    // Sem fim: as setas nunca ficam desabilitadas.
+    expect(carousel.getByRole('button', { name: 'Foto anterior' })).toBeEnabled();
+    expect(carousel.getByRole('button', { name: 'Ver Área coberta' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+
+    await user.click(carousel.getByRole('button', { name: 'Próxima foto' }));
+
+    expect(carousel.getByText('Foto 2 de 2: Piscina')).toBeInTheDocument();
+    expect(carousel.getByRole('button', { name: 'Ver Piscina' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    expect(carousel.getByRole('button', { name: 'Próxima foto' })).toBeEnabled();
+
+    await user.click(carousel.getByRole('button', { name: 'Ver Área coberta' }));
+
+    expect(carousel.getByText('Foto 1 de 2: Área coberta')).toBeInTheDocument();
+  });
+
+  it('dá a volta nas setas: da última vai para a primeira, e da primeira para a última', async () => {
+    const user = userEvent.setup();
+    renderLanding({ '/api/gallery': () => jsonResponse([HERO, AREA, PISCINA]) });
+
+    const carousel = within(await screen.findByRole('region', { name: 'Fotos da chácara' }));
+
+    await user.click(carousel.getByRole('button', { name: 'Foto anterior' }));
+    expect(carousel.getByText('Foto 2 de 2: Piscina')).toBeInTheDocument();
+
+    await user.click(carousel.getByRole('button', { name: 'Próxima foto' }));
+    expect(carousel.getByText('Foto 1 de 2: Área coberta')).toBeInTheDocument();
+
+    // Duas voltas inteiras para a frente, passando pelas cópias das pontas.
+    for (const expected of [
+      'Foto 2 de 2: Piscina',
+      'Foto 1 de 2: Área coberta',
+      'Foto 2 de 2: Piscina',
+      'Foto 1 de 2: Área coberta',
+    ]) {
+      await user.click(carousel.getByRole('button', { name: 'Próxima foto' }));
+      expect(carousel.getByText(expected)).toBeInTheDocument();
+    }
+  });
+
+  /* As cópias que dão a volta são só para os olhos: cada área existe uma vez para o resto. */
+  it('esconde do leitor de tela e do teclado as cópias da volta', async () => {
+    renderLanding({ '/api/gallery': () => jsonResponse([HERO, AREA, PISCINA]) });
+
+    const region = await screen.findByRole('region', { name: 'Fotos da chácara' });
+    const slides = [...region.querySelectorAll('[aria-roledescription="foto"]')];
+    const clones = slides.filter((slide) => slide.hasAttribute('inert'));
+
+    expect(slides).toHaveLength(6);
+    expect(clones).toHaveLength(4);
+    clones.forEach((clone) => expect(clone).toHaveAttribute('aria-hidden', 'true'));
+    expect(within(region).getAllByRole('group')).toHaveLength(2);
+    expect(within(region).getAllByRole('heading', { name: 'Piscina' })).toHaveLength(1);
+  });
+
+  it('com uma área só, mostra a foto sem setas nem pontos', async () => {
+    renderLanding();
+
+    const carousel = within(await screen.findByRole('region', { name: 'Fotos da chácara' }));
+    expect(carousel.getByRole('heading', { name: 'Área coberta' })).toBeVisible();
+    expect(carousel.queryByRole('button', { name: 'Próxima foto' })).not.toBeInTheDocument();
+    expect(carousel.queryByRole('button', { name: 'Pausar as fotos' })).not.toBeInTheDocument();
+  });
+
+  /*
+   * Troca automática a cada 2 segundos, pedido do dono (§14.8, a exceção dele).
+   *
+   * O jsdom não tem `IntersectionObserver`: aqui ele é trocado por um que diz que
+   * a faixa está toda na tela assim que passa a ser observada.
+   */
+  describe('troca automática', () => {
+    class OnScreenObserver {
+      readonly callback: IntersectionObserverCallback;
+
+      constructor(callback: IntersectionObserverCallback) {
+        this.callback = callback;
+      }
+
+      observe(target: Element) {
+        this.callback(
+          [{ target, isIntersecting: true, intersectionRatio: 1 } as IntersectionObserverEntry],
+          this as unknown as IntersectionObserver,
+        );
+      }
+
+      unobserve() {}
+
+      disconnect() {}
+
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      // A entrada dos blocos guarda o observador da página: o de mentira não pode sobrar.
+      resetRevealForTests();
+    });
+
+    async function renderCarousel() {
+      renderLanding({ '/api/gallery': () => jsonResponse([HERO, AREA, PISCINA]) });
+      return within(await screen.findByRole('region', { name: 'Fotos da chácara' }));
+    }
+
+    function wait(ms: number) {
+      return act(() => vi.advanceTimersByTimeAsync(ms));
+    }
+
+    it('passa sozinha a cada 2 segundos e, da última, volta para a primeira', async () => {
+      vi.stubGlobal('IntersectionObserver', OnScreenObserver);
+      const carousel = await renderCarousel();
+
+      const live = carousel.getByText('Foto 1 de 2: Área coberta');
+      // Enquanto passa sozinha, o leitor de tela não é avisado de cada troca.
+      await waitFor(() => expect(live).toHaveAttribute('aria-live', 'off'));
+
+      await wait(2000);
+      expect(live).toHaveTextContent('Foto 2 de 2: Piscina');
+      expect(carousel.getByRole('button', { name: 'Ver Piscina' })).toHaveAttribute(
+        'aria-current',
+        'true',
+      );
+
+      await wait(2000);
+      expect(live).toHaveTextContent('Foto 1 de 2: Área coberta');
+    });
+
+    it('para no botão de pausa, e o mesmo botão volta a passar as fotos', async () => {
+      vi.stubGlobal('IntersectionObserver', OnScreenObserver);
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const carousel = await renderCarousel();
+      const live = carousel.getByText('Foto 1 de 2: Área coberta');
+      await waitFor(() => expect(live).toHaveAttribute('aria-live', 'off'));
+
+      await user.click(carousel.getByRole('button', { name: 'Pausar as fotos' }));
+      // O ponteiro e o foco em cima do carrossel também seguram a troca: aqui, quem segura é o botão.
+      await user.click(document.body);
+      await wait(4000);
+
+      expect(live).toHaveTextContent('Foto 1 de 2: Área coberta');
+      expect(live).toHaveAttribute('aria-live', 'polite');
+
+      await user.click(carousel.getByRole('button', { name: 'Passar as fotos sozinhas' }));
+      await user.click(document.body);
+      await wait(2000);
+
+      expect(live).toHaveTextContent('Foto 2 de 2: Piscina');
+      expect(carousel.getByRole('button', { name: 'Pausar as fotos' })).toBeInTheDocument();
+    });
+
+    it('recomeça a contagem quando a pessoa troca a foto', async () => {
+      vi.stubGlobal('IntersectionObserver', OnScreenObserver);
+      const carousel = await renderCarousel();
+      const live = carousel.getByText('Foto 1 de 2: Área coberta');
+      await waitFor(() => expect(live).toHaveAttribute('aria-live', 'off'));
+
+      await wait(1500);
+      // Clique nativo de propósito: sem ponteiro nem foco, que também segurariam a troca.
+      act(() => carousel.getByRole('button', { name: 'Próxima foto' }).click());
+      expect(live).toHaveTextContent('Foto 2 de 2: Piscina');
+
+      // A troca automática, que viria em 500 ms, agora só vem 2 segundos depois do clique.
+      await wait(1000);
+      expect(live).toHaveTextContent('Foto 2 de 2: Piscina');
+
+      await wait(1000);
+      expect(live).toHaveTextContent('Foto 1 de 2: Área coberta');
+    });
+
+    it('não passa sozinha quando o navegador não sabe dizer se o carrossel está na tela', async () => {
+      const carousel = await renderCarousel();
+
+      await wait(4000);
+
+      expect(carousel.getByText('Foto 1 de 2: Área coberta')).toHaveAttribute(
+        'aria-live',
+        'polite',
+      );
+    });
+
+    it('não passa sozinha para quem pede menos movimento, e aí nem oferece a pausa', async () => {
+      vi.stubGlobal('IntersectionObserver', OnScreenObserver);
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      const carousel = await renderCarousel();
+
+      await wait(4000);
+
+      expect(carousel.getByText('Foto 1 de 2: Área coberta')).toBeInTheDocument();
+      expect(carousel.queryByRole('button', { name: 'Pausar as fotos' })).not.toBeInTheDocument();
+    });
+  });
+
   it('mostra o endereço quando preenchido', async () => {
     renderLanding();
 
@@ -300,62 +486,11 @@ describe('fotos de festas', () => {
   it('não aparecem, mesmo que a API ainda as devolva', async () => {
     renderLanding();
 
-    await screen.findByText('Combos que saem mais barato');
+    await screen.findByRole('heading', { name: 'Decorações' });
 
     expect(screen.queryByText('Festas que já aconteceram aqui')).not.toBeInTheDocument();
     expect(screen.queryByAltText('Chá de bebê com painel de nuvens')).not.toBeInTheDocument();
     expect(screen.queryByAltText('Casamento no gramado')).not.toBeInTheDocument();
-  });
-});
-
-describe('estilos', () => {
-  it('leva ao wizard com o filtro do estilo', async () => {
-    renderLanding();
-
-    const link = await screen.findByRole('link', { name: /Rústico boho/ });
-
-    expect(link).toHaveAttribute('href', '/reservar?estilo=t-1');
-  });
-
-  it('mostra a tagline e a paleta com nome legível', async () => {
-    renderLanding();
-
-    expect(await screen.findByText('Tons naturais e trama de palha.')).toBeVisible();
-    // A cor é dado, não decoração (§14.3).
-    expect(screen.getByText('Sálvia (#A7B8A1)')).toBeInTheDocument();
-  });
-
-  it('não aparece sem estilo cadastrado', async () => {
-    renderLanding({ '/api/themes': () => jsonResponse([]) });
-
-    await screen.findByRole('heading', { level: 1 });
-    expect(screen.queryByText('Escolha um estilo')).not.toBeInTheDocument();
-  });
-});
-
-describe('combos', () => {
-  /* A economia vem calculada da API (§9.6): a landing não soma desconto. */
-  it('mostra o preço do combo e quanto a pessoa economiza', async () => {
-    renderLanding();
-
-    expect(await screen.findByText('Mesa do bolo boho')).toBeVisible();
-    expect(screen.getByText('R$ 500,00')).toBeVisible();
-    expect(screen.getByText('R$ 400,00')).toBeVisible();
-    expect(screen.getByText(/você economiza/)).toBeVisible();
-  });
-
-  it('lista os itens do combo', async () => {
-    renderLanding();
-
-    expect(await screen.findByText('1× Mesa rústica')).toBeVisible();
-    expect(screen.getByText('2× Arranjo de flores')).toBeVisible();
-  });
-
-  it('não aparece sem combo cadastrado', async () => {
-    renderLanding({ '/api/combos': () => jsonResponse([]) });
-
-    await screen.findByRole('heading', { level: 1 });
-    expect(screen.queryByText('Combos que saem mais barato')).not.toBeInTheDocument();
   });
 });
 
@@ -505,8 +640,8 @@ describe('como chegar', () => {
 });
 
 /*
- * Vitrine de itens: pedido do dono para a landing mostrar a decoração mesmo
- * antes de existir estilo cadastrado.
+ * Vitrine de decorações: pedido do dono, e desde novembro de 2026 cada item é
+ * uma decoração completa, com o preço avulso e o preço com a chácara.
  */
 describe('vitrine de itens', () => {
   async function itemsSection() {
@@ -514,20 +649,19 @@ describe('vitrine de itens', () => {
     return heading.closest('section')!;
   }
 
-  it('aparece mesmo sem estilo cadastrado', async () => {
-    renderLanding({ '/api/themes': () => jsonResponse([]) });
+  it('mostra as decorações cadastradas', async () => {
+    renderLanding();
 
     const section = await itemsSection();
 
     expect(within(section).getByRole('heading', { name: 'Decoração casamento 1' })).toBeVisible();
-    expect(screen.queryByText('Escolha um estilo')).not.toBeInTheDocument();
   });
 
   it('some quando ainda não há item', async () => {
     renderLanding({ '/api/items': () => jsonResponse([]) });
 
-    // Os combos chegam pela mesma rodada de requisições: a vitrine já teria aparecido.
-    await screen.findByText('Combos que saem mais barato');
+    // A galeria chega na mesma rodada de requisições: a vitrine já teria aparecido.
+    await screen.findByAltText('Mesa comprida montada no gramado ao fim da tarde');
     expect(screen.queryByRole('heading', { name: 'Decorações' })).not.toBeInTheDocument();
   });
 
@@ -539,6 +673,18 @@ describe('vitrine de itens', () => {
 
     expect(link).toHaveAttribute('href', `/reservar?item=${ITEMS[0]!.id}`);
     expect(within(link).getByText('R$ 350,00')).toBeVisible();
+  });
+
+  it('mostra o preço com a chácara quando ele é menor que o avulso', async () => {
+    renderLanding();
+
+    const section = await itemsSection();
+    const promo = within(section).getByRole('link', { name: /Decoração casamento 1/ });
+    const regular = within(section).getByRole('link', { name: /Decoração casamento 2/ });
+
+    expect(within(promo).getByText(/com a chácara/)).toHaveTextContent('R$ 300,00 com a chácara');
+    // Os dois preços iguais: sem promoção, a segunda linha só repetiria o preço.
+    expect(within(regular).queryByText(/com a chácara/)).not.toBeInTheDocument();
   });
 
   it('filtra por categoria', async () => {

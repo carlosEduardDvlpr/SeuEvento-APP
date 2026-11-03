@@ -33,12 +33,13 @@ const SITEMAP_URL = new URL('../dist/sitemap.xml', import.meta.url);
 const SERVER_DIR_URL = new URL('../dist/server/', import.meta.url);
 const SERVER_ENTRY_URL = new URL('entry-server.js', SERVER_DIR_URL);
 
-/** Caminhos públicos que a landing precisa, na ordem em que entram no pacote. */
+/**
+ * Caminhos públicos que a landing precisa, na ordem em que entram no pacote.
+ * Estilos e combos saíram em novembro de 2026, com as seções deles na landing.
+ */
 const SOURCES = {
   venue: '/public/venue',
   gallery: '/gallery',
-  themes: '/themes',
-  combos: '/combos',
   items: '/items',
 };
 

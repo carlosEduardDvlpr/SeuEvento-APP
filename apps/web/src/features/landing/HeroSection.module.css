@@ -156,24 +156,30 @@
 }
 
 /*
- * A única ação do hero: o dourado da ação principal (§14.2), mais alto e com
- * letra maior que o botão comum. O contorno escuro segura a borda sobre a foto.
- * Raio e ausência de sombra são os de todo botão (§14.5).
+ * A única ação do hero: o dourado da ação principal (§14.2), mais alto que o
+ * botão comum. O contorno escuro segura a borda sobre a foto. Raio e ausência
+ * de sombra são os de todo botão (§14.5).
+ *
+ * No celular a letra é a do texto corrido, e o rótulo não quebra: com a letra
+ * grande, "Reservar uma data" e a seta passavam da largura de um celular
+ * pequeno e o botão virava duas linhas (pedido do dono, novembro de 2026). A
+ * letra maior volta no desktop, onde sobra espaço.
  */
 .cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-12);
-  min-height: 56px;
+  gap: var(--space-8);
+  min-height: 52px;
   margin-top: var(--space-32);
-  padding: 0 var(--space-32);
+  padding: 0 var(--space-24);
   border: 1px solid var(--action-line);
   border-radius: var(--r-sm);
   background: var(--action);
   color: var(--action-fg);
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: 700;
+  white-space: nowrap;
   text-decoration: none;
   transition:
     background-color var(--transition),
@@ -229,6 +235,13 @@
   }
 }
 
+/* A seta acompanha a letra, nos dois tamanhos do botão. */
+.cta svg {
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+}
+
 @media (min-width: 900px) {
   .hero::after {
     inset: var(--space-24);
@@ -236,5 +249,12 @@
 
   .content {
     padding-block: var(--space-96);
+  }
+
+  .cta {
+    gap: var(--space-12);
+    min-height: 56px;
+    padding: 0 var(--space-32);
+    font-size: var(--text-lg);
   }
 }

@@ -124,8 +124,22 @@
   padding-top: var(--space-8);
 }
 
+.prices {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .price {
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* O preço de quem leva a chácara junto, no rosa do Espaço: é dele que a linha fala. */
+.venuePrice {
+  color: var(--venue-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 

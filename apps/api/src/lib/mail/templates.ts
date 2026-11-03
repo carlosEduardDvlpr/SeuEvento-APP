@@ -1,4 +1,10 @@
-import type { BookingKind } from '@chacara/shared';
+import {
+  type Address,
+  type BookingKind,
+  FULFILLMENT_LABELS,
+  type FulfillmentMethod,
+  formatAddress,
+} from '@chacara/shared';
 import { type Email, renderEmail } from './render.js';
 
 /*
@@ -6,9 +12,39 @@ import { type Email, renderEmail } from './render.js';
  *
  * A decoração sozinha muda o que cada e-mail promete: não há "datas seguras"
  * nem "a chácara é sua nesses dias", e sim **itens separados** para um dia, com
- * a retirada combinada direto com a dona. O texto da chácara ficou exatamente
- * como era.
+ * a retirada ou a entrega combinada direto com a dona. O texto da chácara ficou
+ * exatamente como era.
  */
+
+/** Como a decoração chega à festa (§9.12). Ausente na chácara. */
+type Handoff = {
+  fulfillment?: FulfillmentMethod | null;
+  /** O endereço copiado na reserva. Só existe na entrega. */
+  deliveryAddress?: Address | null;
+};
+
+/**
+ * A linha da retirada ou da entrega, igual nos três e-mails da reserva de
+ * decoração (§9.12).
+ *
+ * A entrega diz o endereço inteiro, para quem lê conferir para onde a decoração
+ * vai, e avisa da taxa logo ao lado do total: sem isso, o valor do e-mail
+ * pareceria o final, e a taxa combinada depois viraria surpresa.
+ */
+function handoffLine({ fulfillment, deliveryAddress }: Handoff): string | null {
+  if (fulfillment === 'DELIVERY' && deliveryAddress) {
+    return `Entrega em ${formatAddress(deliveryAddress)}. A taxa de entrega é combinada com a chácara.`;
+  }
+
+  if (fulfillment === 'PICKUP') return `${FULFILLMENT_LABELS.PICKUP}.`;
+
+  return null;
+}
+
+/** "a retirada" ou "a entrega", nas frases que mandam combinar com a dona. */
+function handoffNoun({ fulfillment }: Handoff): string {
+  return fulfillment === 'DELIVERY' ? 'a entrega' : 'a retirada';
+}
 
 /**
  * E-mails transacionais (§17).
@@ -119,6 +155,7 @@ export function bookingReceivedTemplate({
   holdHours,
   bookingUrl,
   kind = 'VENUE',
+  ...handoff
 }: {
   name: string;
   /** Período em linguagem natural, ex.: "5 a 6 de dezembro de 2026". */
@@ -127,18 +164,21 @@ export function bookingReceivedTemplate({
   holdHours: number;
   bookingUrl: string;
   kind?: BookingKind;
-}): Email {
+} & Handoff): Email {
   if (kind === 'DECORATION') {
+    const line = handoffLine(handoff);
+
     return renderEmail('Recebemos seu pedido de decoração', {
       preheader: `Separamos os itens por ${holdHours} horas enquanto confirmamos.`,
       heading: 'Recebemos seu pedido',
       paragraphs: [
         `Olá, ${name}. Seu pedido de decoração para ${dates} chegou, e os itens ficam separados para você por ${holdHours} horas enquanto a gente confirma.`,
         `Total do pedido: ${totalFormatted}.`,
+        ...(line ? [line] : []),
         'Você recebe um e-mail assim que a reserva for confirmada. Se preferir, pode acompanhar pelo site.',
       ],
       action: { label: 'Ver meu pedido', url: bookingUrl },
-      note: 'Nada foi cobrado ainda. O pagamento e a retirada dos itens são combinados direto com a gente.',
+      note: `Nada foi cobrado ainda. O pagamento e ${handoffNoun(handoff)} dos itens são combinados direto com a gente.`,
     });
   }
 
@@ -217,6 +257,7 @@ export function newBookingForAdminTemplate({
   totalFormatted,
   adminUrl,
   kind = 'VENUE',
+  ...handoff
 }: {
   customerName: string;
   customerPhone: string | null;
@@ -226,18 +267,21 @@ export function newBookingForAdminTemplate({
   totalFormatted: string;
   adminUrl: string;
   kind?: BookingKind;
-}): Email {
+} & Handoff): Email {
   const phone = customerPhone
     ? `WhatsApp do cliente: ${customerPhone}.`
     : 'O cliente não deixou telefone no perfil.';
 
   if (kind === 'DECORATION' || guestCount === null) {
+    const line = handoffLine(handoff);
+
     return renderEmail(`Novo pedido de decoração: ${dates}`, {
       preheader: `${customerName} pediu decoração para ${dates}. Confirme ou recuse pelo painel.`,
       heading: 'Chegou um pedido de decoração',
       paragraphs: [
         `${customerName} pediu só a decoração (pegue e monte, sem a chácara) para ${dates}.`,
         `Total do pedido: ${totalFormatted}.`,
+        ...(line ? [line] : []),
         phone,
       ],
       action: { label: 'Ver o pedido no painel', url: adminUrl },
@@ -327,6 +371,7 @@ export function bookingConfirmedTemplate({
   whatsapp,
   bookingUrl,
   kind = 'VENUE',
+  ...handoff
 }: {
   name: string;
   dates: string;
@@ -338,22 +383,28 @@ export function bookingConfirmedTemplate({
   whatsapp: string | null;
   bookingUrl: string;
   kind?: BookingKind;
-}): Email {
+} & Handoff): Email {
   /*
    * Decoração confirmada não carrega horário de entrada nem regras da casa: são
-   * da chácara, e a pessoa não vai estar lá. Também não leva o endereço — onde a
-   * retirada acontece é combinado com a dona, e o e-mail não deveria inventar.
+   * da chácara, e a pessoa não vai estar lá. O endereço da chácara também fica
+   * de fora: a linha da retirada ou da entrega diz para onde a decoração vai, e
+   * o dia e a hora de cada ponta são combinados com a dona, que o e-mail não
+   * deveria inventar.
    */
   if (kind === 'DECORATION') {
+    const line = handoffLine(handoff);
+    const noun = handoffNoun(handoff);
+
     return renderEmail('Sua reserva está confirmada', {
       preheader: `Decoração para ${dates} confirmada.`,
       heading: 'Reserva confirmada',
       paragraphs: [
         `Olá, ${name}. Sua reserva da decoração para ${dates} está confirmada.`,
         `Valor combinado: ${totalFormatted}.`,
+        ...(line ? [line] : []),
         whatsapp
-          ? `Para combinar a retirada e a devolução dos itens, fale com a gente pelo WhatsApp ${whatsapp}.`
-          : 'Para combinar a retirada e a devolução dos itens, responda este e-mail.',
+          ? `Para combinar ${noun} e a devolução dos itens, fale com a gente pelo WhatsApp ${whatsapp}.`
+          : `Para combinar ${noun} e a devolução dos itens, responda este e-mail.`,
       ],
       action: { label: 'Ver minha reserva', url: bookingUrl },
       note: 'O pagamento é combinado direto com a gente.',

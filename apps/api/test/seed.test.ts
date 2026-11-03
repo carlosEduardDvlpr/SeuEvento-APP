@@ -219,6 +219,9 @@ describe('seed', () => {
         expect(item.category.name).toBeTruthy();
         expect(item.themes.length).toBeGreaterThan(0);
         expect(item.priceCents).toBeGreaterThan(0);
+        // O preço com a chácara é promoção: positivo e nunca acima do avulso.
+        expect(item.venuePriceCents).toBeGreaterThan(0);
+        expect(item.venuePriceCents).toBeLessThanOrEqual(item.priceCents);
         expect(item.stock).toBeGreaterThan(0);
         expect(item.active).toBe(true);
       }

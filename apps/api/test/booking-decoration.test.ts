@@ -117,13 +117,14 @@ describe('reserva só de decoração', () => {
     return (response.json() as { days: { status: string }[] }).days[0]?.status;
   }
 
-  /** Pedido de decoração do painel, um item. */
+  /** Pedido de decoração do painel, um item, retirado na chácara (§9.12). */
   function decoration(overrides: Record<string, unknown> = {}) {
     return {
       kind: 'DECORATION',
       startDate: DAY,
       endDate: DAY,
       items: [{ itemId: painelId, quantity: 1 }],
+      fulfillment: 'PICKUP',
       expectedTotalCents: PAINEL_PRICE,
       ...overrides,
     };
@@ -198,7 +199,7 @@ describe('reserva só de decoração', () => {
       });
     });
 
-    it('precisa de pelo menos um item', async () => {
+    it('precisa de uma decoração escolhida', async () => {
       const { token } = await createClient();
 
       const response = await post(
@@ -352,6 +353,7 @@ describe('reserva só de decoração', () => {
         data: {
           userId: other.id,
           kind: 'DECORATION',
+          fulfillment: 'PICKUP',
           startDate: parseISODate(DAY),
           endDate: parseISODate(DAY),
           guestCount: null,
@@ -451,11 +453,14 @@ describe('reserva só de decoração', () => {
       });
 
       expect(response.statusCode).toBe(201);
+      // O painel ainda não pergunta retirada ou entrega: sem a escolha, é retirada (§9.12).
       expect(response.json()).toMatchObject({
         kind: 'DECORATION',
         status: 'CONFIRMED',
         guestCount: null,
         totalCents: MESA_PRICE * 2,
+        fulfillment: 'PICKUP',
+        deliveryAddress: null,
       });
 
       const calendar = await app.inject({

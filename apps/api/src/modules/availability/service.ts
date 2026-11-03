@@ -195,17 +195,14 @@ export async function findUnavailableDates(
 }
 
 /**
- * Rota pública de disponibilidade (§11.3).
+ * Teto do período das consultas públicas de disponibilidade (§11.3).
  *
- * Limita o período aqui, e não no `getDayStatuses`: o orçamento também chama
- * aquela função, mas com intervalo que a própria regra de `maxDays` já contém.
- * Quem precisa de teto é o pedido que vem de fora.
+ * Mora aqui, e não no `getDayStatuses`: o orçamento também chama aquela função,
+ * mas com intervalo que a própria regra de `maxDays` já contém. Quem precisa de
+ * teto é o pedido que vem de fora — a agenda da chácara, a de uma decoração e o
+ * estoque livre do período, que respondem todos com o mesmo erro.
  */
-export async function getAvailability(
-  prisma: PrismaClient,
-  { from, to, kind }: AvailabilityQuery,
-  now: Date = new Date(),
-): Promise<Availability> {
+export function assertAvailabilityPeriod(from: ISODate, to: ISODate): void {
   const span = daysBetweenInclusive(from, to);
 
   if (span > AVAILABILITY_MAX_DAYS) {
@@ -216,6 +213,21 @@ export async function getAvailability(
       { maxDays: AVAILABILITY_MAX_DAYS, requestedDays: span },
     );
   }
+}
+
+/**
+ * Rota pública de disponibilidade (§11.3), para a agenda de um produto.
+ *
+ * A agenda de uma decoração (`itemId`) mora em `decoration.ts`, e não aqui:
+ * ela soma o estoque do item, que é conta de `items/stock.ts`, e aquele arquivo
+ * já importa deste. Trazer o estoque para cá fecharia um ciclo de importação.
+ */
+export async function getAvailability(
+  prisma: PrismaClient,
+  { from, to, kind }: Omit<AvailabilityQuery, 'itemId'>,
+  now: Date = new Date(),
+): Promise<Availability> {
+  assertAvailabilityPeriod(from, to);
 
   return { days: await getDayStatuses(prisma, { from, to, now, kind }) };
 }

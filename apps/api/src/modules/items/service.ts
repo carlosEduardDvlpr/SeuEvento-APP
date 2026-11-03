@@ -1,11 +1,12 @@
-import type {
-  AdminItem,
-  CatalogItem,
-  CreateItemBody,
-  DeleteResult,
-  ItemsQuery,
-  Pagination,
-  UpdateItemBody,
+import {
+  type AdminItem,
+  type CatalogItem,
+  type CreateItemBody,
+  type DeleteResult,
+  type ItemsQuery,
+  type Pagination,
+  type UpdateItemBody,
+  VENUE_PRICE_ABOVE_PRICE_ERROR,
 } from '@chacara/shared';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { AppError, fieldError } from '../../lib/errors.js';
@@ -45,6 +46,7 @@ function toCatalogItem(row: ItemRow): CatalogItem {
     description: row.description,
     imageUrl: row.imageUrl,
     priceCents: row.priceCents,
+    venuePriceCents: row.venuePriceCents,
     stock: row.stock,
     assemblyNotes: row.assemblyNotes,
     sortOrder: row.sortOrder,
@@ -161,9 +163,22 @@ export async function updateItem(
   id: string,
   body: UpdateItemBody,
 ): Promise<AdminItem> {
-  await getAdminItem(prisma, id);
+  const current = await getAdminItem(prisma, id);
 
   const { themeIds, ...fields } = body;
+
+  /*
+   * O preço com a chácara nunca passa do avulso. Com os dois preços no corpo,
+   * o schema compartilhado já comparou; com um só, a comparação é com o que está
+   * gravado, e só a API o conhece. O CHECK `item_venue_price_range` recusaria do
+   * mesmo jeito, mas como erro 500, sem campo marcado no formulário.
+   */
+  const priceCents = fields.priceCents ?? current.priceCents;
+  const venuePriceCents = fields.venuePriceCents ?? current.venuePriceCents;
+
+  if (venuePriceCents > priceCents) {
+    throw fieldError('venuePriceCents', VENUE_PRICE_ABOVE_PRICE_ERROR);
+  }
 
   await assertReferencesExist(prisma, { categoryId: fields.categoryId, themeIds });
 

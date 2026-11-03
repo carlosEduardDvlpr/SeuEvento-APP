@@ -43,6 +43,9 @@ const REDACTED_PATHS = [
   'authorization',
   'cookie',
   'password',
+  // Os dois campos da troca de senha (§10.5) são senha como o `password`.
+  'currentPassword',
+  'newPassword',
   'passwordHash',
   'token',
   'idToken',

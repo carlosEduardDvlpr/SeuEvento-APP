@@ -254,6 +254,8 @@ export type DemoItemSeed = {
   categoryName: string;
   themeSlugs: readonly string[];
   priceCents: number;
+  /** Preço com a chácara: igual ao avulso é "sem promoção", nunca acima dele. */
+  venuePriceCents: number;
   stock: number;
   description: string;
   assemblyNotes: string;
@@ -271,6 +273,7 @@ export const DEMO_ITEMS: readonly DemoItemSeed[] = [
     categoryName: 'Painéis',
     themeSlugs: ['nuvens-e-estrelas', 'cha-revelacao'],
     priceCents: 18_000,
+    venuePriceCents: 16_000,
     stock: 2,
     description: 'Painel redondo com nuvens em relevo, 2 m de diâmetro.',
     assemblyNotes: 'Monte em piso plano e fixe a base antes de encaixar o disco.',
@@ -280,6 +283,7 @@ export const DEMO_ITEMS: readonly DemoItemSeed[] = [
     categoryName: 'Arcos',
     themeSlugs: ['nuvens-e-estrelas', 'cores-doces'],
     priceCents: 24_000,
+    venuePriceCents: 21_000,
     stock: 3,
     description: 'Estrutura de arco com balões em tons pastel, 2,5 m de altura.',
     assemblyNotes: 'Encha os balões no local: transportar cheio estoura no caminho.',
@@ -289,6 +293,7 @@ export const DEMO_ITEMS: readonly DemoItemSeed[] = [
     categoryName: 'Mesas',
     themeSlugs: ['rustico-boho', 'jardim-provencal', 'boteco-churrasco', 'festa-junina'],
     priceCents: 12_000,
+    venuePriceCents: 12_000,
     stock: 6,
     description: 'Mesa de madeira maciça para 8 pessoas, 2 m por 0,9 m.',
     assemblyNotes: 'Pé dobrável: abra até travar o clique dos dois lados.',
@@ -298,6 +303,7 @@ export const DEMO_ITEMS: readonly DemoItemSeed[] = [
     categoryName: 'Painéis',
     themeSlugs: ['rustico-boho', 'boteco-churrasco'],
     priceCents: 20_000,
+    venuePriceCents: 18_000,
     stock: 2,
     description: 'Painel ripado 1,8 m por 2 m, com base de apoio.',
     assemblyNotes: 'Precisa de duas pessoas para levantar. Apoie contra parede ou use o tripé.',
@@ -307,6 +313,7 @@ export const DEMO_ITEMS: readonly DemoItemSeed[] = [
     categoryName: 'Iluminação',
     themeSlugs: ['rustico-boho', 'boteco-churrasco', 'jardim-provencal', 'festa-junina'],
     priceCents: 6_000,
+    venuePriceCents: 6_000,
     stock: 10,
     description: 'Cordão de 10 m com 20 lâmpadas, para área coberta ou aberta.',
     assemblyNotes: 'Use os ganchos da área coberta. Não passe o cordão sobre a churrasqueira.',
@@ -316,6 +323,7 @@ export const DEMO_ITEMS: readonly DemoItemSeed[] = [
     categoryName: 'Lúdicos',
     themeSlugs: ['rustico-boho', 'jardim-provencal'],
     priceCents: 4_500,
+    venuePriceCents: 4_500,
     stock: 8,
     description: 'Arranjo de capim-dos-pampas e folhagem seca artificial, 60 cm.',
     assemblyNotes: 'Abra as hastes com a mão para dar volume antes de posicionar.',
@@ -325,6 +333,7 @@ export const DEMO_ITEMS: readonly DemoItemSeed[] = [
     categoryName: 'Lúdicos',
     themeSlugs: ['safari-selva'],
     priceCents: 9_000,
+    venuePriceCents: 8_000,
     stock: 4,
     description: 'Trio de animais decorativos em resina: leão, girafa e zebra.',
     assemblyNotes: 'São peças pesadas. Posicione longe da circulação das crianças.',
@@ -334,6 +343,7 @@ export const DEMO_ITEMS: readonly DemoItemSeed[] = [
     categoryName: 'Lúdicos',
     themeSlugs: ['festa-junina', 'circo-carrossel'],
     priceCents: 3_500,
+    venuePriceCents: 3_500,
     stock: 12,
     description: 'Cinco varais de bandeirolas de tecido, 8 m cada.',
     assemblyNotes: 'Estique bem entre dois pontos altos; bandeirola frouxa embola com vento.',

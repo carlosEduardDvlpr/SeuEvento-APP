@@ -88,16 +88,19 @@ describe('catálogo público', () => {
         categoryId: category.id,
         name: 'Painel de nuvens',
         priceCents: 18000,
+        venuePriceCents: 15000,
         themeIds: [theme.id],
       });
 
       const response = await app.inject({ method: 'GET', url: '/api/items' });
 
       expect(response.statusCode).toBe(200);
+      // Os dois preços vão para a vitrine: o avulso e o de quem aluga a chácara junto.
       expect(response.json()).toEqual([
         expect.objectContaining({
           name: 'Painel de nuvens',
           priceCents: 18000,
+          venuePriceCents: 15000,
           category: { id: category.id, name: 'Painéis', sortOrder: 0 },
           themeIds: [theme.id],
         }),

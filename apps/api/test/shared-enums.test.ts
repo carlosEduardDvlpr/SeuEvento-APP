@@ -7,6 +7,8 @@ import {
   BOOKING_STATUSES,
   BOOKING_STATUS_LABELS,
   DISCOUNT_TYPES,
+  FULFILLMENT_LABELS,
+  FULFILLMENT_METHODS,
   GALLERY_KINDS,
   GALLERY_KIND_LABELS,
   PAYMENT_KINDS,
@@ -19,6 +21,7 @@ import {
   BookingKind,
   BookingStatus,
   DiscountType,
+  FulfillmentMethod,
   GalleryKind,
   PaymentKind,
   Role,
@@ -43,6 +46,7 @@ describe('enums compartilhados x schema do Prisma', () => {
     ['BookingKind', BOOKING_KINDS, BookingKind],
     ['BlockScope', BLOCK_SCOPES, BlockScope],
     ['PaymentKind', PAYMENT_KINDS, PaymentKind],
+    ['FulfillmentMethod', FULFILLMENT_METHODS, FulfillmentMethod],
   ];
 
   it.each(cases)('%s tem os mesmos valores nas duas pontas', (_name, shared, prisma) => {
@@ -80,6 +84,12 @@ describe('rótulos pt-BR', () => {
   it('tem rótulo para toda situação de recebimento', () => {
     for (const status of PAYMENT_STATUSES) {
       expect(PAYMENT_STATUS_LABELS[status]).toBeTruthy();
+    }
+  });
+
+  it('tem rótulo para retirada e entrega da decoração', () => {
+    for (const method of FULFILLMENT_METHODS) {
+      expect(FULFILLMENT_LABELS[method]).toBeTruthy();
     }
   });
 

@@ -1,6 +1,7 @@
 import { sessionUserSchema, updateMeBodySchema } from '@chacara/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import { Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../lib/errors.js';
 import { requireUserId } from '../../plugins/auth.js';
 import { clearSessionCookie, sessionUserSelect, toSessionUser } from '../auth/session.js';
@@ -49,13 +50,23 @@ export const userRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request) => {
-      // Só nome e telefone: trocar e-mail muda a identidade da conta e exigiria
-      // confirmar o endereço novo; papel nunca é editável pelo próprio usuário.
+      // Nome, telefone e endereço de entrega: trocar e-mail muda a identidade da
+      // conta e exigiria confirmar o e-mail novo; papel nunca é editável pelo
+      // próprio usuário.
+      const { name, phone, address } = request.body;
+
       const user = await app.prisma.user.update({
         where: { id: request.auth?.userId },
         data: {
-          ...(request.body.name === undefined ? {} : { name: request.body.name }),
-          ...(request.body.phone === undefined ? {} : { phone: request.body.phone }),
+          ...(name === undefined ? {} : { name }),
+          ...(phone === undefined ? {} : { phone }),
+          /*
+           * O endereço de entrega (§9.12) é gravado como o schema o deixou:
+           * aparado, com o complemento vazio virando nulo. `null` apaga, e o
+           * `DbNull` é o NULL do SQL, e não um JSON `null` que pareceria um
+           * endereço cadastrado.
+           */
+          ...(address === undefined ? {} : { address: address ?? Prisma.DbNull }),
         },
         select: sessionUserSelect,
       });

@@ -216,6 +216,7 @@ async function seedDemoItems(prisma: PrismaClient): Promise<number> {
         name: item.name,
         description: item.description,
         priceCents: item.priceCents,
+        venuePriceCents: item.venuePriceCents,
         stock: item.stock,
         assemblyNotes: item.assemblyNotes,
         sortOrder,

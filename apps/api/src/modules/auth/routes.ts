@@ -1,5 +1,6 @@
 import {
   acceptedResponseSchema,
+  changePasswordBodySchema,
   forgotPasswordBodySchema,
   googleLoginBodySchema,
   loginBodySchema,
@@ -13,7 +14,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { AppError } from '../../lib/errors.js';
 import { hashToken } from '../../lib/tokens.js';
-import { REFRESH_COOKIE_NAME } from '../../plugins/auth.js';
+import { REFRESH_COOKIE_NAME, requireUserId } from '../../plugins/auth.js';
 import {
   assertTrustedOrigin,
   clearSessionCookie,
@@ -24,6 +25,7 @@ import {
 import { verifyGoogleIdToken } from './google.js';
 import {
   ACCEPTED_MESSAGE,
+  changePassword,
   forgotPassword,
   login,
   loginWithGoogle,
@@ -227,6 +229,44 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
       // guardou a senha que acabou de escolher.
       clearSessionCookie(reply);
       return reply.status(204).send(null);
+    },
+  );
+
+  /*
+   * Troca de senha por quem está logado (§10.5, novembro de 2026).
+   *
+   * Mora em `/auth` com as outras rotas que abrem sessão: termina emitindo um
+   * refresh token novo, em cookie, como o login. A identidade vem do access
+   * token, e não do cookie, então a barreira de origem do refresh e do logout não
+   * se aplica: outro site não tem como mandar o cabeçalho `Authorization`.
+   */
+  app.post(
+    '/auth/change-password',
+    {
+      onRequest: app.authenticate,
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute',
+          /*
+           * O mesmo ritmo do login (§10.7), contado por conta: quem tem o token
+           * de outra pessoa não ganha tentativas trocando de IP para adivinhar a
+           * senha atual. Depois do `authenticate`, para a chave ser o usuário.
+           */
+          hook: 'preHandler',
+          keyGenerator: (request) => request.auth?.userId ?? request.ip,
+        },
+      },
+      schema: {
+        body: changePasswordBodySchema,
+        response: { 200: sessionResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const user = await changePassword(app.prisma, requireUserId(request.auth), request.body);
+
+      // A troca derrubou todas as sessões; esta aba continua com uma nova (família nova).
+      return issueSession({ app, reply, user });
     },
   );
 

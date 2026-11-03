@@ -14,6 +14,9 @@ import { LegalPage, LegalSection, legalStyles as styles } from './LegalPage';
  *   o limite de requisições usa o IP como chave (§10.7);
  * - o rascunho no navegador existe porque o wizard guarda o pedido em
  *   `sessionStorage` (§12.4);
+ * - o endereço é o `User.address`, e a reserva com entrega guarda uma cópia em
+ *   `Booking.deliveryAddress` (§9.12);
+ * - a busca do CEP vai do navegador direto ao ViaCEP (`lib/cep.ts`);
  * - a remoção descrita é a que o `DELETE /me` executa.
  *
  * Não há medição de audiência nem rastreador de publicidade no site, então a
@@ -39,16 +42,21 @@ export function PrivacyPage() {
           <LegalSection title="O que coletamos">
             <ul className={styles.list}>
               <li>
-                <strong>Cadastro:</strong> nome, e-mail e telefone. Nada além disso — nem CPF, nem
-                endereço, nem data de nascimento.
+                <strong>Cadastro:</strong> nome, e-mail e telefone. Nem CPF, nem data de nascimento.
+              </li>
+              <li>
+                <strong>Endereço de entrega:</strong> só se você quiser receber a decoração no seu
+                endereço. São CEP, rua, número, complemento, bairro, cidade e estado. Ele fica no
+                seu perfil, e a reserva com entrega guarda uma cópia, para a entrega ir ao lugar
+                certo mesmo que você mude de endereço depois.
               </li>
               <li>
                 <strong>Senha:</strong> guardada apenas como código embaralhado, do qual não é
                 possível voltar à senha original. Nem a chácara consegue ver a sua.
               </li>
               <li>
-                <strong>Reserva:</strong> datas, número de convidados, itens escolhidos, valores e o
-                que você escrever no campo de observações.
+                <strong>Reserva:</strong> datas, número de convidados, a decoração escolhida, se ela
+                é retirada ou entregue, valores e o que você escrever no campo de observações.
               </li>
               <li>
                 <strong>Login com o Google:</strong> se você entrar por aí, recebemos do Google o
@@ -69,6 +77,9 @@ export function PrivacyPage() {
               <li>
                 Permitir que a chácara fale com você sobre a reserva — é por isso que o telefone é
                 obrigatório para reservar.
+              </li>
+              <li>
+                Levar a decoração até o endereço que você informou, quando você escolhe a entrega.
               </li>
               <li>Avisar por e-mail a cada mudança no andamento do pedido.</li>
               <li>Manter o histórico de reservas por obrigação fiscal.</li>
@@ -117,6 +128,11 @@ export function PrivacyPage() {
               Google. Esses serviços podem manter servidores fora do Brasil.
             </p>
             <p>
+              Quando você digita o CEP no cadastro do endereço, o seu navegador consulta o ViaCEP,
+              um serviço público de busca de CEP, para preencher a rua, o bairro e a cidade. Só o
+              CEP vai nessa consulta.
+            </p>
+            <p>
               Fora disso, seus dados de reserva aparecem apenas para você e para a administração da
               chácara. As datas ocupadas que o calendário público mostra não trazem nome, e-mail nem
               qualquer detalhe de quem reservou.
@@ -126,8 +142,8 @@ export function PrivacyPage() {
           <LegalSection title="Por quanto tempo guardamos">
             <p>
               Os dados da sua conta ficam enquanto a conta existir. O registro das reservas fica
-              pelo prazo da obrigação fiscal, mesmo depois de você apagar a conta — mas sem ligação
-              com a sua identidade.
+              pelo prazo da obrigação fiscal, mesmo depois de você apagar a conta, mas sem o seu
+              nome, e-mail e telefone.
             </p>
           </LegalSection>
 
@@ -140,13 +156,14 @@ export function PrivacyPage() {
             <ul className={styles.list}>
               <li>
                 <strong>Ver e corrigir:</strong> seus dados e suas reservas estão em{' '}
-                <Link to="/minhas-reservas">Minhas reservas</Link>. Nome e telefone você edita por
-                lá.
+                <Link to="/minhas-reservas">Minhas reservas</Link>. Nome, telefone e endereço você
+                edita na aba “Meu perfil”.
               </li>
               <li>
-                <strong>Apagar a conta:</strong> também em “Minhas reservas”, no fim da página. Seu
-                nome, e-mail e telefone saem do sistema na hora, as sessões abertas caem em todos os
-                aparelhos e o registro das reservas permanece sem ligação com você. Enquanto houver
+                <strong>Apagar a conta:</strong> no fim da aba “Meu perfil”. Seu nome, e-mail,
+                telefone e endereço saem do sistema na hora, as sessões abertas caem em todos os
+                aparelhos e o registro das reservas permanece sem esses dados. O endereço que uma
+                reserva com entrega copiou fica com ela, como o resto do histórico. Enquanto houver
                 reserva em andamento a remoção fica bloqueada, porque a chácara precisa poder falar
                 com você até a festa acontecer.
               </li>

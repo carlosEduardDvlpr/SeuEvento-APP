@@ -72,6 +72,21 @@
   font-weight: 600;
 }
 
+/* O endereço de entrega não cabe numa coluna: ocupa a linha inteira. */
+.factWide {
+  grid-column: 1 / -1;
+}
+
+.factWide dd {
+  overflow-wrap: anywhere;
+}
+
+.note {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
 /* Prazo do pedido: a informação mais acionável da tela. */
 .hold {
   margin: 0;

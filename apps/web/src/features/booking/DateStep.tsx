@@ -2,33 +2,38 @@ import { useMemo, useState } from 'react';
 import { DayPicker, type DateRange } from 'react-day-picker';
 import { ptBR } from 'react-day-picker/locale';
 import type { PublicVenue } from '@chacara/shared';
-import { Field } from '@/components/Field';
 import { Skeleton } from '@/components/Skeleton';
 import { formatDateRange } from '@/lib/format';
 import { dayCount, toCalendarDate, toISODate } from './calendar-dates';
-import type { BookingDraft, DraftAction } from './draft';
-import { KindPicker } from './KindPicker';
+import { type BookingDraft, type DraftAction, agendaItemId, rangeLengthError } from './draft';
 import { useAvailableDays } from './useAvailableDays';
 import styles from './DateStep.module.css';
 import 'react-day-picker/style.css';
 
 /**
- * Passo 1: o que reservar, datas e convidados (§13.2).
+ * Passo da data (§13.2).
  *
  * O calendário é `react-day-picker`, a única exceção de UI do projeto (§3):
  * calendário acessível com seleção de intervalo é caro de fazer à mão e fácil de
  * fazer mal.
  *
- * Na decoração sozinha (T32) o passo muda em três pontos, e só neles: a agenda é
- * a da decoração, o calendário escolhe **um** dia, e não há convidados.
+ * Na chácara, escolhe um ou mais dias seguidos; na decoração sozinha (T32), um
+ * dia, na agenda da decoração. Com a decoração já escolhida, a agenda é a
+ * **dela** (novembro de 2026): o dia em que ela saiu para outra festa não é
+ * oferecido.
  */
 
 export type DateStepProps = {
   draft: BookingDraft;
   dispatch: (action: DraftAction) => void;
   venue: PublicVenue;
-  /** Mostrado quando a pessoa tenta avançar com o passo incompleto. */
-  errors: { range?: string; guestCount?: string };
+  /**
+   * Dias do período escolhido que não estão livres. Vem do wizard, que segura o
+   * "Continuar" com a mesma lista que esta tela explica.
+   */
+  unavailable: readonly string[];
+  /** Mostrado quando a pessoa tenta avançar sem escolher a data. */
+  error?: string;
   /**
    * Recusa do envio que só tem conserto aqui (§13.2).
    *
@@ -38,13 +43,19 @@ export type DateStepProps = {
   notice?: string;
 };
 
-export function DateStep({ draft, dispatch, venue, errors, notice }: DateStepProps) {
+/** "9 de dezembro de 2026", ou a lista deles. */
+function describeDays(dates: readonly string[]): string {
+  return dates.map((date) => formatDateRange(date, date)).join(', ');
+}
+
+export function DateStep({ draft, dispatch, venue, unavailable, error, notice }: DateStepProps) {
   const [visibleMonth, setVisibleMonth] = useState(() =>
     draft.startDate ? toCalendarDate(draft.startDate) : new Date(),
   );
 
   const decoration = draft.kind === 'DECORATION';
-  const days = useAvailableDays(visibleMonth, draft.kind);
+  const itemId = agendaItemId(draft);
+  const days = useAvailableDays(visibleMonth, draft.kind, itemId);
 
   const selected = useMemo<DateRange | undefined>(() => {
     if (!draft.startDate) return undefined;
@@ -55,22 +66,8 @@ export function DateStep({ draft, dispatch, venue, errors, notice }: DateStepPro
     };
   }, [draft.startDate, draft.endDate]);
 
-  /*
-   * Dias indisponíveis **dentro** do intervalo escolhido.
-   *
-   * O `react-day-picker` desabilita dia a dia, mas não impede a seleção de um
-   * intervalo que pule por cima de um dia ocupado. A §13.2 pede que a gente
-   * explique **qual** dia atrapalha, em vez de só recusar.
-   */
-  const blockedInRange = useMemo(() => {
-    if (!draft.startDate || !draft.endDate) return [];
-    return days.unavailableWithin(draft.startDate, draft.endDate);
-  }, [draft.startDate, draft.endDate, days]);
-
   const total = draft.startDate && draft.endDate ? dayCount(draft.startDate, draft.endDate) : 0;
-  // Faixa de dias é regra da chácara; a decoração é sempre um dia.
-  const tooLong = !decoration && total > venue.maxDays;
-  const tooShort = !decoration && total > 0 && total < venue.minDays;
+  const lengthError = rangeLengthError(draft, venue);
   const leadDays = `${venue.minLeadDays} ${venue.minLeadDays === 1 ? 'dia' : 'dias'}`;
 
   function handleSelect(range: DateRange | undefined) {
@@ -91,7 +88,7 @@ export function DateStep({ draft, dispatch, venue, errors, notice }: DateStepPro
 
   /*
    * Só o que a API disse estar livre é selecionável. Mês ainda não carregado fica
-   * desabilitado, em vez de parecer disponível — é melhor esperar que oferecer
+   * desabilitado, em vez de parecer disponível: é melhor esperar que oferecer
    * uma data que pode estar tomada.
    */
   const isUnavailable = (date: Date) => days.statusOf(toISODate(date)) !== 'free';
@@ -104,18 +101,14 @@ export function DateStep({ draft, dispatch, venue, errors, notice }: DateStepPro
         </p>
       ) : null}
 
-      <section className={styles.block}>
-        <KindPicker value={draft.kind} onChange={(kind) => dispatch({ type: 'setKind', kind })} />
-      </section>
-
       <section className={styles.block} aria-labelledby="titulo-datas">
         <h2 className={styles.title} id="titulo-datas">
           {decoration ? 'Qual é o dia da festa?' : 'Quando é a festa?'}
         </h2>
         {decoration ? (
           <p className={styles.hint}>
-            A decoração é reservada para um dia de uso, com pelo menos {leadDays} de antecedência. A
-            retirada e a devolução dos itens são combinadas direto com a gente.
+            A decoração é reservada para um dia de uso, com pelo menos {leadDays} de antecedência.
+            {itemId ? ' O calendário mostra os dias em que a decoração escolhida está livre.' : ''}
           </p>
         ) : (
           <p className={styles.hint}>
@@ -171,9 +164,9 @@ export function DateStep({ draft, dispatch, venue, errors, notice }: DateStepPro
           </ul>
         </div>
 
-        {errors.range ? (
+        {error ? (
           <p className={styles.problem} role="alert">
-            {errors.range}
+            {error}
           </p>
         ) : null}
 
@@ -190,58 +183,28 @@ export function DateStep({ draft, dispatch, venue, errors, notice }: DateStepPro
         ) : null}
 
         {/*
-          A §13.2 pede que a gente diga qual dia atrapalha, não só que recuse. Na
-          troca de chácara para decoração (ou o contrário), o dia que já estava
-          escolhido pode não servir na outra agenda — e é esta mensagem que avisa.
+          A §13.2 pede que a gente diga qual dia atrapalha, não só que recuse. É
+          também o aviso de quando o dia que já estava escolhido não serve na
+          agenda nova: trocar de produto, ou escolher a decoração depois da data.
         */}
-        {blockedInRange.length > 0 ? (
+        {unavailable.length > 0 ? (
           <p className={styles.problem} role="alert">
-            {blockedInRange.length === 1
-              ? `O dia ${formatDateRange(blockedInRange[0]!, blockedInRange[0]!)} não está disponível${decoration ? ' para a decoração. Escolha outro dia.' : '. Escolha outro período.'}`
-              : `Estes dias não estão disponíveis: ${blockedInRange
-                  .map((date) => formatDateRange(date, date))
-                  .join(', ')}. Escolha outro período.`}
+            {unavailable.length === 1
+              ? `O dia ${describeDays(unavailable)} não está disponível${
+                  decoration
+                    ? ` para ${itemId ? 'esta decoração' : 'a decoração'}. Escolha outro dia.`
+                    : '. Escolha outro período.'
+                }`
+              : `Estes dias não estão disponíveis: ${describeDays(unavailable)}. Escolha outro período.`}
           </p>
         ) : null}
 
-        {tooLong ? (
+        {lengthError ? (
           <p className={styles.problem} role="alert">
-            A chácara aceita no máximo {venue.maxDays} {venue.maxDays === 1 ? 'dia' : 'dias'}{' '}
-            seguidos.
-          </p>
-        ) : null}
-
-        {tooShort ? (
-          <p className={styles.problem} role="alert">
-            A reserva é de no mínimo {venue.minDays} dias seguidos.
+            {lengthError}
           </p>
         ) : null}
       </section>
-
-      {/* Sem a chácara, não há convidados a receber (T32). */}
-      {decoration ? null : (
-        <section className={styles.block}>
-          <h2 className={styles.title}>Quantas pessoas?</h2>
-
-          <Field
-            className={styles.guests}
-            label="Número de convidados"
-            type="number"
-            min={1}
-            max={venue.maxGuests}
-            inputMode="numeric"
-            value={draft.guestCount === null ? '' : String(draft.guestCount)}
-            onChange={(event) =>
-              dispatch({
-                type: 'setGuestCount',
-                guestCount: event.target.value === '' ? null : Number(event.target.value),
-              })
-            }
-            error={errors.guestCount}
-            help={`A chácara recebe até ${venue.maxGuests} pessoas.`}
-          />
-        </section>
-      )}
     </div>
   );
 }

@@ -1,0 +1,33 @@
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-32);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.guests {
+  max-width: 220px;
+}
+
+/* Borda além da cor: status não é comunicado só por cor (§14.2). */
+.problem {
+  margin: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--danger);
+  border-radius: var(--r-sm);
+  background: var(--st-cancelled-bg);
+  color: var(--st-cancelled-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

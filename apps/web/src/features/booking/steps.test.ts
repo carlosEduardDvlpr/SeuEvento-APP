@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { WIZARD_STEPS, isWizardStep, parseStep, stepIndex } from './steps';
+import { isWizardStep, parseStep, stepsFor } from './steps';
 
 describe('isWizardStep', () => {
-  it('reconhece os três passos', () => {
-    expect(isWizardStep('datas')).toBe(true);
-    expect(isWizardStep('itens')).toBe(true);
-    expect(isWizardStep('revisao')).toBe(true);
+  it('reconhece os cinco passos', () => {
+    for (const step of ['tipo', 'data', 'convidados', 'decoracao', 'revisao']) {
+      expect(isWizardStep(step)).toBe(true);
+    }
   });
 
   it('recusa valor desconhecido e nulo', () => {
@@ -17,28 +17,52 @@ describe('isWizardStep', () => {
 
 describe('parseStep', () => {
   it('devolve o passo pedido na URL', () => {
-    expect(parseStep('itens')).toBe('itens');
+    expect(parseStep('convidados')).toBe('convidados');
+  });
+
+  /*
+   * Os passos de antes de novembro de 2026 podem estar no histórico do navegador
+   * ou num link salvo: caem no passo que fazia o mesmo papel.
+   */
+  it('traduz os passos antigos', () => {
+    expect(parseStep('datas')).toBe('data');
+    expect(parseStep('itens')).toBe('decoracao');
   });
 
   /*
    * Link antigo, URL digitada errada ou `?step=` vazio não podem mostrar uma
-   * tela em branco: o wizard volta para o começo, que é sempre válido.
+   * tela em branco: o wizard abre no primeiro passo do pedido, que é sempre
+   * válido. `constructor` é o caso de quem procura num objeto literal.
    */
-  it('cai no primeiro passo quando o valor não serve', () => {
-    expect(parseStep(null)).toBe('datas');
-    expect(parseStep('')).toBe('datas');
-    expect(parseStep('pagamento')).toBe('datas');
+  it('não reconhece o que não é passo', () => {
+    expect(parseStep(null)).toBeNull();
+    expect(parseStep('')).toBeNull();
+    expect(parseStep('pagamento')).toBeNull();
+    expect(parseStep('constructor')).toBeNull();
   });
 });
 
-describe('stepIndex', () => {
-  it('numera os passos na ordem em que aparecem', () => {
-    expect(stepIndex('datas')).toBe(0);
-    expect(stepIndex('itens')).toBe(1);
-    expect(stepIndex('revisao')).toBe(2);
+describe('stepsFor', () => {
+  it('a chácara passa por todos os passos', () => {
+    expect(stepsFor('VENUE', false)).toEqual([
+      'tipo',
+      'data',
+      'convidados',
+      'decoracao',
+      'revisao',
+    ]);
   });
 
-  it('cobre todos os passos declarados', () => {
-    expect(WIZARD_STEPS.map(stepIndex)).toEqual([0, 1, 2]);
+  it('a decoração não tem convidados', () => {
+    expect(stepsFor('DECORATION', false)).toEqual(['tipo', 'data', 'decoracao', 'revisao']);
+  });
+
+  /* Quem veio do cartão de uma decoração na landing já disse o que quer reservar. */
+  it('a decoração vinda da landing pula o tipo', () => {
+    expect(stepsFor('DECORATION', true)).toEqual(['data', 'decoracao', 'revisao']);
+  });
+
+  it('a chácara sempre mostra o tipo', () => {
+    expect(stepsFor('VENUE', true)[0]).toBe('tipo');
   });
 });

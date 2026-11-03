@@ -89,7 +89,10 @@
   color: var(--brand);
 }
 
-/* Rodapé com o total parcial sempre visível (§13.2). */
+/*
+ * Rodapé fixo com "Voltar" e "Continuar". O total só entra na revisão, e é o do
+ * orçamento (§13.2).
+ */
 .footer {
   position: fixed;
   bottom: 0;
@@ -135,9 +138,11 @@
   font-weight: 700;
 }
 
+/* Sem o total ao lado (antes da revisão), os botões ficam à direita. */
 .actions {
   display: flex;
   gap: var(--space-8);
+  margin-left: auto;
 }
 
 .state {

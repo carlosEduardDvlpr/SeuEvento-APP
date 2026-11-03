@@ -90,14 +90,15 @@ export const CUSTOMER = {
 };
 
 /**
- * Itens do catálogo de demonstração usados no pedido (`apps/api/src/seed/data.ts`).
+ * A decoração do catálogo de demonstração usada no pedido (`apps/api/src/seed/data.ts`).
  *
- * São dados versionados, não aleatórios, e é por isso que dá para afirmar o
- * valor: 180,00 + 240,00 em itens, mais a diária que o servidor calcular.
+ * É dado versionado, não aleatório, e é por isso que dá para afirmar o valor: o
+ * pedido leva uma decoração só (novembro de 2026) e, com a chácara, ela sai pelo
+ * preço com a chácara, 160,00 em vez dos 180,00 avulsos, mais a diária que o
+ * servidor calcular.
  */
-export const ORDERED_ITEMS = [
-  { name: 'Painel de nuvens', priceCents: 18_000 },
-  { name: 'Arco de balões pastel', priceCents: 24_000 },
-];
-
-export const ITEMS_TOTAL_CENTS = ORDERED_ITEMS.reduce((sum, item) => sum + item.priceCents, 0);
+export const ORDERED_DECORATION = {
+  name: 'Painel de nuvens',
+  priceCents: 18_000,
+  venuePriceCents: 16_000,
+};

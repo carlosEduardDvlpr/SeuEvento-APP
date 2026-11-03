@@ -1,11 +1,11 @@
 ﻿import { expect, test, type Page } from '@playwright/test';
-import { ADMIN, CUSTOMER, ITEMS_TOTAL_CENTS, ORDERED_ITEMS, WEB_URL } from './support/env.js';
+import { ADMIN, CUSTOMER, ORDERED_DECORATION, WEB_URL } from './support/env.js';
 import { waitForMailLink } from './support/mail-log.js';
 
 /**
- * O caminho feliz da §19, ponta a ponta: landing → datas e itens → cadastro com
- * confirmação de e-mail → pedido enviado → admin confirma → cliente vê
- * "Confirmada".
+ * O caminho feliz da §19, ponta a ponta: landing → tipo, data, convidados e
+ * decoração → cadastro com confirmação de e-mail → pedido enviado → admin
+ * confirma → cliente vê "Confirmada".
  *
  * **O que só este teste prova:** que as peças estão ligadas. Navegador, SPA,
  * proxy, Fastify, Prisma, Postgres e as constraints de verdade, atravessados por
@@ -25,10 +25,12 @@ function brl(cents: number): string {
 }
 
 /**
- * Abre o wizard pelo botão do hero e escolhe o primeiro dia livre.
+ * Abre o wizard pelo botão do hero, fica com a chácara e escolhe o primeiro dia
+ * livre.
  *
- * É o caminho que a §13.1 promete ("chegar às datas em um gesto"): o hero tem um
- * botão só, e ele leva ao calendário. O dia é o primeiro que o calendário deixa
+ * É o caminho que a §13.1 promete: o hero tem um botão só, e ele leva ao
+ * wizard. O primeiro passo pergunta o que reservar, com a chácara já escolhida,
+ * e o segundo é o calendário (§13.2). O dia é o primeiro que o calendário deixa
  * clicar, e não uma data fixa: assim o teste não depende do dia em que roda nem
  * de navegar mês a mês, que é a parte frágil de testar calendário.
  */
@@ -41,6 +43,10 @@ async function startFromHero(page: Page): Promise<string> {
 
   await expect(page).toHaveURL(/\/reservar$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Montar meu pedido');
+
+  await expect(page.getByRole('radio', { name: /A chácara/ })).toBeChecked();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(page.getByRole('heading', { name: 'Quando é a festa?' })).toBeVisible();
 
   /*
    * Seletor pela estrutura do `react-day-picker`, não pelo texto: o rótulo do
@@ -65,7 +71,7 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
   browser,
 }) => {
   // ----------------------------------------------------------------------
-  // 1. Landing e passo 1: datas e convidados
+  // 1. Landing, tipo, data e convidados
   // ----------------------------------------------------------------------
   const chosenDate = await startFromHero(page);
 
@@ -80,29 +86,29 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
   const dayButton = page.locator(`[data-day="${chosenDate}"] button`);
   await expect(dayButton).toHaveAttribute('aria-label', /selecionado/);
 
+  await page.getByRole('button', { name: 'Continuar' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Quantas pessoas?' })).toBeVisible();
   await page.getByLabel('Número de convidados').fill('40');
+  await page.getByRole('button', { name: 'Continuar' }).click();
+
+  // ----------------------------------------------------------------------
+  // 2. A decoração do pegue e monte, uma por pedido
+  // ----------------------------------------------------------------------
+  await expect(page.getByRole('heading', { name: 'Quer uma decoração?' })).toBeVisible();
+
+  /*
+   * O rádio fica oculto para o olho e o cartão inteiro é o rótulo dele: o toque
+   * é no cartão, como a pessoa faria. A asserção é no rádio, que é o que o
+   * leitor de tela anuncia.
+   */
+  await page.locator('label', { hasText: ORDERED_DECORATION.name }).click();
+  await expect(page.getByRole('radio', { name: ORDERED_DECORATION.name })).toBeChecked();
 
   await page.getByRole('button', { name: 'Continuar' }).click();
 
   // ----------------------------------------------------------------------
-  // 2. Passo 2: itens do pegue e monte
-  // ----------------------------------------------------------------------
-  await expect(page.getByRole('heading', { name: 'Escolha o estilo da festa' })).toBeVisible();
-
-  for (const item of ORDERED_ITEMS) {
-    await page.getByRole('button', { name: `Aumentar ${item.name}` }).click();
-    await expect(page.getByRole('spinbutton', { name: `Quantidade de ${item.name}` })).toHaveValue(
-      '1',
-    );
-  }
-
-  // O rodapé soma só os itens; a diária entra no total na revisão (§13.2).
-  await expect(page.getByText(`Itens escolhidos (${ORDERED_ITEMS.length})`)).toBeVisible();
-
-  await page.getByRole('button', { name: 'Continuar' }).click();
-
-  // ----------------------------------------------------------------------
-  // 3. Passo 3: revisão com o orçamento do servidor
+  // 3. Revisão com o orçamento do servidor
   // ----------------------------------------------------------------------
   await expect(page.getByRole('heading', { name: /Confira seu pedido/i })).toBeVisible();
 
@@ -114,16 +120,17 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
 
   /*
    * Quem soma é o servidor (§9.7), e o valor dá para afirmar porque o catálogo
-   * de demonstração é versionado: 180,00 + 240,00. Se este número bate, o
-   * caminho inteiro — carrinho, proxy, `POST /pricing/quote`, catálogo no
-   * Postgres — está ligado.
+   * de demonstração é versionado: com a chácara, a decoração sai por 160,00 em
+   * vez de 180,00. Se este número bate, o caminho inteiro (rascunho, proxy,
+   * `POST /pricing/quote`, preço com a chácara no Postgres) está ligado.
    */
   const valores = page
     .locator('section')
     .filter({ has: page.getByRole('heading', { name: 'Valores' }) });
 
-  await expect(valores.getByText('Itens do pegue e monte')).toBeVisible();
-  await expect(valores.getByText(brl(ITEMS_TOTAL_CENTS))).toBeVisible();
+  await expect(valores.getByText(ORDERED_DECORATION.name)).toBeVisible();
+  await expect(valores.getByText('preço com a chácara')).toBeVisible();
+  await expect(valores.getByText(brl(ORDERED_DECORATION.venuePriceCents))).toBeVisible();
 
   /*
    * O total é capturado como **texto**, não convertido para número: ele é
@@ -138,8 +145,8 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
   await expect(totalValue).toBeVisible();
   const totalText = ((await totalValue.textContent()) ?? '').trim();
 
-  // A diária entra no total, então ele é necessariamente maior que os itens.
-  expect(totalText).not.toBe(brl(ITEMS_TOTAL_CENTS));
+  // A diária entra no total, então ele é necessariamente maior que a decoração.
+  expect(totalText).not.toBe(brl(ORDERED_DECORATION.venuePriceCents));
 
   // ----------------------------------------------------------------------
   // 4. Cadastro e confirmação de e-mail
@@ -183,9 +190,7 @@ test('cliente monta o pedido, confirma o e-mail e o admin aprova a reserva', asy
 
   // O rascunho sobreviveu ao desvio: é a promessa feita na tela do cadastro.
   await expect(page.getByRole('heading', { name: /Confira seu pedido/i })).toBeVisible();
-  for (const item of ORDERED_ITEMS) {
-    await expect(page.getByText(item.name).first()).toBeVisible();
-  }
+  await expect(page.getByText(ORDERED_DECORATION.name).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Solicitar reserva' }).click();
 

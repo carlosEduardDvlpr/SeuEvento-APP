@@ -30,6 +30,7 @@ const PAINEL: CatalogItem = {
   description: null,
   imageUrl: null,
   priceCents: 12_000,
+  venuePriceCents: 12_000,
   stock: 3,
   assemblyNotes: null,
   sortOrder: 1,

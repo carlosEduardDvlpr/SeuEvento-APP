@@ -31,6 +31,11 @@ import itemStyles from './ItemsPage.module.css';
  * O estoque é **por dia**, não pelo período (§9.3): o mesmo painel sai no sábado e
  * volta para sair no sábado seguinte. A ajuda do campo diz isso, porque é a
  * pergunta que o dono faz na primeira vez que cadastra.
+ *
+ * Cada item é uma decoração completa, com dois preços (novembro de 2026, no
+ * lugar dos combos): o avulso, quando ela sai sozinha, e o com a chácara, quando
+ * sai junto com a reserva do espaço. O com a chácara nunca passa do avulso, e a
+ * mesma regra do servidor recusa o formulário antes de enviar (§12.5).
  */
 
 type FormState = {
@@ -39,6 +44,7 @@ type FormState = {
   description: string;
   imageUrl: string;
   priceCents: number | null;
+  venuePriceCents: number | null;
   stock: string;
   assemblyNotes: string;
   themeIds: string[];
@@ -52,6 +58,7 @@ const EMPTY_FORM: FormState = {
   description: '',
   imageUrl: '',
   priceCents: null,
+  venuePriceCents: null,
   stock: '1',
   assemblyNotes: '',
   themeIds: [],
@@ -110,6 +117,7 @@ export function ItemsPage() {
       description: item.description ?? '',
       imageUrl: item.imageUrl ?? '',
       priceCents: item.priceCents,
+      venuePriceCents: item.venuePriceCents,
       stock: String(item.stock),
       assemblyNotes: item.assemblyNotes ?? '',
       themeIds: item.themeIds,
@@ -137,6 +145,7 @@ export function ItemsPage() {
       description: form.description,
       imageUrl: form.imageUrl,
       priceCents: form.priceCents ?? Number.NaN,
+      venuePriceCents: form.venuePriceCents ?? Number.NaN,
       stock: form.stock === '' ? Number.NaN : Number(form.stock),
       assemblyNotes: form.assemblyNotes,
       themeIds: form.themeIds,
@@ -289,7 +298,10 @@ export function ItemsPage() {
                   <th scope="col">Categoria</th>
                   <th scope="col">Estilos</th>
                   <th scope="col" className={styles.numeric}>
-                    Preço
+                    Avulso
+                  </th>
+                  <th scope="col" className={styles.numeric}>
+                    Com a chácara
                   </th>
                   <th scope="col" className={styles.numeric}>
                     Estoque
@@ -337,6 +349,9 @@ export function ItemsPage() {
                     </td>
                     <td className={styles.numeric}>
                       <Money cents={item.priceCents} />
+                    </td>
+                    <td className={styles.numeric}>
+                      <Money cents={item.venuePriceCents} />
                     </td>
                     <td className={styles.numeric}>{item.stock}</td>
                     <td>
@@ -432,23 +447,31 @@ export function ItemsPage() {
 
           <div className={styles.formRow}>
             <MoneyField
-              label="Preço"
+              label="Preço avulso"
               valueCents={form.priceCents}
               onChangeCents={(cents) => setForm({ ...form, priceCents: cents })}
               error={errors.priceCents}
-              help="Cobrado uma vez pelo período."
+              help="Quando a decoração sai sozinha, sem a chácara."
             />
 
-            <Field
-              label="Estoque"
-              type="number"
-              min={0}
-              value={form.stock}
-              onChange={(event) => setForm({ ...form, stock: event.target.value })}
-              error={errors.stock}
-              help="Unidades disponíveis por dia."
+            <MoneyField
+              label="Preço com a chácara"
+              valueCents={form.venuePriceCents}
+              onChangeCents={(cents) => setForm({ ...form, venuePriceCents: cents })}
+              error={errors.venuePriceCents}
+              help="Vale quando a decoração sai junto com a chácara. Igual ao avulso é sem promoção."
             />
           </div>
+
+          <Field
+            label="Estoque"
+            type="number"
+            min={0}
+            value={form.stock}
+            onChange={(event) => setForm({ ...form, stock: event.target.value })}
+            error={errors.stock}
+            help="Unidades disponíveis por dia."
+          />
 
           <Textarea
             label="Descrição"

@@ -1,4 +1,4 @@
-import type { Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
+import type { CatalogItem, GalleryImage, PublicVenue } from '@chacara/shared';
 import { StrictMode } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { act } from '@testing-library/react';
@@ -52,6 +52,15 @@ const GALLERY: GalleryImage[] = [
     caption: 'Mesas para 60 pessoas.',
     sortOrder: 1,
   },
+  // Duas áreas: com uma só, o carrossel não dá a volta e não ganharia as cópias.
+  {
+    id: 'g-4',
+    kind: 'VENUE',
+    url: '/uploads/piscina.webp',
+    alt: 'Piscina',
+    caption: null,
+    sortOrder: 2,
+  },
   {
     id: 'g-3',
     kind: 'EVENTS',
@@ -62,42 +71,14 @@ const GALLERY: GalleryImage[] = [
   },
 ];
 
-const THEMES: Theme[] = [
-  {
-    id: 't-1',
-    slug: 'rustico-boho',
-    name: 'Rústico Boho',
-    tagline: 'Madeira, linho e capim-dos-pampas.',
-    description: null,
-    palette: [{ name: 'Sálvia', hex: '#A7B8A1' }],
-    coverImageUrl: null,
-    sortOrder: 1,
-  },
-];
-
-const COMBOS: Combo[] = [
-  {
-    id: 'c-1',
-    name: 'Combo Nuvens',
-    description: 'Painel, mesa e luzes.',
-    imageUrl: null,
-    themeId: 't-1',
-    discountType: 'PERCENT',
-    discountValue: 10,
-    items: [],
-    itemsTotalCents: 50000,
-    discountCents: 5000,
-    priceCents: 45000,
-  },
-];
-
-const ITEMS = [
+const ITEMS: CatalogItem[] = [
   {
     id: '00000000-0000-4000-8000-000000000001',
     name: 'Decoração casamento 1',
     description: null,
     imageUrl: '/catalogo/casamento/1.jpg',
     priceCents: 40000,
+    venuePriceCents: 35000,
     stock: 1,
     assemblyNotes: null,
     sortOrder: 1,
@@ -106,7 +87,7 @@ const ITEMS = [
   },
 ];
 
-const SEED = { venue: VENUE, gallery: GALLERY, themes: THEMES, combos: COMBOS, items: ITEMS };
+const SEED = { venue: VENUE, gallery: GALLERY, items: ITEMS };
 const SITE_URL = 'https://chacara.exemplo.com.br';
 
 beforeEach(() => {
@@ -130,9 +111,8 @@ describe('renderLanding', () => {
     // É isto que o rastreador e o leitor de cartão veem sem executar nada.
     expect(page.html).toContain('<h1');
     expect(page.html).toContain('Chácara Seu Evento');
-    expect(page.html).toContain('Rústico Boho');
-    expect(page.html).toContain('Combo Nuvens');
     expect(page.html).toContain('Decoração casamento 1');
+    expect(page.html).toContain('com a chácara');
 
     expect(page.title).toBe('Chácara Seu Evento — chácara para festas e decoração pegue e monte');
     expect(page.canonical).toBe('https://chacara.exemplo.com.br/');
@@ -177,7 +157,22 @@ describe('renderLanding', () => {
 
     expect(complaints).toEqual([]);
 
+    // Hidratado, o carrossel ganha as cópias que dão a volta, sem divergência.
+    expect(container.querySelectorAll('[aria-roledescription="foto"]')).toHaveLength(6);
+
     container.remove();
+  });
+
+  /*
+   * As cópias do carrossel sem fim só existem no navegador: sem JavaScript, não
+   * haveria quem pulasse de uma cópia para a outra, e o HTML repetiria cada área
+   * três vezes para quem lê sem executar nada.
+   */
+  it('entrega o carrossel com uma cópia só das fotos', () => {
+    const page = renderLanding({ ...SEED, siteUrl: SITE_URL });
+
+    expect(page.html.match(/aria-roledescription="foto"/g)).toHaveLength(2);
+    expect(page.html).not.toMatch(/\sinert[\s=>]/);
   });
 
   /*

@@ -102,7 +102,7 @@ O sistema tem \*\*dois ambientes no mesmo SPA React\*\*:
 
 2\. Escolhe o dia (ou intervalo de dias) e o número de convidados. (O tipo de evento também era perguntado aqui; saiu em outubro de 2026, a pedido do dono, ver o registro na seção 8.)
 
-3\. Escolhe itens "pegue e monte", filtrando por estilo/tema. Combos aplicam desconto automaticamente.
+3\. Escolhe itens "pegue e monte", filtrando por estilo/tema. Combos aplicam desconto automaticamente. (Desde novembro de 2026, a pedido do dono: escolhe uma decoração completa, que sai pelo preço com a chácara, e os estilos e os combos saíram. Quem aluga só a decoração escolhe entre retirar na chácara e receber no endereço. Ver 9.12 e 13.2.)
 
 4\. Vê o resumo com o preço calculado pelo servidor.
 
@@ -140,11 +140,17 @@ O sistema tem \*\*dois ambientes no mesmo SPA React\*\*:
 
 | Diária | `daily` | Valor de um dia de uso da chácara; varia por regra de preço |
 
-| Item | `Item` | Peça de decoração/mobiliário do pegue e monte, com estoque |
+| Item | `Item` | Peça de decoração/mobiliário do pegue e monte, com estoque. Desde novembro de 2026, cada item é uma \*\*decoração completa\*\*, e é assim que o site o chama; o pedido leva uma só (9.12) |
 
-| Combo | `Combo` | Conjunto de itens com desconto quando levados juntos |
+| Preço com a chácara | `venuePriceCents` | Preço da decoração quando a reserva é da chácara. Nunca acima do preço avulso (`priceCents`), que vale para a reserva só de decoração (9.12) |
 
-| Estilo (tema) | `Theme` | Linha estética da festa (Rústico Boho, Nuvens, Tropical...). Agrupa itens e combos |
+| Retirada, entrega | `fulfillment` (`PICKUP`, `DELIVERY`) | Como a decoração da reserva só de decoração chega à festa. A taxa de entrega é combinada com a chácara e não entra no total (9.12) |
+
+| Endereço de entrega | `User.address`, `Booking.deliveryAddress` | O endereço do perfil do cliente. A reserva com entrega guarda uma cópia dele (9.12) |
+
+| Combo | `Combo` | Conjunto de itens com desconto quando levados juntos. Saiu do site em novembro de 2026: o orçamento não aplica mais combo, e o painel guarda os cadastrados (9.6) |
+
+| Estilo (tema) | `Theme` | Linha estética da festa (Rústico Boho, Nuvens, Tropical...). Agrupa itens e combos. Saiu do site em novembro de 2026: a landing e o wizard não filtram mais por estilo, e o painel continua cadastrando |
 
 | Tipo de evento | — | Removido em outubro de 2026 (seção 8): a reserva não guarda mais o tipo de festa. Não use o termo no código novo |
 
@@ -585,6 +591,8 @@ Fonte: `apps/api/prisma/schema.prisma`. Regras gerais: dinheiro em `Int` (centav
 > \*\*Registro (outubro de 2026): sem tipo de evento.\*\* A pedido do dono, a pergunta "Que festa é?" saiu do wizard e o conceito saiu do sistema inteiro: `Booking.eventType` e o enum `EventType` foram removidos pela migration `20261026225848_drop_event_type` (o tipo das reservas já gravadas se perdeu junto), e com eles `eventTypeSchema`, `EVENT_TYPE_LABELS` e a sugestão de estilo por tipo de evento (15.1). O corpo de `POST /bookings` e da reserva manual não tem mais o campo, e as telas que diziam "Chá de bebê para 40 pessoas" dizem "Chácara para 40 pessoas". Em produção, a API com a migration sobe antes do site: a API antiga exige o campo e recusaria os pedidos do site novo. Os blocos abaixo ainda mostram o campo, como registro da especificação original.
 
 > \*\*Registro (novembro de 2026): plano de pagamento.\*\* A pedido do dono, o painel passou a anotar o sinal e as parcelas de cada reserva. A migration `20261102002222_payment_plan` criou o enum `PaymentKind` (`DEPOSIT` | `INSTALLMENT`) e a tabela `Payment` (`bookingId`, `kind`, `number`, `dueDate`, `amountCents`, `paidOn`; as duas datas em `@db.Date`), com único em (`bookingId`, `number`), índice em `dueDate`, `onDelete: Cascade` a partir da reserva e três CHECKs manuais: valor maior que zero, número de 0 a 12, e o número 0 só para o sinal. A reserva não mudou: o plano divide o total dela no tempo. As regras estão na 9.11. Em produção, a API com a migration sobe antes do site, que chama as rotas novas.
+
+> \*\*Registro (novembro de 2026): decoração completa, preço com a chácara, retirada ou entrega.\*\* A pedido da dona, cada item virou uma decoração completa, com dois preços, e os combos e os estilos saíram do site. A migration `20261102212329_decoration_delivery` acrescentou `Item.venuePriceCents` (obrigatório, preenchido com o `priceCents` de cada item, ou seja, sem promoção até a dona mudar), o enum `FulfillmentMethod` (`PICKUP` ou `DELIVERY`), `Booking.fulfillment`, `Booking.deliveryAddress` (JSON, a cópia do endereço) e `User.address` (JSON, um endereço por conta), com três CHECKs manuais: `item_venue_price_range` (de zero ao preço avulso), `booking_fulfillment_by_kind` (modalidade só na decoração, e obrigatória nela) e `booking_delivery_address` (endereço copiado se e só se for entrega). As reservas de decoração já gravadas ficaram como retirada, que era o único jeito que existia. As regras estão na 9.12. Em produção, a API com a migration sobe antes do site: o site novo chama `GET /items/availability` e grava o endereço pelo `PATCH /me`, que a API antiga não conhece.
 
 
 
@@ -1220,6 +1228,8 @@ O pedido só é aceito se `quantity <= disponível(dia)` \*\*em todos os dias\*\
 
 \*\*Concorrência:\*\* a criação da reserva roda em \*\*uma transação\*\* que (1) trava as linhas de `Item` envolvidas em ordem de id (`SELECT id FROM "Item" WHERE id = ANY($1) ORDER BY id FOR UPDATE`), (2) confere estoque, (3) insere a reserva (a constraint 8.1 protege as datas). Ordenar por id evita deadlock entre duas reservas simultâneas.
 
+> \*\*Desde novembro de 2026\*\* o wizard mostra o estoque livre antes do envio. `GET /items/availability?from=&to=` devolve, para cada decoração ativa, o `freeStock` do pior dia do período, com a mesma conta desta seção e zero onde a decoração está fechada (9.10). `GET /availability?itemId=` usa a mesma conta para a agenda de uma decoração (9.12). As duas são só informação: quem decide no envio continua sendo a transação.
+
 
 
 \### 9.4 Preço da diária
@@ -1260,9 +1270,15 @@ total      = dailyTotal + itemsTotal - discount
 
 \*\*Pedido de itens é por reserva\*\* (não por dia): o cliente paga o item uma vez pelo período. (Ver decisão em aberto 23.)
 
+> \*\*Desde novembro de 2026\*\* o preço do item depende do produto da reserva: na chácara (`VENUE`) vale `item.venuePriceCents`, o preço com a chácara, e na decoração sozinha (`DECORATION`), `item.priceCents`, o avulso. O orçamento não aplica combo (9.6), então sai com `combos: []` e `discountTotalCents: 0`, e `total = dailyTotal + itemsTotal`. O `unitPriceCents` do snapshot guarda o preço que valeu.
+
 
 
 \### 9.6 Algoritmo de combos
+
+
+
+> \*\*Fora de uso desde novembro de 2026.\*\* A pedido da dona, o preço com a chácara (9.12) tomou o lugar dos combos, e o pedido do site leva uma decoração só. O orçamento chama o cálculo com a lista de combos vazia, e nada é descontado. O `applyCombos`, os testes dele, a prévia e o CRUD do painel ficaram, para o caso de os combos voltarem. As reservas antigas guardam os combos que tinham (`appliedCombos`), e o detalhe da reserva continua mostrando. O texto abaixo descreve o algoritmo como ele é.
 
 
 
@@ -1462,6 +1478,8 @@ O calendário do painel mostra a agenda da chácara e, por cima, as decorações
 
 Decisões da dona: o bloqueio de data é só da chácara; a antecedência mínima é a mesma; a decoração é de um dia de uso; não há convidados.
 
+> \*\*Desde novembro de 2026\*\* o pedido do site leva uma decoração só, os combos não se aplicam mais, cada produto tem o seu preço de decoração e a decoração sozinha escolhe entre retirada e entrega (9.12).
+
 
 
 \### 9.11 Plano de pagamento e financeiro (novembro de 2026)
@@ -1503,6 +1521,50 @@ O cliente paga por fora (Pix, dinheiro, transferência) e o dono anota no painel
 
 
 \*\*O financeiro do mês conta pelo vencimento\*\*, não pelo dia em que o dinheiro entrou: a parcela de dezembro recebida em novembro entra em dezembro. A parcela em aberto de reserva cancelada não entra em nada; a recebida continua contando, porque o dinheiro entrou. "Em atraso" junta todos os meses. "Sem pagamento registrado" lista as reservas `CONFIRMED` ou `COMPLETED` que começam no mês, com total maior que zero e sem nenhuma linha: é o que o dono ainda não anotou, inclusive o pagamento à vista, que não vira plano sozinho ao confirmar.
+
+
+
+\### 9.12 Decoração completa, preço com a chácara, retirada ou entrega (novembro de 2026)
+
+
+
+A pedido da dona, cada item do catálogo passou a ser uma decoração completa, e o pedido do site leva \*\*uma\*\*, uma vez (`hasOneDecorationAtMost`, em `packages/shared`, com a mensagem `ONE_DECORATION_ERROR`). Os estilos e os combos saíram do site. No lugar dos combos, cada decoração tem dois preços.
+
+
+
+| Regra | Chácara (`VENUE`) | Só decoração (`DECORATION`) |
+
+|---|---|---|
+
+| Decoração no pedido | Opcional, no máximo uma | Obrigatória, exatamente uma |
+
+| Preço da decoração | `venuePriceCents`, o preço com a chácara | `priceCents`, o avulso |
+
+| Como chega à festa | Já está na chácara (`fulfillment` nulo) | `PICKUP` (retirada na chácara) ou `DELIVERY` (entrega no endereço), obrigatório no pedido do cliente |
+
+| Endereço | Não se aplica | Na entrega, o do perfil, copiado em `Booking.deliveryAddress` |
+
+| Taxa de entrega | Não se aplica | Combinada com a chácara, fora do total. A revisão, a confirmação, o detalhe e os e-mails dizem isso |
+
+
+
+\*\*O preço com a chácara\*\* nunca passa do avulso (`VENUE_PRICE_ABOVE_PRICE_ERROR` na API, CHECK `item_venue_price_range` no banco). Igual ao avulso é "sem promoção", e aí a landing e o wizard mostram um preço só.
+
+
+
+\*\*O endereço\*\* é um por conta, em `User.address`, no formato do `addressInputSchema` (`packages/shared`): CEP com exatamente 8 números, rua, número, complemento opcional, bairro, cidade e UF (uma das 27). O cliente cadastra em "Meu perfil" (13.3) ou no próprio pedido, num diálogo (`AddressDialog`). Com os 8 números do CEP, o diálogo busca rua, bairro, cidade e UF no ViaCEP, direto do navegador (`lib/cep.ts`) e sem passar pela API; tudo continua editável, e quem valida é a API. Na entrega, a criação da reserva copia o endereço do perfil; sem endereço salvo, responde `VALIDATION_ERROR` no campo `fulfillment`. Mudar o endereço depois não muda a reserva. `DELETE /me` apaga o endereço do perfil, e a cópia que a reserva guardou fica com ela, como o resto do histórico (10.8).
+
+
+
+\*\*A agenda de uma decoração.\*\* `GET /availability?itemId=` devolve a agenda do produto com a decoração por cima: o dia em que todo o estoque dela já saiu, por reserva de qualquer produto, fica `booked`, e o dia em que a decoração está fechada fica `blocked`. Decoração inativa ou desconhecida responde 404. É o calendário de quem chega pela decoração da landing. `GET /items/availability?from=&to=` dá o estoque livre de todas no período (9.3), e é com ele que o passo da decoração mostra a que está "Em uso nessa data".
+
+
+
+\*\*Reserva manual (9.8).\*\* O painel não pergunta a modalidade: decoração lançada sem `fulfillment` fica como retirada. O painel continua aceitando mais de uma decoração na mesma reserva.
+
+
+
+Decisões da dona: a taxa de entrega é combinada, não calculada pelo site; um endereço por conta; a troca de e-mail com código de confirmação fica para depois (seção 22).
 
 
 
@@ -1600,6 +1662,8 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 
 `POST /auth/forgot-password` cria `AuthToken` `PASSWORD\_RESET` (validade 1 h, uso único). `POST /auth/reset-password { token, password }` troca a senha, marca o token usado e \*\*revoga todos os refresh tokens\*\* do usuário.
 
+\*\*Troca de senha logado\*\* (novembro de 2026, em "Meu perfil"). `POST /auth/change-password { currentPassword, newPassword }` exige sessão e a senha atual, recusa a nova igual à atual, troca o hash, \*\*revoga todos os refresh tokens\*\* e devolve uma sessão nova (access token e cookie), para este aparelho continuar conectado e os outros caírem. Senha atual errada responde `400 VALIDATION\_ERROR` no campo `currentPassword`, e não `401`: o `401` dispararia o refresh e a repetição do `client.ts` (10.4), e um erro de digitação derrubaria a sessão. Conta só com Google (`hasPassword: false` na sessão) não tem senha para trocar, e o perfil não oferece. Limite: 5 por minuto por usuário. A troca de e-mail com código de confirmação fica para depois (seção 22): até lá, o e-mail aparece no perfil só para leitura.
+
 
 
 \### 10.6 Autorização
@@ -1622,9 +1686,9 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 
 |---|---|
 
-| Rate limit | `login`: 5/min por IP + e-mail. `register`: 5/h por IP. `resend-verification` e `forgot-password`: 3/h por e-mail. Global: 100/min por IP |
+| Rate limit | `login`: 5/min por IP + e-mail. `register`: 5/h por IP. `resend-verification` e `forgot-password`: 3/h por e-mail. `change-password`: 5/min por usuário. Global: 100/min por IP |
 
-| Helmet | Ativo. CSP restritiva no front (`index.html`/Vercel headers) permitindo só Google Identity e fontes usadas. Desde o mapa do "Como chegar" (13.1), `frame-src` também precisa de `https://www.google.com`, de onde vem a ficha incorporada (`/maps/embed`). O `https://maps.google.com` da busca por endereço deixou de ser usado em novembro de 2026 |
+| Helmet | Ativo. CSP restritiva no front (`index.html`/Vercel headers) permitindo só Google Identity e fontes usadas. Desde o mapa do "Como chegar" (13.1), `frame-src` também precisa de `https://www.google.com`, de onde vem a ficha incorporada (`/maps/embed`). O `https://maps.google.com` da busca por endereço deixou de ser usado em novembro de 2026. Desde a busca do CEP (9.12), `connect-src` também precisa de `https://viacep.com.br`, que o navegador chama direto |
 
 | CORS | Só em dev. Em produção, sem CORS (proxy same-origin) |
 
@@ -1644,11 +1708,11 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 
 
 
-\- Coletar o mínimo: nome, e-mail, telefone.
+\- Coletar o mínimo: nome, e-mail, telefone. O endereço só entra para a entrega da decoração, e só se o cliente cadastrar (9.12).
 
-\- Checkbox de aceite dos Termos e da Política de Privacidade no cadastro (`termsAcceptedAt`). As páginas estáticas ficam em `/termos` e `/privacidade`.
+\- Checkbox de aceite dos Termos e da Política de Privacidade no cadastro (`termsAcceptedAt`). As páginas estáticas ficam em `/termos` e `/privacidade`. (Em novembro de 2026 os links saíram do rodapé, a pedido do dono, e as duas páginas continuam no ar, ligadas pelo aceite do cadastro. A política diz que o endereço é guardado para a entrega e que o CEP vai do navegador ao ViaCEP.)
 
-\- `DELETE /me` (fase 6): anonimiza o usuário (nome, e-mail, telefone) e mantém as reservas para fins fiscais e históricos.
+\- `DELETE /me` (fase 6): anonimiza o usuário (nome, e-mail, telefone e, desde novembro de 2026, o endereço) e mantém as reservas para fins fiscais e históricos, inclusive a cópia do endereço que uma reserva com entrega guardou.
 
 \- Dados de reserva só aparecem para o dono e para o admin.
 
@@ -1752,13 +1816,15 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 
 | GET | `/public/venue` | Nome, capacidade, horários, WhatsApp, endereço, regras, limites de dias |
 
-| GET | `/availability?from=\&to=` | Estado de cada dia: `free` \\| `booked` \\| `blocked` \\| `past` |
+| GET | `/availability?from=\&to=` | Estado de cada dia: `free` \\| `booked` \\| `blocked` \\| `past`. `kind=` escolhe a agenda (9.10), e `itemId=` pede a de uma decoração (9.12) |
 
-| GET | `/themes` | Temas ativos (com paleta) |
+| GET | `/themes` | Temas ativos (com paleta). Sem uso no site desde novembro de 2026 |
 
-| GET | `/items?themeId=\&categoryId=` | Itens ativos (com temas e categoria) |
+| GET | `/items?themeId=\&categoryId=` | Itens ativos (com temas, categoria e os dois preços) |
 
-| GET | `/combos?themeId=` | Combos ativos com seus itens |
+| GET | `/items/availability?from=\&to=` | Estoque livre de cada decoração ativa no período, pelo pior dia (9.3). Novembro de 2026 |
+
+| GET | `/combos?themeId=` | Combos ativos com seus itens. Sem uso no site desde novembro de 2026 |
 
 | GET | `/gallery?kind=` | Imagens ativas, ordenadas |
 
@@ -1780,6 +1846,8 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 
 | POST | `/auth/forgot-password`, `/auth/reset-password` |
 
+| POST | `/auth/change-password` (autenticado, 10.5) |
+
 
 
 \*\*Cliente (autenticado)\*\*
@@ -1790,9 +1858,9 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 
 |---|---|---|
 
-| GET | `/me` | Perfil |
+| GET | `/me` | Perfil (com `address` e `hasPassword` desde novembro de 2026) |
 
-| PATCH | `/me` | Nome e telefone |
+| PATCH | `/me` | Nome, telefone e endereço (`address`, ou `null` para apagar) |
 
 | POST | `/bookings` | Cria o pedido de reserva |
 
@@ -1818,7 +1886,7 @@ Isso evita redirect OAuth no backend e mantém tudo em uma rota. Se no futuro en
 
 | Pagamentos (9.11) | `GET`, `PUT` (troca o plano inteiro) e `DELETE /admin/bookings/:id/payments`, `PATCH /admin/payments/:id` (`{ paidOn }` registra ou desfaz o recebimento), `GET /admin/finance?month=YYYY-MM` (vencimentos do mês, atrasados de todos os meses, reservas sem pagamento) |
 
-| Itens | CRUD `/admin/items` (incl. `themeIds`), CRUD `/admin/categories` |
+| Itens | CRUD `/admin/items` (incl. `themeIds` e, desde novembro de 2026, `venuePriceCents`), CRUD `/admin/categories` |
 
 | Combos | CRUD `/admin/combos` |
 
@@ -1962,6 +2030,32 @@ Nunca inclui nome, e-mail ou detalhe de quem reservou. Cache curto (`Cache-Contr
 
 Resposta `201` com a reserva completa (status `PENDING`, `holdExpiresAt`, snapshot financeiro). Exige e-mail verificado e telefone no perfil. (Desde outubro de 2026 o corpo não tem `eventType`, ver seção 8; o exemplo acima ficou como registro.)
 
+Desde novembro de 2026 (9.12), `items` leva no máximo uma decoração, com `quantity: 1`, e o corpo tem `fulfillment`: `PICKUP` ou `DELIVERY` na decoração sozinha, obrigatório, e `null` na chácara. A entrega exige endereço no perfil. A resposta traz `fulfillment` e `deliveryAddress`, a cópia do endereço.
+
+```json
+
+{
+
+&#x20; "kind": "DECORATION",
+
+&#x20; "startDate": "2026-12-05",
+
+&#x20; "endDate": "2026-12-05",
+
+&#x20; "guestCount": null,
+
+&#x20; "items": \[{ "itemId": "…", "quantity": 1 }],
+
+&#x20; "fulfillment": "DELIVERY",
+
+&#x20; "customerNotes": null,
+
+&#x20; "expectedTotalCents": 40000
+
+}
+
+```
+
 
 
 \*\*`PATCH /admin/bookings/:id/status`\*\*
@@ -2008,7 +2102,7 @@ Resposta `201` com a reserva completa (status `PENDING`, `holdExpiresAt`, snapsh
 
 /redefinir-senha         Define a nova senha (token na query)
 
-/minhas-reservas         Lista do cliente          \[CLIENT]
+/minhas-reservas         Lista do cliente          \[CLIENT]   (?aba=perfil abre "Meu perfil")
 
 /reservas/:id            Detalhe da reserva        \[CLIENT]
 
@@ -2040,7 +2134,7 @@ Resposta `201` com a reserva completa (status `PENDING`, `holdExpiresAt`, snapsh
 
 \- A landing e o wizard \*\*não exigem login\*\* até o passo final. O rascunho da reserva persiste em `sessionStorage` (sempre com `try/catch`, seção 12.4) para sobreviver ao desvio por login/cadastro.
 
-\- \*\*O rascunho não é carrinho\*\* (outubro de 2026, a pedido do dono). Só o pedido que \*\*chegou à revisão\*\* vai para o `sessionStorage`, e fica lá até ser enviado, mesmo que a pessoa volte um passo para ajustar. Antes da revisão ele vive só na tela, e sair dela o esquece. Cada escolha vinda da landing (`?item=`, `?estilo=`, `?data=`) começa um pedido novo e descarta o guardado; sem escolha na URL (botão do hero, "Reservar" do cabeçalho, volta do login), o pedido guardado continua de onde parou. Antes, o item da vitrine somava com o que tinha sobrado da visita anterior.
+\- \*\*O rascunho não é carrinho\*\* (outubro de 2026, a pedido do dono). Só o pedido que \*\*chegou à revisão\*\* vai para o `sessionStorage`, e fica lá até ser enviado, mesmo que a pessoa volte um passo para ajustar. Antes da revisão ele vive só na tela, e sair dela o esquece. Cada escolha vinda da landing (`?item=`, `?data=`) começa um pedido novo e descarta o guardado; sem escolha na URL (botão do hero, "Reservar" do cabeçalho, volta do login), o pedido guardado continua de onde parou. Antes, o item da vitrine somava com o que tinha sobrado da visita anterior. (O `?estilo=` saiu com os estilos, em novembro de 2026: o wizard o tira da URL sem efeito.)
 
 \- \*\*Página nova começa do topo\*\* (`app/ScrollToTop.tsx`). Voltar e avançar do navegador ficam com o navegador, e mudança só na query não conta; a troca de passo do wizard rola para o topo por conta própria.
 
@@ -2064,7 +2158,7 @@ Resposta `201` com a reserva completa (status `PENDING`, `holdExpiresAt`, snapsh
 
 
 
-Chaves do Query: arrays hierárquicos (`\['items', { themeId }]`, `\['bookings', 'me']`, `\['admin', 'bookings', filters]`). Mutations invalidam a chave do recurso e nada além.
+Chaves do Query: arrays hierárquicos (`\['items', { categoryId }]`, `\['bookings', 'me']`, `\['admin', 'bookings', filters]`). Mutations invalidam a chave do recurso e nada além. O estoque livre das decorações mora em `\['availability', 'items', range]`, debaixo da agenda: enviar ou cancelar uma reserva já invalida `\['availability']`, e os dois mudam juntos.
 
 
 
@@ -2116,19 +2210,19 @@ Objetivo: fazer a pessoa \*\*sentir a festa na chácara\*\* e chegar às datas e
 
 
 
-1\. \*\*Hero.\*\* Foto grande da chácara em uso (hora dourada, uma festa montada) ocupando a primeira tela, com o nome, uma frase curta e um botão só, "Reservar uma data", que abre o calendário do wizard. Texto centralizado sobre a foto, com entrada em fade na carga (14.8). Mudou em outubro de 2026, a pedido do dono: era o "Hero com verificação de datas", com a foto na moldura em arco e um seletor "Quando é a festa?" com as próximas datas livres. Desde então a landing não consulta a disponibilidade, e o wizard continua aceitando `?data=` para links antigos. Com o "Reservar" do cabeçalho virando link (ver o cabeçalho, logo abaixo da lista), o botão do hero é o único dourado da primeira tela, como a 14.2 pede.
+1\. \*\*Hero.\*\* Foto grande da chácara em uso (hora dourada, uma festa montada) ocupando a primeira tela, com o nome, uma frase curta e um botão só, "Reservar uma data", que abre o calendário do wizard. Texto centralizado sobre a foto, com entrada em fade na carga (14.8). Mudou em outubro de 2026, a pedido do dono: era o "Hero com verificação de datas", com a foto na moldura em arco e um seletor "Quando é a festa?" com as próximas datas livres. Desde então a landing não consulta a disponibilidade, e o wizard continua aceitando `?data=` para links antigos. Com o "Reservar" do cabeçalho virando link (ver o cabeçalho, logo abaixo da lista), o botão do hero é o único dourado da primeira tela, como a 14.2 pede. Em novembro de 2026, a pedido do dono, o rótulo do botão passou a usar a letra do texto corrido no celular e não quebra linha; a letra maior fica para o desktop.
 
-2\. \*\*A chácara.\*\* Tour por áreas (salão/área coberta, área verde, cozinha, banheiros, estacionamento etc., com o que existir de verdade): foto + duas linhas cada. Capacidade, horários e endereço em bloco de fatos, sem cara de planilha.
+2\. \*\*A chácara.\*\* Tour por áreas (salão/área coberta, área verde, cozinha, banheiros, estacionamento etc., com o que existir de verdade): foto + duas linhas cada. Capacidade, horários e endereço em bloco de fatos, sem cara de planilha. (Em novembro de 2026, a pedido do dono: os valores do bloco de fatos usam todos a letra de leitura do endereço, e as áreas viraram um carrossel, `VenueCarousel.tsx`. É rolagem nativa com encaixe no centro, sem biblioteca: a foto da vez inteira, as vizinhas menores nas bordas, setas, pontos e, no desktop, o contador. Também a pedido do dono, o carrossel é infinito, da última foto volta para a primeira, e passa sozinho a cada 2 segundos, com botão de pausar e as regras da exceção registrada na 14.8.)
 
 3\. \*\*Galeria\*\* (removida em outubro de 2026, a pedido do dono). Era o mosaico "Festas que já aconteceram aqui", com fotos reais de festas já realizadas e visualização ampliada com navegação por teclado. A seção saiu da landing, e o painel deixou de oferecer a seção "Eventos" da galeria. O tipo `EVENTS` continua no banco, sem uso: a landing ignora foto dele.
 
 4\. \*\*Pegue e monte, como funciona.\*\* Aqui a numeração é legítima, porque é uma sequência real: escolher os itens, retirar, montar e devolver. Três passos curtos. (Desde outubro de 2026 o texto é o do dono: escolher, montar e devolver, sem o passo de retirar e sem a frase de abertura.)
 
-5\. \*\*Estilos.\*\* Os temas da seção 15 em cartões de arco com paleta e uma foto de kit montado. Clicar leva ao wizard com o filtro de tema aplicado.
+5\. \*\*Estilos\*\* (removida em novembro de 2026, a pedido do dono). Eram os temas da seção 15 em cartões de arco com paleta e uma foto de kit montado, e o clique levava ao wizard com o filtro de tema aplicado. Cada decoração passou a ser completa (9.12), e o site deixou de filtrar por estilo. Os temas continuam no banco e no painel.
 
-5\.1 \*\*Decoração pegue e monte\*\* (acrescentada em outubro de 2026, a pedido do dono; na página, o título é "Decorações", sem frase de abertura). Os itens ativos com estoque, com foto, nome e preço de tabela, filtráveis por categoria; aparece mesmo sem estilo cadastrado. Mostra oito e revela o resto sob pedido. Clicar leva ao wizard com o item já no pedido (`?item=`) e, também a pedido do dono, com "Só a decoração" já escolhido no primeiro passo; a chácara continua a um toque no seletor, e trocar não tira o item do pedido.
+5\.1 \*\*Decoração pegue e monte\*\* (acrescentada em outubro de 2026, a pedido do dono; na página, o título é "Decorações", sem frase de abertura). Os itens ativos com estoque, com foto, nome e preço de tabela, filtráveis por categoria; aparece mesmo sem estilo cadastrado. Mostra oito e revela o resto sob pedido. Clicar leva ao wizard com o item já no pedido (`?item=`) e, também a pedido do dono, com "Só a decoração" já escolhido no primeiro passo; a chácara continua a um toque no seletor, e trocar não tira o item do pedido. Desde novembro de 2026, a pedido do dono: o cartão mostra o preço avulso e, quando é menor, a segunda linha "R$ … com a chácara" (9.12); e o clique abre o pedido só de decoração \*\*sem\*\* o passo do tipo, direto no calendário, que só oferece os dias em que aquela decoração está livre (13.2).
 
-6\. \*\*Combos.\*\* Os combos ativos mais vantajosos, com quanto o cliente economiza.
+6\. \*\*Combos\*\* (removida em novembro de 2026, a pedido do dono). Eram os combos ativos mais vantajosos, com quanto o cliente economizava. O preço com a chácara tomou o lugar deles (9.6, 9.12).
 
 7\. \*\*Depoimentos.\*\* Reais, com nome e tipo de evento. Sem depoimento inventado.
 
@@ -2136,7 +2230,7 @@ Objetivo: fazer a pessoa \*\*sentir a festa na chácara\*\* e chegar às datas e
 
 9\. \*\*Como chegar.\*\* Endereço, mapa (link para o Maps, sem embed pesado por padrão) e botão de WhatsApp. (Desde outubro de 2026, a pedido do dono, a seção também embute o mapa do Google, sem chave de API e com `loading="lazy"`; as ações têm ícone. A política de privacidade avisa que o mapa conecta o navegador ao Google. Em novembro de 2026 o mapa passou a ser a ficha da Donna Belle no Google, incorporada com endereço fixo em `DirectionsSection.tsx`, em vez da busca pelo endereço cadastrado; com isso saíram o link "Abrir no mapa" da landing e o campo "Link do mapa" das configurações. O `mapsUrl` continua no banco e na API, sem uso na tela.)
 
-10\. \*\*Rodapé.\*\* Contato, redes, termos e privacidade. (O Instagram da marca, `@donnabelle.decor`, está fixo no `PublicLayout`: `VenueSettings` não tem campo de rede social.)
+10\. \*\*Rodapé.\*\* Contato, redes, termos e privacidade. (O Instagram da marca, `@donnabelle.decor`, está fixo no `PublicLayout`: `VenueSettings` não tem campo de rede social. Em novembro de 2026, a pedido do dono, saíram do rodapé os links dos termos e da privacidade e o "Você entrou como". As duas páginas continuam no ar, ligadas pelo aceite do cadastro, 10.8.)
 
 
 
@@ -2147,6 +2241,7 @@ Cabeçalho fixo e discreto: logo, "Reservar" (botão principal), "Entrar"/"Minha
 > - \*\*No desktop\*\* (a partir de 760 px), as ações são links alinhados, cada um com o seu ícone: "Reservar", "Minhas reservas" (por extenso) e "Sair" para quem entrou, ou "Entrar" para quem não entrou. O "Reservar" deixou de ser botão dourado.
 > - \*\*No celular\*\*, as mesmas ações ficam num menu lateral (`app/layout/SiteMenu.tsx`), aberto pelo botão "Menu". O menu é um `<dialog>` modal, com as regras de gaveta da 14.11: prende o foco, fecha com Escape, pelo fundo ou ao escolher uma opção, e devolve o foco ao botão.
 > - O "Reservar" do celular ficou a um toque, dentro do menu; o caminho imediato na landing é o botão do hero.
+> - Desde novembro de 2026, quem entrou como `ADMIN` vê também "Painel admin" (para `/admin`), no cabeçalho e no menu lateral. O cliente não vê o atalho; quem protege o painel continua sendo o `RequireRole` e a API (10.6).
 
 
 
@@ -2154,7 +2249,25 @@ Cabeçalho fixo e discreto: logo, "Reservar" (botão principal), "Entrar"/"Minha
 
 
 
-Passo na URL (`?step=datas|itens|revisao`) para o botão voltar do navegador funcionar. Barra de progresso simples e o total parcial sempre visível (rodapé fixo no celular).
+Passo na URL (`?step=tipo|data|convidados|decoracao|revisao`) para o botão voltar do navegador funcionar. Barra de progresso simples com os passos do pedido e rodapé fixo com "Voltar" e "Continuar". O total aparece só na revisão, e é o do orçamento.
+
+> \*\*Registro (novembro de 2026).\*\* A pedido do dono, o wizard virou uma pergunta por passo. Eram três passos (`datas`, `itens`, `revisao`): o tipo, as datas e os convidados juntos no primeiro; os itens com filtro por estilo, quantidade e aba de combos no segundo; e a estimativa dos itens no rodapé. Os estilos, os combos, a quantidade e a estimativa saíram. Os links antigos `?step=datas` e `?step=itens` caem em `data` e `decoracao`.
+
+
+
+Os passos dependem do pedido (`stepsFor`, em `features/booking/steps.ts`):
+
+
+
+| Pedido | Passos |
+
+|---|---|
+
+| Chácara | tipo, data, convidados, decoração, revisão |
+
+| Só a decoração | tipo, data, decoração, revisão |
+
+| Decoração vinda da landing (`?item=`) | data, decoração, revisão. Quem clicou numa decoração está alugando a decoração, e o tipo não é perguntado |
 
 
 
@@ -2162,15 +2275,19 @@ Passo na URL (`?step=datas|itens|revisao`) para o botão voltar do navegador fun
 
 |---|---|---|
 
-| \*\*1. Datas\*\* | Calendário de intervalo (`react-day-picker`) com dias `booked`/`blocked`/`past` desabilitados e legenda. Número de convidados. (Os cartões de tipo de evento saíram em outubro de 2026, ver seção 8.) | Respeita `minDays`/`maxDays`. Ao escolher um intervalo com dia indisponível no meio, explica qual dia atrapalha |
+| \*\*Tipo\*\* | "O que você quer reservar?": a chácara (escolhida de início) ou só a decoração, em cartões de rádio | Trocar para a decoração encolhe as datas para o primeiro dia e não apaga o resto |
 
-| \*\*2. Itens\*\* | Filtro por \*\*estilo\*\*, depois por categoria. Cartão do item com foto, preço, quantidade e "dica de montagem". Aba "Combos" com os kits do estilo escolhido | Item sem estoque nas datas escolhidas aparece esmaecido com o motivo. Ao completar um combo, aparece a linha de desconto |
+| \*\*Data\*\* | Calendário (`react-day-picker`): intervalo na chácara, um dia na decoração. Dias `booked`/`blocked`/`past` desabilitados e legenda. Num pedido de decoração com a decoração já escolhida, a agenda é a dela (`?itemId=`, 9.12). (Os cartões de tipo de evento saíram em outubro de 2026, ver seção 8.) | Respeita `minDays`/`maxDays`. Dia indisponível no meio do intervalo é explicado pelo nome, com a agenda exata do período escolhido. Os dois casos seguram o "Continuar" |
 
-| \*\*3. Revisão\*\* | Resumo: datas, diárias por dia, itens (com a foto de cada um), combos aplicados, total. Campo de observações. Regras da casa e política de cancelamento em texto curto | Chama `POST /pricing/quote` (com \*debounce\* de 300 ms) e mostra `issues` |
+| \*\*Convidados\*\* | Só na chácara. Número de convidados | O teto é o `maxGuests`: acima dele o aviso aparece na hora e o "Continuar" não anda |
 
-| \*\*Envio\*\* | Se não logado, mostra entrar/cadastrar/Google \*\*sem perder o rascunho\*\*. Botão \*\*"Solicitar reserva"\*\* | Envia `expectedTotalCents`. Trata `PRICE\_CHANGED`, `DATE\_UNAVAILABLE`, `STOCK\_INSUFFICIENT` (voltando ao passo certo com a mensagem) |
+| \*\*Decoração\*\* | Uma decoração, em cartões de rádio com foto, categoria, descrição, dica de montagem e preço, e filtro por categoria. Na chácara, "Sem decoração" é uma das opções e o preço é o com a chácara, com o avulso riscado quando é maior. Na decoração sozinha, a escolha é obrigatória e o preço é o avulso | A que já saiu para outra festa nessas datas aparece esmaecida, sem poder ser escolhida, com "Em uso nessa data" (`GET /items/availability`). A escolhida que ficou em uso segura o "Continuar". Decoração sem estoque nenhum não aparece. Com a decoração fechada no período, o passo explica isso em vez de mostrar o catálogo |
 
-| \*\*Confirmação\*\* | "Pedido enviado". Explica: as datas ficam seguras por até X horas, a chácara confirma por e-mail, e há um botão de WhatsApp para agilizar | Mostra `holdExpiresAt` em linguagem humana |
+| \*\*Revisão\*\* | Resumo: datas, convidados, diárias por dia, a decoração (com a foto e a etiqueta "preço com a chácara" quando vale) e o total. Na decoração sozinha, "Como a decoração chega à festa?": retirada na chácara ou entrega no endereço, sem escolha pronta. Campo de observações. Regras da casa e política de cancelamento em texto curto | Chama `POST /pricing/quote` (com \*debounce\* de 300 ms) e mostra `issues`. Na entrega, mostra o endereço do perfil com "Alterar endereço" e diz que a taxa é combinada com a chácara |
+
+| \*\*Envio\*\* | Se não logado, mostra entrar/cadastrar/Google \*\*sem perder o rascunho\*\*. Na entrega sem endereço salvo, o cadastro do endereço (diálogo com busca do CEP) fica no lugar do botão. Botão \*\*"Solicitar reserva"\*\* | Envia `expectedTotalCents` e `fulfillment`. Sem retirada nem entrega escolhida, não envia e diz o que falta. Trata `PRICE\_CHANGED`, `DATE\_UNAVAILABLE`, `STOCK\_INSUFFICIENT` (voltando ao passo certo com a mensagem) |
+
+| \*\*Confirmação\*\* | "Pedido enviado". Explica: as datas ficam seguras por até X horas, a chácara confirma por e-mail, e há um botão de WhatsApp para agilizar. Na decoração, diz como ela chega e, na entrega, o endereço e que a taxa é combinada | Mostra `holdExpiresAt` em linguagem humana |
 
 
 
@@ -2178,7 +2295,9 @@ Comportamentos obrigatórios:
 
 
 
-\- O servidor decide. O front nunca soma preço para exibir o total oficial: usa o `quote`. (Pode mostrar uma estimativa local enquanto carrega, marcada como "calculando".)
+\- Não dá para pular pergunta. O passo pedido na URL só abre com os anteriores respondidos (`reachableStep`, em `features/booking/draft.ts`), e o atalho da barra de progresso também: um link para a revisão com o pedido pela metade cai no primeiro passo que falta.
+
+\- O servidor decide. O front nunca soma preço para exibir o total oficial: usa o `quote`. (Desde novembro de 2026 não há estimativa antes da revisão.)
 
 \- Tratamento otimista \*\*proibido\*\* para reserva. Só confirma depois da resposta `201`.
 
@@ -2190,7 +2309,13 @@ Comportamentos obrigatórios:
 
 
 
-Lista por status (próximas, passadas, canceladas) com `StatusBadge`. Detalhe com datas, itens, combos aplicados, valores (snapshot), observações e o botão "Cancelar reserva" quando permitido, com explicação do prazo quando não. Reserva `PENDING` mostra contagem de quando as datas deixam de ficar seguras.
+Lista por status (próximas, passadas, canceladas) com `StatusBadge`. Detalhe com datas, itens, combos aplicados, valores (snapshot), observações e o botão "Cancelar reserva" quando permitido, com explicação do prazo quando não. Reserva `PENDING` mostra contagem de quando as datas deixam de ficar seguras. Na decoração, o detalhe diz como ela chega e, na entrega, o endereço copiado e que a taxa é combinada.
+
+\*\*Duas abas\*\* (novembro de 2026, a pedido do dono), seguindo o padrão de abas da WAI-ARIA, com a aba aberta na URL (`?aba=perfil`):
+
+\- \*\*Minhas reservas:\*\* a lista de sempre.
+
+\- \*\*Meu perfil:\*\* "Seus dados", com nome e WhatsApp para editar e o e-mail só para leitura, com o aviso de que a troca vai pedir um código (seção 22); "Endereço de entrega", com "Cadastrar endereço" ou "Alterar endereço" (o mesmo diálogo do pedido, 9.12); "Senha", com a troca da 10.5, ou o aviso de que a conta entra com o Google, sem senha; e, no fim, "Sua conta", com a remoção da 10.8.
 
 
 
@@ -2210,13 +2335,13 @@ Ambiente mais denso e funcional que o da landing, com a mesma identidade (tokens
 
 | \*\*Calendário\*\* | Grade mensal. Dias coloridos por status (ver StatusBadge). Clicar num dia abre gaveta com as reservas do dia, e ações "Bloquear dia"/"Desbloquear" (com motivo) |
 
-| \*\*Reservas\*\* | Tabela com busca (nome, e-mail, telefone), filtro de status e período. Detalhe: cliente (com botão de WhatsApp), datas, itens, totais, observações do cliente, \*\*notas internas\*\*, histórico de status e ações "Confirmar", "Cancelar" (motivo obrigatório). Logo depois dos valores, o cartão \*\*Pagamento\*\* (9.11): o sinal e as parcelas com a situação de cada um, o recebido e o que falta, "Registrar pagamento"/"Editar pagamento" (o editor do plano), "Registrar recebimento", "Desfazer" e "Excluir plano" (só sem recebimento) |
+| \*\*Reservas\*\* | Tabela com busca (nome, e-mail, telefone), filtro de status e período. Detalhe: cliente (com botão de WhatsApp), datas, itens, totais, observações do cliente, \*\*notas internas\*\*, histórico de status e ações "Confirmar", "Cancelar" (motivo obrigatório). Na decoração, o cartão "Como a decoração chega", com a retirada ou a entrega e, na entrega, o endereço copiado e o lembrete de combinar a taxa (9.12). Logo depois dos valores, o cartão \*\*Pagamento\*\* (9.11): o sinal e as parcelas com a situação de cada um, o recebido e o que falta, "Registrar pagamento"/"Editar pagamento" (o editor do plano), "Registrar recebimento", "Desfazer" e "Excluir plano" (só sem recebimento) |
 
 | \*\*Financeiro\*\* | Números do mês pelo vencimento (previsto, recebido, a receber) e o total em atraso de todos os meses. Grade mensal com os dias que têm sinal ou parcela, marcados por cor, ícone e texto (a receber, em atraso, recebido); tocar num dia filtra a lista de vencimentos logo abaixo. Cada vencimento tem "Registrar recebimento" (com o dia, hoje por padrão), "Desfazer", o link da reserva e "Cobrar pelo WhatsApp" com mensagem pronta. Depois vêm "Em atraso" e as reservas fechadas do mês sem pagamento registrado |
 
-| \*\*Reserva manual\*\* | Escolher/criar cliente (nome + telefone), datas, itens, opção de já confirmar. Mesmo cálculo de preço do cliente, com campo de \*\*ajuste manual de desconto\*\* opcional (fase 6) |
+| \*\*Reserva manual\*\* | Escolher/criar cliente (nome + telefone), datas, itens, opção de já confirmar. Mesmo cálculo de preço do cliente, com campo de \*\*ajuste manual de desconto\*\* opcional (fase 6). A decoração lançada aqui sai como retirada (9.12) |
 
-| \*\*Itens\*\* | Tabela com foto, categoria, temas, preço, estoque, ativo. Formulário com upload/URL da imagem, temas (multi-seleção), dica de montagem |
+| \*\*Itens\*\* | Tabela com foto, categoria, temas, preço, estoque, ativo. Formulário com upload/URL da imagem, temas (multi-seleção), dica de montagem. Desde novembro de 2026, dois preços, os dois obrigatórios: "Preço avulso" e "Preço com a chácara", que não pode passar do avulso (9.12) |
 
 | \*\*Combos\*\* | Selecionar itens e quantidades, tipo e valor do desconto, tema. \*\*Prévia da economia\*\* ("soma dos itens R$ X, o cliente paga R$ Y") |
 
@@ -2232,7 +2357,7 @@ Ambiente mais denso e funcional que o da landing, com a mesma identidade (tokens
 
 
 
-> \*\*Registro (outubro de 2026).\*\* Combos e Temas (no menu, "Estilos") saíram do menu do painel a pedido do dono. As telas e as rotas continuam funcionando em `/admin/combos` e `/admin/temas`, e o que está cadastrado continua valendo no site e no preço; só não há mais atalho para elas.
+> \*\*Registro (outubro de 2026).\*\* Combos e Temas (no menu, "Estilos") saíram do menu do painel a pedido do dono. As telas e as rotas continuam funcionando em `/admin/combos` e `/admin/temas`, e o que está cadastrado continua valendo no site e no preço; só não há mais atalho para elas. (Desde novembro de 2026, não vale mais: o site não filtra por estilo e o orçamento não aplica combo, 9.6 e 9.12. Os cadastros continuam no banco.)
 
 Toda ação destrutiva pede confirmação em diálogo com o resultado explicado ("Isso cancela a reserva e avisa o cliente por e-mail").
 
@@ -2559,6 +2684,8 @@ Wizard no celular:
 
 ```
 
+> \*\*Registro (novembro de 2026).\*\* O wizard de hoje tem um passo por pergunta (13.2): os convidados ganharam passo próprio, e a barra fixa só tem "Voltar" e "Continuar" até a revisão, que é onde o total aparece.
+
 
 
 \### 14.8 Movimento
@@ -2580,6 +2707,14 @@ Wizard no celular:
 > - Revelado, o bloco não some de novo.
 >
 > Não vale para o wizard, a área do cliente nem o painel.
+
+> \*\*Registro (novembro de 2026): segunda exceção pedida pelo dono.\*\* O carrossel das áreas da chácara (13.1, item 2; `features/landing/VenueCarousel.tsx`) é automático, contrariando a proibição acima: passa para a foto seguinte a cada 2 segundos e é infinito, da última volta para a primeira. A volta usa três cópias das fotos e, quando a faixa para numa cópia das pontas, pula sem animação para a mesma foto na cópia do meio. As cópias das pontas são `inert` e `aria-hidden`, e o HTML pré-renderizado tem uma cópia só. As garantias:
+>
+> - Um botão pausa e retoma ("Pausar as fotos", "Passar as fotos sozinhas"), e a escolha vale enquanto a página estiver aberta (WCAG 2.2.2).
+> - Só passa com o carrossel na tela. Sem `IntersectionObserver`, não passa.
+> - Para enquanto o ponteiro está em cima, o foco do teclado está dentro, o dedo está na faixa e até um segundo depois de a pessoa rolá-la.
+> - Com `prefers-reduced-motion: reduce`, não passa sozinho, e o botão de pausa nem aparece.
+> - O anúncio "Foto 2 de 5" ao leitor de tela fica desligado enquanto passa sozinho, para não falar a cada 2 segundos.
 
 \- Respeitar `prefers-reduced-motion: reduce` (desliga o momento do hero e reduz os demais a troca instantânea).
 
@@ -2680,6 +2815,8 @@ Um \*\*estilo\*\* é a linha estética de uma festa: paleta, materiais, motivos 
 \- `/reservar?tema=<slug>` abre o wizard já filtrado. Os cartões da landing usam esse link.
 
 \- \*\*Os 12 temas abaixo entram no seed.\*\* O admin pode editar, desativar e criar outros. Fotos e itens reais vêm do dono.
+
+> \*\*Registro (novembro de 2026).\*\* Os estilos saíram do site a pedido do dono: cada item virou uma decoração completa (9.12), a landing não tem mais a seção de estilos e o wizard não filtra por estilo nem aceita `?estilo=`. Os temas, as ligações com os itens e a tela do painel continuam, sem efeito no site. Esta seção fica como registro do catálogo.
 
 
 
@@ -3065,6 +3202,24 @@ Erro diz \*\*o que aconteceu e o que fazer\*\*, no tom da interface (sem pedir d
 
 | `INTERNAL` | Algo deu errado do nosso lado. Tente de novo em instantes. |
 
+Desde novembro de 2026 (9.12), com uma decoração por pedido, a falta de estoque vira "“Painel de nuvens” não está mais livre nessas datas. Volte à decoração e escolha outra, ou siga sem decoração." Mensagens do wizard que não são código da API, e sim da própria tela:
+
+| Situação | Mensagem |
+
+|---|---|
+
+| Convidados acima do `maxGuests` | São mais pessoas do que a chácara recebe. O máximo é 120. |
+
+| Decoração escolhida em uso nas datas | A decoração escolhida não está livre nessa data. Escolha outra ou siga sem decoração. |
+
+| Decoração sozinha sem decoração | Escolha a decoração da festa. |
+
+| Decoração sozinha sem retirada nem entrega | Escolha se você retira a decoração na chácara ou se ela vai até você. |
+
+| Cartão de decoração indisponível | Em uso nessa data |
+
+| Troca de senha com a senha atual errada | A senha atual não confere. |
+
 
 
 \### 16.5 Estados vazios e carregando
@@ -3077,7 +3232,7 @@ Estado vazio convida a agir e diz o próximo passo:
 
 \- Sem reservas: "Você ainda não tem reservas. Veja as datas livres e escolha o estilo da sua festa." + botão "Ver datas".
 
-\- Sem itens no filtro: "Nenhum item desse estilo está livre nessas datas. Tente outro estilo ou ajuste as datas."
+\- Sem itens no filtro: "Nenhum item desse estilo está livre nessas datas. Tente outro estilo ou ajuste as datas." (Sem estilos desde novembro de 2026: o passo da decoração mostra a que está em uso, desabilitada, e só fica vazio sem decoração nenhuma no catálogo, com "Nenhuma decoração para escolher" e o convite para falar pelo WhatsApp.)
 
 \- Admin sem pedidos: "Nenhum pedido aguardando confirmação."
 
@@ -3140,6 +3295,8 @@ Regras:
 \- Falha ao enviar e-mail \*\*não desfaz\*\* cadastro nem reserva: registra o erro no log e segue. Para a confirmação de e-mail, o usuário sempre pode pedir reenvio.
 
 \- No domínio de envio, configure SPF, DKIM e DMARC antes de ir para produção.
+
+\- Desde novembro de 2026 (9.12), os três e-mails da reserva de decoração (recebemos, novo pedido e confirmada) têm a linha de como ela chega: "Retirada na chácara" ou "Entrega em <endereço>. A taxa de entrega é combinada com a chácara.", e mandam combinar a retirada ou a entrega, conforme o caso.
 
 
 
@@ -3223,7 +3380,7 @@ O SPA renderiza no cliente, o que \*\*prejudica\*\* a busca por "chácara para f
 
 | Front | Vitest + Testing Library | Só o que tem lógica: reducer do wizard, mapeamento de erros, `readableOn`, formatadores |
 
-| E2E | Playwright | \*\*Um\*\* caminho feliz: landing → escolher datas e itens → cadastro/login → solicitar reserva → admin confirma |
+| E2E | Playwright | \*\*Um\*\* caminho feliz: landing → tipo, data, convidados e decoração → cadastro/login → solicitar reserva → admin confirma |
 
 
 
@@ -3270,6 +3427,28 @@ Casos do plano de pagamento (9.11) que \*\*precisam\*\* existir como teste (em `
 6\. Salvamentos simultâneos do mesmo plano terminam todos, e o último vence.
 
 7\. O financeiro conta o mês pelo vencimento e junta os atrasados de todos os meses.
+
+
+
+Casos da decoração completa, da retirada ou entrega e do perfil (9.12, 10.5) que \*\*precisam\*\* existir como teste (na API, em `booking-fulfillment`, `decoration-availability`, `profile-address` e `auth-change-password`; no site, em `features/booking` e `features/account`):
+
+
+
+1\. Na chácara, a decoração sai pelo preço com a chácara; na decoração sozinha, pelo avulso; e o orçamento não aplica combo.
+
+2\. O pedido do cliente com duas decorações, ou com quantidade 2, é recusado. O lançamento do painel não tem esse limite.
+
+3\. Decoração sem retirada nem entrega é recusada; na chácara, o que vier é ignorado.
+
+4\. Entrega sem endereço no perfil é recusada. Com endereço, a reserva guarda a cópia, e mudar o perfil depois não muda a reserva.
+
+5\. A agenda de uma decoração fica `booked` no dia em que todo o estoque dela já saiu, por reserva de qualquer produto, e `blocked` no dia em que a decoração está fechada.
+
+6\. O estoque livre do período é o do pior dia, e zero com a decoração fechada.
+
+7\. Na troca de senha, a senha atual errada responde 400 no campo `currentPassword`, e a troca certa derruba as outras sessões.
+
+8\. O wizard não deixa pular pergunta, trava os convidados no `maxGuests` e não deixa escolher a decoração em uso nas datas.
 
 
 
@@ -3349,7 +3528,7 @@ Se houver ambiente de homologação, ele espelha a produção com banco separado
 
 
 
-\- Cabeçalhos de segurança (CSP, `X-Content-Type-Options`, `Referrer-Policy`) configurados aqui. A CSP libera apenas o próprio domínio, o Google Identity, o CDN de imagens usado e, em `frame-src`, o mapa do Google (`https://www.google.com`, ver 10.7).
+\- Cabeçalhos de segurança (CSP, `X-Content-Type-Options`, `Referrer-Policy`) configurados aqui. A CSP libera apenas o próprio domínio, o Google Identity, o CDN de imagens usado, em `frame-src` o mapa do Google (`https://www.google.com`, ver 10.7) e, em `connect-src`, o ViaCEP (`https://viacep.com.br`), que a busca do CEP chama direto do navegador (9.12).
 
 
 
@@ -3453,7 +3632,11 @@ Fora do MVP (não implemente sem pedido explícito):
 
 \- \*\*Dia de montagem\*\* com preço próprio (o dia anterior à festa).
 
-\- Entrega e montagem pela equipe, frete.
+\- Entrega e montagem pela equipe, frete. (Desde novembro de 2026 a decoração sozinha pode ser \*\*entregue\*\* no endereço do cliente, com a taxa combinada por fora, 9.12. Calcular o frete no site e a montagem pela equipe continuam fora.)
+
+\- \*\*Troca de e-mail pelo cliente\*\*, com código de confirmação no e-mail novo (pedido do dono em novembro de 2026, para uma etapa seguinte). Até lá, o e-mail aparece em "Meu perfil" só para leitura.
+
+\- \*\*Mais de uma decoração por pedido\*\* do site. Desde novembro de 2026 cada item é uma decoração completa e o pedido leva uma (9.12); o painel continua lançando mais de uma.
 
 \- Multiunidade (mais de uma chácara) e multi-empresa.
 

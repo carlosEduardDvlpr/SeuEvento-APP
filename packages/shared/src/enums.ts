@@ -29,6 +29,14 @@ export type BookingKind = (typeof BOOKING_KINDS)[number];
 export const BLOCK_SCOPES = ['VENUE', 'DECORATION', 'BOTH'] as const;
 export type BlockScope = (typeof BLOCK_SCOPES)[number];
 
+/**
+ * Como a decoração chega à festa, na reserva só de decoração (§9.12): o cliente
+ * retira na chácara ou recebe no endereço dele. A taxa da entrega é combinada
+ * depois com a chácara e não entra no total.
+ */
+export const FULFILLMENT_METHODS = ['PICKUP', 'DELIVERY'] as const;
+export type FulfillmentMethod = (typeof FULFILLMENT_METHODS)[number];
+
 /** Um recebimento do plano de pagamento (§9.11): o sinal ou uma parcela. */
 export const PAYMENT_KINDS = ['DEPOSIT', 'INSTALLMENT'] as const;
 export type PaymentKind = (typeof PAYMENT_KINDS)[number];

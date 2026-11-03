@@ -70,6 +70,9 @@ const DETALHE: AdminBooking = {
   combos: [{ comboId: 'c-1', name: 'Combo Nuvens', times: 1, discountCents: 4_000 }],
   discountTotalCents: 4_000,
   totalCents: 350_000,
+  // Na chácara a decoração já está lá: nem retirada, nem entrega (§9.12).
+  fulfillment: null,
+  deliveryAddress: null,
   customerNotes: 'Chegamos na sexta para montar.',
   adminNotes: null,
   cancelReason: null,
@@ -79,6 +82,30 @@ const DETALHE: AdminBooking = {
   updatedAt: '2026-11-14T12:00:00.000Z',
   customer: { id: 'u-1', name: 'Ana Beatriz', email: 'ana@exemplo.com', phone: '11988887777' },
   allowedTransitions: ['CONFIRMED', 'CANCELLED'],
+};
+
+/** Só a decoração, entregue no endereço que a reserva guardou no envio (§9.12). */
+const DECORACAO_ENTREGUE: AdminBooking = {
+  ...DETALHE,
+  kind: 'DECORATION',
+  startDate: '2026-12-05',
+  endDate: '2026-12-05',
+  guestCount: null,
+  days: [],
+  dailyTotalCents: 0,
+  combos: [],
+  discountTotalCents: 0,
+  totalCents: 24_000,
+  fulfillment: 'DELIVERY',
+  deliveryAddress: {
+    cep: '12954000',
+    street: 'Rua das Orquídeas',
+    number: '265',
+    complement: 'casa 2',
+    district: 'Chácaras Fernão Dias',
+    city: 'Atibaia',
+    state: 'SP',
+  },
 };
 
 const SEM_PLANO: PaymentPlan = {
@@ -657,6 +684,48 @@ describe('BookingDetailPage, painel', () => {
       });
 
       expect(await screen.findByText(/pelo cliente/)).toBeVisible();
+    });
+  });
+
+  /* §9.12: na decoração, o dono vê se ela sai daqui ou vai até o cliente. */
+  describe('como a decoração chega', () => {
+    it('mostra a entrega, com o endereço guardado na reserva e a taxa a combinar', async () => {
+      renderDetail(DECORACAO_ENTREGUE);
+
+      expect(await screen.findByRole('heading', { name: 'Como a decoração chega' })).toBeVisible();
+      expect(screen.getByText('Entrega no endereço')).toBeVisible();
+      expect(
+        screen.getByText(
+          'Rua das Orquídeas, 265, casa 2 – Chácaras Fernão Dias, Atibaia/SP – CEP 12954-000',
+        ),
+      ).toBeVisible();
+      expect(screen.getByText('A taxa de entrega é combinada com o cliente.')).toBeVisible();
+    });
+
+    it('mostra a retirada, sem endereço nem taxa', async () => {
+      renderDetail({ ...DECORACAO_ENTREGUE, fulfillment: 'PICKUP', deliveryAddress: null });
+
+      expect(await screen.findByText('Retirada na chácara')).toBeVisible();
+      expect(screen.queryByText(/taxa de entrega/)).not.toBeInTheDocument();
+    });
+
+    it('não aparece na reserva da chácara', async () => {
+      renderDetail(DETALHE);
+
+      await screen.findByText('Valores');
+      expect(
+        screen.queryByRole('heading', { name: 'Como a decoração chega' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('na confirmação, avisa que a entrega e a taxa se combinam direto', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderDetail(DECORACAO_ENTREGUE);
+
+      await user.click(await screen.findByRole('button', { name: 'Confirmar reserva' }));
+
+      const dialog = within(await screen.findByRole('dialog'));
+      expect(dialog.getByText(/A entrega e a taxa vocês combinam direto/)).toBeVisible();
     });
   });
 

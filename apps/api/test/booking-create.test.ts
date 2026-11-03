@@ -143,15 +143,23 @@ describe('criação de reserva', () => {
       expect(Math.abs(hold - expected)).toBeLessThan(60_000);
     });
 
-    /* O snapshot é o que protege a reserva de mudança no catálogo (§2.1). */
+    /*
+     * O snapshot é o que protege a reserva de mudança no catálogo (§2.1). Na
+     * chácara, o preço gravado é o preço com a chácara (novembro de 2026).
+     */
     it('grava nome e preço do item como estavam no momento do pedido', async () => {
       const { token } = await createClient();
-      const item = await createItem({ categoryId, name: 'Painel de nuvens', priceCents: 18000 });
+      const item = await createItem({
+        categoryId,
+        name: 'Painel de nuvens',
+        priceCents: 18000,
+        venuePriceCents: 15000,
+      });
 
       const created = await post(token, {
         ...TWO_DAYS,
-        items: [{ itemId: item.id, quantity: 2 }],
-        expectedTotalCents: BASE_DAILY * 2 + 36000,
+        items: [{ itemId: item.id, quantity: 1 }],
+        expectedTotalCents: BASE_DAILY * 2 + 15000,
       });
 
       expect(created.statusCode).toBe(201);
@@ -159,7 +167,7 @@ describe('criação de reserva', () => {
       // O catálogo muda depois; a reserva não.
       await prisma.item.update({
         where: { id: item.id },
-        data: { name: 'Painel renomeado', priceCents: 99900 },
+        data: { name: 'Painel renomeado', priceCents: 99900, venuePriceCents: 99900 },
       });
 
       const row = await prisma.bookingItem.findFirstOrThrow({
@@ -167,31 +175,28 @@ describe('criação de reserva', () => {
       });
       expect(row).toMatchObject({
         itemName: 'Painel de nuvens',
-        unitPriceCents: 18000,
-        quantity: 2,
+        unitPriceCents: 15000,
+        quantity: 1,
       });
     });
 
-    it('aplica o combo e grava os combos no snapshot', async () => {
+    /* O preço com a chácara tomou o lugar dos combos: nada de combo no snapshot. */
+    it('não aplica combo, e o snapshot grava a reserva sem combo', async () => {
       const { token } = await createClient();
       const painel = await createItem({ categoryId, priceCents: 20000 });
-      const mesa = await createItem({ categoryId, priceCents: 12000 });
-      const combo = await createCombo({ name: 'Kit boho', itemIds: [painel.id, mesa.id] });
+      await createCombo({ name: 'Kit painel', itemIds: [painel.id] });
 
       const response = await post(token, {
         ...TWO_DAYS,
-        items: [
-          { itemId: painel.id, quantity: 1 },
-          { itemId: mesa.id, quantity: 1 },
-        ],
-        expectedTotalCents: BASE_DAILY * 2 + 32000 - 3200,
+        items: [{ itemId: painel.id, quantity: 1 }],
+        expectedTotalCents: BASE_DAILY * 2 + 20000,
       });
 
       expect(response.statusCode).toBe(201);
-      expect(response.json().combos).toEqual([
-        { comboId: combo.id, name: 'Kit boho', times: 1, discountCents: 3200 },
-      ]);
-      expect(response.json().discountTotalCents).toBe(3200);
+      expect(response.json()).toMatchObject({ combos: [], discountTotalCents: 0 });
+      expect(
+        await prisma.booking.findUniqueOrThrow({ where: { id: response.json().id } }),
+      ).toMatchObject({ appliedCombos: [], discountTotalCents: 0 });
     });
 
     /* §17: cada transição manda e-mail, e o prazo é o que a pessoa precisa saber. */
@@ -499,20 +504,20 @@ describe('criação de reserva', () => {
     it('recusa pedido cujo item já está comprometido naquele dia', async () => {
       const first = await createClient({ email: 'ana@exemplo.com' });
       const second = await createClient({ email: 'bia@exemplo.com' });
-      const item = await createItem({ categoryId, stock: 3, priceCents: 10000 });
+      const item = await createItem({ categoryId, stock: 1, priceCents: 10000 });
 
       await post(first.token, {
         ...TWO_DAYS,
-        items: [{ itemId: item.id, quantity: 2 }],
-        expectedTotalCents: BASE_DAILY * 2 + 20000,
+        items: [{ itemId: item.id, quantity: 1 }],
+        expectedTotalCents: BASE_DAILY * 2 + 10000,
       });
 
       const response = await post(second.token, {
         ...TWO_DAYS,
         startDate: '2027-04-10',
         endDate: '2027-04-10',
-        items: [{ itemId: item.id, quantity: 2 }],
-        expectedTotalCents: BASE_DAILY + 20000,
+        items: [{ itemId: item.id, quantity: 1 }],
+        expectedTotalCents: BASE_DAILY + 10000,
       });
 
       expect(response.statusCode).toBe(409);
@@ -522,23 +527,23 @@ describe('criação de reserva', () => {
     /* O orçamento é onde a falta de estoque aparece como motivo próprio. */
     it('o orçamento acusa a falta de estoque junto com a data', async () => {
       const { token } = await createClient();
-      const item = await createItem({ categoryId, stock: 3, priceCents: 10000 });
+      const item = await createItem({ categoryId, stock: 1, priceCents: 10000 });
 
       await post(token, {
         ...TWO_DAYS,
-        items: [{ itemId: item.id, quantity: 2 }],
-        expectedTotalCents: BASE_DAILY * 2 + 20000,
+        items: [{ itemId: item.id, quantity: 1 }],
+        expectedTotalCents: BASE_DAILY * 2 + 10000,
       });
 
       const estimate = await quote({
         startDate: '2027-04-10',
         endDate: '2027-04-10',
-        items: [{ itemId: item.id, quantity: 2 }],
+        items: [{ itemId: item.id, quantity: 1 }],
       });
 
       expect(estimate.json().issues).toEqual([
         { code: 'DATE_UNAVAILABLE', dates: ['2027-04-10'] },
-        { code: 'STOCK_INSUFFICIENT', itemId: item.id, available: 1 },
+        { code: 'STOCK_INSUFFICIENT', itemId: item.id, available: 0 },
       ]);
     });
 

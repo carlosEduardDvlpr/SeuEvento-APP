@@ -37,6 +37,8 @@ const ANA: SessionUser = {
   phone: '11988880000',
   role: 'CLIENT',
   emailVerified: true,
+  address: null,
+  hasPassword: true,
 };
 
 function renderLayout({
@@ -212,17 +214,51 @@ describe('rodapé', () => {
     expect(footer().getByRole('link', { name: /Instagram/ })).toBeVisible();
   });
 
-  it('mantém os termos e a política de privacidade', async () => {
-    renderLayout();
+  /* Pedido do dono (novembro de 2026): o rodapé fica só com a marca e o contato. */
+  it('não tem os links legais nem diz quem entrou', async () => {
+    renderLayout({ user: ANA });
 
     await footer().findByText('Espaço Donna Belle');
-    expect(footer().getByRole('link', { name: 'Termos de uso' })).toHaveAttribute(
+    expect(footer().queryByRole('link', { name: 'Termos de uso' })).not.toBeInTheDocument();
+    expect(
+      footer().queryByRole('link', { name: 'Política de privacidade' }),
+    ).not.toBeInTheDocument();
+    expect(footer().queryByText(/Você entrou como/)).not.toBeInTheDocument();
+  });
+});
+
+describe('atalho do painel', () => {
+  const DONA: SessionUser = { ...ANA, id: 'u-9', name: 'Administração', role: 'ADMIN' };
+
+  it('aparece para o admin, no cabeçalho e no menu lateral', async () => {
+    const user = userEvent.setup();
+    renderLayout({ user: DONA });
+
+    expect(await mainNav().findByRole('link', { name: 'Painel admin' })).toHaveAttribute(
       'href',
-      '/termos',
+      '/admin',
     );
-    expect(footer().getByRole('link', { name: 'Política de privacidade' })).toHaveAttribute(
-      'href',
-      '/privacidade',
-    );
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
+
+    expect(
+      within(screen.getByRole('dialog', { name: 'Menu' })).getByRole('link', {
+        name: 'Painel admin',
+      }),
+    ).toHaveAttribute('href', '/admin');
+  });
+
+  it('não aparece para o cliente', async () => {
+    renderLayout({ user: ANA });
+
+    await mainNav().findByRole('link', { name: 'Minhas reservas' });
+    expect(mainNav().queryByRole('link', { name: 'Painel admin' })).not.toBeInTheDocument();
+  });
+
+  it('não aparece para quem não entrou', async () => {
+    renderLayout();
+
+    await mainNav().findByRole('link', { name: 'Entrar' });
+    expect(mainNav().queryByRole('link', { name: 'Painel admin' })).not.toBeInTheDocument();
   });
 });

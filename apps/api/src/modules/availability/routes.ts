@@ -1,5 +1,6 @@
 import { availabilityQuerySchema, availabilitySchema } from '@chacara/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { getDecorationAvailability } from './decoration.js';
 import { getAvailability } from './service.js';
 
 /**
@@ -25,7 +26,13 @@ export const availabilityRoutes: FastifyPluginAsyncZod = async (app) => {
        * modo, quem decide no fim é a constraint da §8.1 na hora de reservar.
        */
       reply.header('Cache-Control', 'public, max-age=30');
-      return getAvailability(app.prisma, request.query);
+
+      // Com `itemId`, a agenda é a de uma decoração: o estoque dela entra na conta.
+      const { itemId, ...query } = request.query;
+
+      return itemId === undefined
+        ? getAvailability(app.prisma, query)
+        : getDecorationAvailability(app.prisma, { ...query, itemId });
     },
   );
 };

@@ -67,6 +67,15 @@ enum PaymentKind {
   INSTALLMENT // parcela (ou pagamento à vista, quando é a única)
 }
 
+/// Como a decoração chega à festa, na reserva só de decoração (§9.12).
+///
+/// A taxa da entrega é combinada depois com a chácara e nunca entra no total
+/// da reserva.
+enum FulfillmentMethod {
+  PICKUP // o cliente retira na chácara
+  DELIVERY // a decoração vai até o endereço do cliente
+}
+
 model User {
   id              String    @id @default(uuid())
   name            String
@@ -79,6 +88,11 @@ model User {
   role            Role      @default(CLIENT)
   createdAt       DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime  @updatedAt @db.Timestamptz(6)
+
+  /// Endereço de entrega da decoração (§9.12), no formato do `addressSchema`
+  /// de `packages/shared`. Um por conta, nulo até a pessoa cadastrar. É Json, e
+  /// não colunas, porque só serve para ser copiado inteiro na reserva.
+  address Json?
 
   bookings      Booking[]
   authTokens    AuthToken[]
@@ -177,16 +191,20 @@ model Theme {
 }
 
 model Item {
-  id            String  @id @default(uuid())
-  categoryId    String
-  name          String
-  description   String?
-  imageUrl      String?
-  priceCents    Int
-  stock         Int // unidades disponíveis por dia
-  assemblyNotes String? // dicas de montagem (pegue e monte)
-  active        Boolean @default(true)
-  sortOrder     Int     @default(0)
+  id              String  @id @default(uuid())
+  categoryId      String
+  name            String
+  description     String?
+  imageUrl        String?
+  priceCents      Int // preço avulso: a decoração sozinha, sem a chácara
+  /// Preço com a chácara (novembro de 2026): o que vale quando a reserva é da
+  /// chácara. Tomou o lugar dos combos no pedido. Nunca passa do avulso, regra
+  /// que é o CHECK `item_venue_price_range` da migration `decoration_delivery`.
+  venuePriceCents Int
+  stock           Int // unidades disponíveis por dia
+  assemblyNotes   String? // dicas de montagem (pegue e monte)
+  active          Boolean @default(true)
+  sortOrder       Int     @default(0)
 
   category     Category      @relation(fields: [categoryId], references: [id])
   themes       ItemTheme[]
@@ -252,6 +270,14 @@ model Booking {
   discountTotalCents Int
   totalCents         Int
   appliedCombos      Json // [{ comboId, name, times, discountCents }]
+
+  /// Retirada ou entrega, só na decoração (§9.12). Nulo na chácara: a regra
+  /// "decoração tem, chácara não" é o CHECK `booking_fulfillment_by_kind`.
+  fulfillment     FulfillmentMethod?
+  /// Cópia do endereço do cliente no envio, só na entrega (CHECK
+  /// `booking_delivery_address`). Snapshot como o financeiro (§2.1): quem muda
+  /// de endereço depois não muda o destino de uma entrega já combinada.
+  deliveryAddress Json?
 
   customerNotes  String?
   adminNotes     String?

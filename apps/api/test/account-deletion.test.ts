@@ -150,6 +150,31 @@ describe('remoção da conta (§10.8)', () => {
     expect(bookings.map((booking) => booking.totalCents)).toEqual([150_000, 150_000]);
   });
 
+  /* O endereço de entrega (§9.12) é dado pessoal como o telefone. */
+  it('apaga o endereço de entrega do perfil', async () => {
+    const user = await createClient();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        address: {
+          cep: '12954000',
+          street: 'Rua das Orquídeas',
+          number: '265',
+          complement: null,
+          district: 'Chácaras Fernão Dias',
+          city: 'Atibaia',
+          state: 'SP',
+        },
+      },
+    });
+    const { accessToken } = await session();
+
+    expect((await deleteAccount(accessToken)).statusCode).toBe(204);
+
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(row.address).toBeNull();
+  });
+
   /*
    * Com credencial preservada, quem apagou a conta voltaria a entrar nela e
    * encontraria o histórico — a remoção não teria valido nada.
@@ -320,6 +345,12 @@ describe('remoção da conta (§10.8)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ name: 'Conta removida', email: null, phone: null });
+    expect(response.json()).toMatchObject({
+      name: 'Conta removida',
+      email: null,
+      phone: null,
+      address: null,
+      hasPassword: false,
+    });
   });
 });

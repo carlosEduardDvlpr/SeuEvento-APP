@@ -13,10 +13,10 @@ import styles from './SubmitGate.module.css';
 /**
  * O que falta para a pessoa poder enviar o pedido (§13.2).
  *
- * São três condições, e cada uma tem uma tela própria em vez de um erro: entrar,
- * ter o e-mail confirmado e ter telefone no perfil (§11.3). Recusar o envio por
- * um campo que a pessoa nem sabia que faltava é o pior desfecho possível depois
- * de montar o pedido inteiro.
+ * Cada condição tem uma tela própria em vez de um erro: entrar, ter o e-mail
+ * confirmado, ter telefone no perfil (§11.3) e, na entrega da decoração, ter o
+ * endereço cadastrado (§9.12). Recusar o envio por um campo que a pessoa nem
+ * sabia que faltava é o pior desfecho possível depois de montar o pedido inteiro.
  *
  * O rascunho **não se perde** em nenhum caminho: o Google entra sem sair da
  * página, e os links para entrar e se cadastrar levam `next` com a URL atual.
@@ -29,9 +29,19 @@ export type SubmitGateProps = {
   error?: string | null;
   isSubmitting: boolean;
   onSubmit: () => void;
+  /** A decoração vai para o endereço do perfil: sem ele, não há para onde entregar. */
+  delivery: boolean;
+  /** Abre o cadastro do endereço de entrega. */
+  onAddAddress: () => void;
 };
 
-export function SubmitGate({ error, isSubmitting, onSubmit }: SubmitGateProps) {
+export function SubmitGate({
+  error,
+  isSubmitting,
+  onSubmit,
+  delivery,
+  onAddAddress,
+}: SubmitGateProps) {
   const { status, user, signIn, setUser } = useAuth();
   const location = useLocation();
 
@@ -211,6 +221,25 @@ export function SubmitGate({ error, isSubmitting, onSubmit }: SubmitGateProps) {
             Salvar e continuar
           </Button>
         </form>
+      </section>
+    );
+  }
+
+  /*
+   * A reserva copia o endereço do perfil no envio (§9.12), e a API recusa a
+   * entrega sem ele. O cadastro abre aqui mesmo, num diálogo, sem sair do pedido.
+   */
+  if (delivery && user && !user.address) {
+    return (
+      <section className={styles.gate}>
+        <h2 className={styles.title}>Para onde vai a decoração?</h2>
+        <p className={styles.lead}>
+          Cadastre o endereço de entrega. Ele fica salvo no seu perfil para os próximos pedidos.
+        </p>
+
+        <Button variant="primary" onClick={onAddAddress}>
+          Cadastrar endereço
+        </Button>
       </section>
     );
   }

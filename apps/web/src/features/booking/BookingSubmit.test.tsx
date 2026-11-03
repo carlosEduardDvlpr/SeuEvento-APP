@@ -1,5 +1,12 @@
-import type { Booking, CatalogItem, PublicVenue, Quote, SessionUser } from '@chacara/shared';
-import { screen, waitFor } from '@testing-library/react';
+import type {
+  Address,
+  Booking,
+  CatalogItem,
+  PublicVenue,
+  Quote,
+  SessionUser,
+} from '@chacara/shared';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { errorResponse, jsonResponse, renderWithProviders } from '../../../test/helpers/render';
@@ -10,7 +17,7 @@ import { EMPTY_DRAFT, type BookingDraft, saveDraft } from './draft';
  * Revisão, envio e confirmação (§13.2).
  *
  * Os testes entram pela borda: o que a API responde e o que a pessoa vê. É aqui
- * que moram as duas garantias mais importantes do fluxo — o total exibido é
+ * que moram as duas garantias mais importantes do fluxo: o total exibido é
  * **sempre** o do servidor, e um envio recusado devolve a pessoa ao passo que
  * resolve o problema.
  */
@@ -36,7 +43,8 @@ const PAINEL: CatalogItem = {
   name: 'Painel de balões arco-íris',
   description: null,
   imageUrl: null,
-  priceCents: 12_000,
+  priceCents: 40_000,
+  venuePriceCents: 30_000,
   stock: 3,
   assemblyNotes: null,
   sortOrder: 1,
@@ -44,6 +52,7 @@ const PAINEL: CatalogItem = {
   themeIds: [],
 };
 
+/** Orçamento da chácara com a decoração pelo preço com a chácara. */
 const QUOTE: Quote = {
   available: true,
   issues: [],
@@ -56,15 +65,25 @@ const QUOTE: Quote = {
     {
       itemId: PAINEL.id,
       name: PAINEL.name,
-      quantity: 2,
-      unitPriceCents: 12_000,
-      totalCents: 24_000,
+      quantity: 1,
+      unitPriceCents: 30_000,
+      totalCents: 30_000,
     },
   ],
-  itemsTotalCents: 24_000,
-  combos: [{ comboId: 'combo-1', name: 'Combo Nuvens', times: 1, discountCents: 4_000 }],
-  discountTotalCents: 4_000,
-  totalCents: 350_000,
+  itemsTotalCents: 30_000,
+  combos: [],
+  discountTotalCents: 0,
+  totalCents: 360_000,
+};
+
+/** A decoração sozinha: sem diária, pelo preço avulso. */
+const DECORATION_QUOTE: Quote = {
+  ...QUOTE,
+  days: [],
+  dailyTotalCents: 0,
+  lines: [{ ...QUOTE.lines[0]!, unitPriceCents: 40_000, totalCents: 40_000 }],
+  itemsTotalCents: 40_000,
+  totalCents: 40_000,
 };
 
 const BOOKING: Booking = {
@@ -81,9 +100,11 @@ const BOOKING: Booking = {
   dailyTotalCents: QUOTE.dailyTotalCents,
   items: QUOTE.lines,
   itemsTotalCents: QUOTE.itemsTotalCents,
-  combos: QUOTE.combos,
-  discountTotalCents: QUOTE.discountTotalCents,
+  combos: [],
+  discountTotalCents: 0,
   totalCents: QUOTE.totalCents,
+  fulfillment: null,
+  deliveryAddress: null,
   customerNotes: null,
   cancelReason: null,
   createdAt: '2026-12-01T12:00:00.000Z',
@@ -96,13 +117,36 @@ const VERIFIED: SessionUser = {
   phone: '(11) 98888-0000',
   role: 'CLIENT',
   emailVerified: true,
+  address: null,
+  hasPassword: true,
+};
+
+const ADDRESS: Address = {
+  cep: '12954000',
+  street: 'Rua das Orquídeas',
+  number: '265',
+  complement: null,
+  district: 'Chácaras Fernão Dias',
+  city: 'Atibaia',
+  state: 'SP',
+};
+
+/** O que o ViaCEP responde para a Praça da Sé. */
+const VIACEP_SE = {
+  cep: '01001-000',
+  logradouro: 'Praça da Sé',
+  complemento: 'lado ímpar',
+  bairro: 'Sé',
+  localidade: 'São Paulo',
+  uf: 'SP',
 };
 
 type Call = { url: string; method: string; body: unknown };
 type Handler = (call: Call) => Response;
 
 /**
- * `fetch` de mentira com rotas por `"MÉTODO /caminho"`.
+ * `fetch` de mentira com rotas por `"MÉTODO /caminho"` (ou pela URL inteira,
+ * que é como a busca no ViaCEP, fora da nossa API, é respondida).
  *
  * A sessão é aberta pelo `POST /auth/refresh`, que é o que o `AuthProvider` chama
  * ao montar: é assim que o teste entra logado sem simular a tela de login.
@@ -112,10 +156,11 @@ function stubFetch(routes: Record<string, Handler> = {}, user: SessionUser | nul
 
   const base: Record<string, Handler> = {
     'GET /api/public/venue': () => jsonResponse(VENUE),
-    'GET /api/themes': () => jsonResponse([]),
     'GET /api/categories': () => jsonResponse([]),
     'GET /api/items': () => jsonResponse([PAINEL]),
-    'GET /api/combos': () => jsonResponse([]),
+    'GET /api/items/availability': () =>
+      jsonResponse({ items: [{ itemId: PAINEL.id, freeStock: 3 }] }),
+    'GET /api/availability': () => jsonResponse({ days: [] }),
     'POST /api/pricing/quote': () => jsonResponse(QUOTE),
     'POST /api/auth/refresh': () =>
       user
@@ -135,18 +180,25 @@ function stubFetch(routes: Record<string, Handler> = {}, user: SessionUser | nul
     const path = url.split('?')[0]!;
     const handler = base[`${call.method} ${url}`] ?? base[`${call.method} ${path}`];
 
-    if (handler) return Promise.resolve(handler(call));
-    if (path === '/api/availability') return Promise.resolve(jsonResponse({ days: [] }));
-
-    return Promise.resolve(jsonResponse([]));
+    return Promise.resolve(handler ? handler(call) : jsonResponse([]));
   });
 
   vi.stubGlobal('fetch', fetchMock);
   return calls;
 }
 
+/** O `PATCH /me` de mentira devolve o usuário com o que foi pedido. */
+function patchMe(user: SessionUser = VERIFIED): Handler {
+  return (call) => jsonResponse({ ...user, ...(call.body as Partial<SessionUser>) });
+}
+
 /** Chave do pedido guardado no `sessionStorage`. */
 const DRAFT_KEY = 'chacara:booking-draft';
+
+function storedDraft(): BookingDraft | null {
+  const raw = window.sessionStorage.getItem(DRAFT_KEY);
+  return raw ? (JSON.parse(raw) as BookingDraft) : null;
+}
 
 /**
  * Pedido completo e guardado, como o de quem chegou à revisão: é só a partir
@@ -158,9 +210,14 @@ function seedDraft(draft: Partial<BookingDraft> = {}) {
     startDate: '2026-12-05',
     endDate: '2026-12-06',
     guestCount: 60,
-    items: [{ itemId: PAINEL.id, quantity: 2 }],
+    itemId: PAINEL.id,
     ...draft,
   });
+}
+
+/** Pedido só de decoração, de um dia, ainda sem retirada nem entrega. */
+function seedDecoration(draft: Partial<BookingDraft> = {}) {
+  seedDraft({ kind: 'DECORATION', endDate: '2026-12-05', guestCount: null, ...draft });
 }
 
 function renderReview(route = '/reservar?step=revisao') {
@@ -191,9 +248,8 @@ describe('ReviewStep', () => {
   });
 
   /*
-   * §13.2: o front nunca soma preço para exibir o total oficial. 3.300 + 240 − 40
-   * daria 3.500 por coincidência aqui; o que o teste garante é que o número
-   * exibido é o `totalCents` que veio na resposta.
+   * §13.2: o front nunca soma preço para exibir o total oficial. O que o teste
+   * garante é que o número exibido é o `totalCents` que veio na resposta.
    */
   it('exibe o total que o servidor calculou', async () => {
     stubFetch({
@@ -201,72 +257,73 @@ describe('ReviewStep', () => {
     });
     renderReview();
 
-    // Duas vezes: no resumo e no rodapé fixo, que na revisão também mostra o
-    // total oficial em vez da estimativa.
+    // Duas vezes: no resumo e no rodapé, que na revisão mostra o total oficial.
     expect(await screen.findAllByText('R$ 2.999,00')).toHaveLength(2);
   });
 
-  it('mostra os combos aplicados e quanto a pessoa economiza', async () => {
-    stubFetch();
-    renderReview();
-
-    expect(await screen.findByText('Combo Nuvens')).toBeVisible();
-    expect(screen.getByText(/Você economiza/)).toBeVisible();
-  });
-
-  it('pede o orçamento com as datas e os itens do rascunho', async () => {
+  it('pede o orçamento com as datas e a decoração, uma vez', async () => {
     const calls = stubFetch();
     renderReview();
 
     await screen.findByText('Valores');
 
-    const quoteCall = calls.find((call) => call.url === '/api/pricing/quote');
-    expect(quoteCall?.body).toEqual({
+    expect(calls.find((call) => call.url === '/api/pricing/quote')?.body).toEqual({
       kind: 'VENUE',
       startDate: '2026-12-05',
       endDate: '2026-12-06',
-      items: [{ itemId: PAINEL.id, quantity: 2 }],
+      items: [{ itemId: PAINEL.id, quantity: 1 }],
     });
+  });
+
+  /* O valor da linha é o do servidor; a etiqueta explica por que é menor que o da vitrine. */
+  it('marca a decoração que saiu pelo preço com a chácara', async () => {
+    stubFetch();
+    renderReview();
+
+    const line = (await screen.findByText('preço com a chácara')).closest('li')!;
+
+    expect(within(line).getByText(PAINEL.name)).toBeVisible();
+    expect(within(line).getByText('R$ 300,00')).toBeVisible();
   });
 
   /*
    * A foto vem do catálogo, e não do orçamento: é ela que deixa a pessoa
    * reconhecer a peça, porque o nome no catálogo costuma ser genérico.
    */
-  it('mostra a foto de cada item do pedido', async () => {
+  it('mostra a foto da decoração do pedido', async () => {
     stubFetch({
       'GET /api/items': () => jsonResponse([{ ...PAINEL, imageUrl: '/catalogo/paineis/1.jpg' }]),
     });
     renderReview();
 
-    const line = (await screen.findByText('2× Painel de balões arco-íris')).closest('li')!;
+    const line = (await screen.findByText(PAINEL.name)).closest('li')!;
 
     await waitFor(() => {
       expect(line.querySelector('img')).toHaveAttribute('src', '/catalogo/paineis/1.jpg');
     });
-    // Decorativa: o nome do item já está do lado, e o leitor de tela não repete.
+    // Decorativa: o nome já está do lado, e o leitor de tela não repete.
     expect(line.querySelector('img')).toHaveAttribute('alt', '');
   });
 
-  it('põe o ícone no lugar da foto quando o item não tem uma', async () => {
+  it('põe o ícone no lugar da foto quando a decoração não tem uma', async () => {
     stubFetch();
     renderReview();
 
-    const line = (await screen.findByText('2× Painel de balões arco-íris')).closest('li')!;
+    const line = (await screen.findByText(PAINEL.name)).closest('li')!;
 
     expect(line.querySelector('img')).toBeNull();
     expect(line.querySelector('svg')).not.toBeNull();
   });
 
-  it('diz que é só a chácara quando não há item no pedido', async () => {
+  it('diz que é só a chácara quando não há decoração no pedido', async () => {
     stubFetch({
       'POST /api/pricing/quote': () =>
-        jsonResponse({ ...QUOTE, lines: [], itemsTotalCents: 0, combos: [] }),
+        jsonResponse({ ...QUOTE, lines: [], itemsTotalCents: 0, totalCents: 330_000 }),
     });
-    seedDraft({ items: [] });
+    seedDraft({ itemId: null });
     renderReview();
 
-    expect(await screen.findByText(/Sem itens de decoração neste pedido/)).toBeVisible();
+    expect(await screen.findByText(/Sem decoração neste pedido/)).toBeVisible();
   });
 
   /*
@@ -286,27 +343,10 @@ describe('ReviewStep', () => {
     renderReview();
 
     expect(await screen.findByText(/5 de dezembro de 2026 acabou de ser reservado/)).toBeVisible();
-    // O resumo continua na tela.
     expect(screen.getByText('Valores')).toBeVisible();
   });
 
-  it('diz quantas unidades ainda cabem quando o item está acabando', async () => {
-    stubFetch({
-      'POST /api/pricing/quote': () =>
-        jsonResponse({
-          ...QUOTE,
-          available: false,
-          issues: [{ code: 'STOCK_INSUFFICIENT', itemId: PAINEL.id, available: 1 }],
-        }),
-    });
-    renderReview();
-
-    expect(
-      await screen.findByText(/Só temos 1 unidade de “Painel de balões arco-íris”/),
-    ).toBeVisible();
-  });
-
-  it('avisa quando o item zerou nas datas escolhidas', async () => {
+  it('avisa quando a decoração saiu para outra festa nessas datas', async () => {
     stubFetch({
       'POST /api/pricing/quote': () =>
         jsonResponse({
@@ -317,7 +357,11 @@ describe('ReviewStep', () => {
     });
     renderReview();
 
-    expect(await screen.findByText(/não está mais disponível nessas datas/)).toBeVisible();
+    expect(
+      await screen.findByText(
+        '“Painel de balões arco-íris” não está mais livre nessas datas. Volte à decoração e escolha outra, ou siga sem decoração.',
+      ),
+    ).toBeVisible();
   });
 
   it('mostra o prazo do pedido e o prazo de cancelamento antes de enviar', async () => {
@@ -342,10 +386,7 @@ describe('ReviewStep', () => {
 
     await user.type(await screen.findByLabelText('Alguma observação?'), 'Chegamos às 14h.');
 
-    await waitFor(() => {
-      const stored = JSON.parse(window.sessionStorage.getItem(DRAFT_KEY) ?? '{}') as BookingDraft;
-      expect(stored.customerNotes).toBe('Chegamos às 14h.');
-    });
+    await waitFor(() => expect(storedDraft()?.customerNotes).toBe('Chegamos às 14h.'));
   });
 });
 
@@ -356,9 +397,21 @@ describe('ReviewStep', () => {
  * descarta o que o `beforeEach` deixou guardado.
  */
 describe('pedido guardado a partir da revisão', () => {
-  function storedDraft(): BookingDraft | null {
-    const raw = window.sessionStorage.getItem(DRAFT_KEY);
-    return raw ? (JSON.parse(raw) as BookingDraft) : null;
+  /** Do tipo à revisão, passo a passo, com a data que veio no link. */
+  async function walkToReview(user: ReturnType<typeof userEvent.setup>) {
+    await screen.findByText('O que você quer reservar?');
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    await screen.findByText('5 de dezembro de 2026');
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    await user.type(await screen.findByLabelText('Número de convidados'), '40');
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    await screen.findByRole('radio', { name: 'Sem decoração' });
+    expect(storedDraft()).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
   }
 
   it('guarda o pedido ao chegar à revisão, e não antes', async () => {
@@ -366,13 +419,7 @@ describe('pedido guardado a partir da revisão', () => {
     stubFetch({}, null);
     renderWithProviders(<BookingWizard />, { route: '/reservar?data=2026-12-05' });
 
-    await user.type(await screen.findByLabelText('Número de convidados'), '40');
-    await user.click(screen.getByRole('button', { name: /Continuar/ }));
-
-    await screen.findByText('Escolha o estilo da festa');
-    expect(storedDraft()).toBeNull();
-
-    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    await walkToReview(user);
 
     expect(await screen.findByText('Falta só entrar')).toBeVisible();
     await waitFor(() => {
@@ -380,7 +427,7 @@ describe('pedido guardado a partir da revisão', () => {
         startDate: '2026-12-05',
         endDate: '2026-12-05',
         guestCount: 40,
-        items: [],
+        itemId: null,
       });
     });
   });
@@ -390,20 +437,13 @@ describe('pedido guardado a partir da revisão', () => {
     stubFetch({}, null);
     renderWithProviders(<BookingWizard />, { route: '/reservar?data=2026-12-05' });
 
-    await user.type(await screen.findByLabelText('Número de convidados'), '40');
-    await user.click(screen.getByRole('button', { name: /Continuar/ }));
-    await screen.findByText('Escolha o estilo da festa');
-    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    await walkToReview(user);
     await screen.findByText('Falta só entrar');
 
     await user.click(screen.getByRole('button', { name: /Voltar/ }));
-    await user.click(
-      await screen.findByRole('button', { name: 'Aumentar Painel de balões arco-íris' }),
-    );
+    await user.click(await screen.findByRole('radio', { name: PAINEL.name }));
 
-    await waitFor(() => {
-      expect(storedDraft()?.items).toEqual([{ itemId: PAINEL.id, quantity: 1 }]);
-    });
+    await waitFor(() => expect(storedDraft()?.itemId).toBe(PAINEL.id));
   });
 });
 
@@ -477,10 +517,7 @@ describe('SubmitGate', () => {
 
   it('libera o envio depois de salvar o telefone', async () => {
     const user = userEvent.setup();
-    const calls = stubFetch(
-      { 'PATCH /api/me': () => jsonResponse(VERIFIED) },
-      { ...VERIFIED, phone: null },
-    );
+    const calls = stubFetch({ 'PATCH /api/me': patchMe() }, { ...VERIFIED, phone: null });
     renderReview();
 
     await user.type(await screen.findByLabelText('WhatsApp'), '(11) 98888-0000');
@@ -506,6 +543,129 @@ describe('SubmitGate', () => {
   });
 });
 
+/*
+ * §9.12: na decoração sozinha, a pessoa escolhe retirar na chácara ou receber
+ * no endereço do perfil. A taxa de entrega é combinada e não entra no total.
+ */
+describe('retirada ou entrega da decoração', () => {
+  function stubDecoration(routes: Record<string, Handler> = {}, user: SessionUser = VERIFIED) {
+    return stubFetch(
+      { 'POST /api/pricing/quote': () => jsonResponse(DECORATION_QUOTE), ...routes },
+      user,
+    );
+  }
+
+  it('pede para escolher antes de enviar, sem chamar a API', async () => {
+    const user = userEvent.setup();
+    seedDecoration();
+    const calls = stubDecoration();
+    renderReview();
+
+    expect(await screen.findByText('Como a decoração chega à festa?')).toBeVisible();
+    expect(screen.getByRole('radio', { name: /Retirada na chácara/ })).not.toBeChecked();
+    expect(screen.getByRole('radio', { name: /Entrega no endereço/ })).not.toBeChecked();
+
+    await user.click(await screen.findByRole('button', { name: 'Solicitar reserva' }));
+
+    // Na escolha e junto do botão, que é onde a pessoa está olhando.
+    expect(
+      await screen.findAllByText(
+        'Escolha se você retira a decoração na chácara ou se ela vai até você.',
+      ),
+    ).toHaveLength(2);
+    expect(calls.some((call) => call.url === '/api/bookings')).toBe(false);
+  });
+
+  it('a retirada não pede endereço e vai no pedido', async () => {
+    const user = userEvent.setup();
+    seedDecoration();
+    const calls = stubDecoration({ 'POST /api/bookings': () => jsonResponse(BOOKING, 201) });
+    renderReview();
+
+    await user.click(await screen.findByRole('radio', { name: /Retirada na chácara/ }));
+    await user.click(screen.getByRole('button', { name: 'Solicitar reserva' }));
+
+    await waitFor(() => {
+      expect(calls.find((call) => call.url === '/api/bookings')?.body).toMatchObject({
+        kind: 'DECORATION',
+        fulfillment: 'PICKUP',
+      });
+    });
+  });
+
+  it('na entrega sem endereço, pede o endereço no lugar do envio', async () => {
+    const user = userEvent.setup();
+    seedDecoration({ fulfillment: 'DELIVERY' });
+    stubDecoration();
+    renderReview();
+
+    expect(await screen.findByText('Para onde vai a decoração?')).toBeVisible();
+    expect(screen.getByText(/Falta o endereço de entrega/)).toBeVisible();
+    expect(screen.getByText('A taxa de entrega é combinada com a chácara.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Solicitar reserva' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Cadastrar endereço' }));
+    expect(await screen.findByRole('dialog', { name: 'Endereço de entrega' })).toBeVisible();
+  });
+
+  it('libera o envio depois de cadastrar o endereço pelo CEP', async () => {
+    const user = userEvent.setup();
+    seedDecoration({ fulfillment: 'DELIVERY' });
+    const calls = stubDecoration({
+      'GET https://viacep.com.br/ws/01001000/json/': () => jsonResponse(VIACEP_SE),
+      'PATCH /api/me': patchMe(),
+    });
+    renderReview();
+
+    await user.click(await screen.findByRole('button', { name: 'Cadastrar endereço' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Endereço de entrega' }));
+
+    await user.type(dialog.getByLabelText('CEP'), '01001000');
+    await waitFor(() => expect(dialog.getByLabelText('Rua')).toHaveValue('Praça da Sé'));
+    await user.type(dialog.getByLabelText('Número'), '100');
+    await user.click(dialog.getByRole('button', { name: 'Salvar endereço' }));
+
+    expect(await screen.findByRole('button', { name: 'Solicitar reserva' })).toBeVisible();
+    expect(screen.getByText('Praça da Sé, 100 – Sé, São Paulo/SP – CEP 01001-000')).toBeVisible();
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toMatchObject({
+      address: { cep: '01001000', number: '100', state: 'SP' },
+    });
+  });
+
+  it('mostra o endereço do perfil e manda a entrega no pedido', async () => {
+    const user = userEvent.setup();
+    seedDecoration({ fulfillment: 'DELIVERY' });
+    const calls = stubDecoration(
+      { 'POST /api/bookings': () => jsonResponse(BOOKING, 201) },
+      { ...VERIFIED, address: ADDRESS },
+    );
+    renderReview();
+
+    expect(
+      await screen.findByText(
+        'Rua das Orquídeas, 265 – Chácaras Fernão Dias, Atibaia/SP – CEP 12954-000',
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Alterar endereço' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Solicitar reserva' }));
+
+    await waitFor(() => {
+      expect(calls.find((call) => call.url === '/api/bookings')?.body).toMatchObject({
+        fulfillment: 'DELIVERY',
+      });
+    });
+  });
+
+  it('a chácara não pergunta como a decoração chega', async () => {
+    stubFetch();
+    renderReview();
+
+    await screen.findByText('Valores');
+    expect(screen.queryByText('Como a decoração chega à festa?')).not.toBeInTheDocument();
+  });
+});
+
 describe('envio do pedido', () => {
   it('manda o total do orçamento como expectedTotalCents', async () => {
     const user = userEvent.setup();
@@ -520,7 +680,8 @@ describe('envio do pedido', () => {
         startDate: '2026-12-05',
         endDate: '2026-12-06',
         guestCount: 60,
-        items: [{ itemId: PAINEL.id, quantity: 2 }],
+        items: [{ itemId: PAINEL.id, quantity: 1 }],
+        fulfillment: null,
         customerNotes: null,
         expectedTotalCents: QUOTE.totalCents,
       });
@@ -570,7 +731,7 @@ describe('envio do pedido', () => {
     await user.click(await screen.findByRole('button', { name: 'Solicitar reserva' }));
     await screen.findByText('Pedido enviado');
 
-    expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+    expect(storedDraft()).toBeNull();
   });
 
   /* O botão de enviar fica no fim da revisão; a confirmação não pode abrir lá embaixo. */
@@ -600,14 +761,14 @@ describe('envio do pedido', () => {
     await user.click(await screen.findByRole('button', { name: 'Solicitar reserva' }));
 
     expect(await screen.findByText('Você já tem 3 pedidos aguardando confirmação.')).toBeVisible();
-    expect(window.sessionStorage.getItem(DRAFT_KEY)).not.toBeNull();
+    expect(storedDraft()).not.toBeNull();
   });
 
   /*
    * §13.2: erro de envio volta ao passo que resolve. "A data foi reservada" na
    * tela de revisão deixaria o problema sem conserto.
    */
-  it('volta ao passo das datas quando a data foi tomada no meio do caminho', async () => {
+  it('volta ao passo da data quando a data foi tomada no meio do caminho', async () => {
     const user = userEvent.setup();
     stubFetch({
       'POST /api/bookings': () =>
@@ -621,18 +782,22 @@ describe('envio do pedido', () => {
     expect(screen.getByText('O dia 05/12 acabou de ser reservado.')).toBeVisible();
   });
 
-  it('volta ao passo dos itens quando o estoque acabou', async () => {
+  it('volta ao passo da decoração quando ela saiu para outra festa', async () => {
     const user = userEvent.setup();
     stubFetch({
       'POST /api/bookings': () =>
-        errorResponse(409, 'STOCK_INSUFFICIENT', 'Só temos 1 unidade nessas datas.'),
+        errorResponse(
+          409,
+          'STOCK_INSUFFICIENT',
+          'Esta decoração não está mais livre nessas datas.',
+        ),
     });
     renderReview();
 
     await user.click(await screen.findByRole('button', { name: 'Solicitar reserva' }));
 
-    expect(await screen.findByText('Escolha o estilo da festa')).toBeVisible();
-    expect(screen.getByText('Só temos 1 unidade nessas datas.')).toBeVisible();
+    expect(await screen.findByText('Quer uma decoração?')).toBeVisible();
+    expect(screen.getByText('Esta decoração não está mais livre nessas datas.')).toBeVisible();
   });
 
   /* §9.7: o cliente nunca paga um valor que não viu. */
@@ -649,7 +814,7 @@ describe('envio do pedido', () => {
         errorResponse(
           409,
           'PRICE_CHANGED',
-          'O valor mudou de R$ 3.500,00 para R$ 3.950,00. Confira o novo total antes de enviar.',
+          'O valor mudou de R$ 3.600,00 para R$ 3.950,00. Confira o novo total antes de enviar.',
         ),
     });
     renderReview();
@@ -665,20 +830,13 @@ describe('envio do pedido', () => {
 
 /*
  * T32: o mesmo wizard manda o pedido só de decoração. O que o teste garante é o
- * contrato com a API — o tipo vai no orçamento e no pedido, e convidados vai
+ * contrato com a API: o tipo vai no orçamento e no pedido, e convidados vai
  * nulo mesmo que o rascunho guarde um número de quando a pessoa olhou a chácara.
  */
 describe('reserva só de decoração', () => {
-  const DECORATION_QUOTE: Quote = {
-    ...QUOTE,
-    days: [],
-    dailyTotalCents: 0,
-    totalCents: QUOTE.itemsTotalCents - QUOTE.discountTotalCents,
-  };
-
-  it('manda o pedido com o tipo, um dia e sem convidados', async () => {
+  it('manda o pedido com o tipo, um dia, a retirada e sem convidados', async () => {
     const user = userEvent.setup();
-    seedDraft({ kind: 'DECORATION', endDate: '2026-12-05', guestCount: 60 });
+    seedDecoration({ guestCount: 60, fulfillment: 'PICKUP' });
     const calls = stubFetch({
       'POST /api/pricing/quote': () => jsonResponse(DECORATION_QUOTE),
       'POST /api/bookings': () =>
@@ -690,6 +848,7 @@ describe('reserva só de decoração', () => {
             guestCount: null,
             days: [],
             dailyTotalCents: 0,
+            fulfillment: 'PICKUP',
           },
           201,
         ),
@@ -699,6 +858,8 @@ describe('reserva só de decoração', () => {
     // Sem diária na decoração: o bloco some, em vez de mostrar R$ 0,00.
     expect(await screen.findByText('Valores')).toBeVisible();
     expect(screen.queryByText(/Diária/)).not.toBeInTheDocument();
+    // O preço avulso, sem a etiqueta da chácara.
+    expect(screen.queryByText('preço com a chácara')).not.toBeInTheDocument();
     expect(calls.find((call) => call.url === '/api/pricing/quote')?.body).toMatchObject({
       kind: 'DECORATION',
     });
@@ -711,7 +872,8 @@ describe('reserva só de decoração', () => {
         startDate: '2026-12-05',
         endDate: '2026-12-05',
         guestCount: null,
-        items: [{ itemId: PAINEL.id, quantity: 2 }],
+        items: [{ itemId: PAINEL.id, quantity: 1 }],
+        fulfillment: 'PICKUP',
         customerNotes: null,
         expectedTotalCents: DECORATION_QUOTE.totalCents,
       });

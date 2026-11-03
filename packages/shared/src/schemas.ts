@@ -5,6 +5,7 @@ import {
   BOOKING_STATUSES,
   DAY_STATUSES,
   DISCOUNT_TYPES,
+  FULFILLMENT_METHODS,
   GALLERY_KINDS,
   PAYMENT_KINDS,
   PAYMENT_STATUSES,
@@ -123,6 +124,7 @@ export const dayStatusSchema = z.enum(DAY_STATUSES);
 export const bookingKindSchema = z.enum(BOOKING_KINDS);
 export const blockScopeSchema = z.enum(BLOCK_SCOPES);
 export const paymentKindSchema = z.enum(PAYMENT_KINDS);
+export const fulfillmentSchema = z.enum(FULFILLMENT_METHODS);
 export const paymentStatusSchema = z.enum(PAYMENT_STATUSES);
 
 /** Paginação das listas do admin (§11.1). */

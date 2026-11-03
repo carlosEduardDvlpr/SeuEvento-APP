@@ -31,6 +31,7 @@ const PAINEL = {
   description: null,
   imageUrl: null,
   priceCents: 20000,
+  venuePriceCents: 15000,
   stock: 2,
   assemblyNotes: null,
   sortOrder: 0,
@@ -88,7 +89,7 @@ describe('ItemsPage', () => {
     vi.unstubAllGlobals();
   });
 
-  it('lista o item com categoria, estilos, preço e estoque', async () => {
+  it('lista o item com categoria, estilos, os dois preços e estoque', async () => {
     stubFetch(baseRoutes());
     renderPage();
 
@@ -100,7 +101,10 @@ describe('ItemsPage', () => {
     expect(table.getByText('Painéis')).toBeVisible();
     // O estilo aparece pelo nome, não pelo id.
     expect(table.getByText('Rústico boho')).toBeVisible();
+    expect(table.getByRole('columnheader', { name: 'Avulso' })).toBeVisible();
+    expect(table.getByRole('columnheader', { name: 'Com a chácara' })).toBeVisible();
     expect(table.getByText('R$ 200,00')).toBeVisible();
+    expect(table.getByText('R$ 150,00')).toBeVisible();
     expect(table.getByText('2')).toBeVisible();
   });
 
@@ -132,7 +136,21 @@ describe('ItemsPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Novo item' }));
 
     expect(screen.getByText('Unidades disponíveis por dia.')).toBeVisible();
-    expect(screen.getByText('Cobrado uma vez pelo período.')).toBeVisible();
+  });
+
+  /* Cada decoração tem dois preços (novembro de 2026), e a ajuda diz quando vale cada um. */
+  it('explica quando vale cada preço', async () => {
+    stubFetch(baseRoutes());
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo item' }));
+
+    expect(screen.getByLabelText('Preço avulso')).toHaveAccessibleDescription(
+      'Quando a decoração sai sozinha, sem a chácara.',
+    );
+    expect(screen.getByLabelText('Preço com a chácara')).toHaveAccessibleDescription(
+      'Vale quando a decoração sai junto com a chácara. Igual ao avulso é sem promoção.',
+    );
   });
 
   it('já vem com a primeira categoria escolhida', async () => {
@@ -154,7 +172,8 @@ describe('ItemsPage', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Novo item' }));
     await userEvent.type(screen.getByLabelText('Nome'), 'Painel ripado');
-    await userEvent.type(screen.getByLabelText('Preço'), '200');
+    await userEvent.type(screen.getByLabelText('Preço avulso'), '200');
+    await userEvent.type(screen.getByLabelText('Preço com a chácara'), '150');
     await userEvent.clear(screen.getByLabelText('Estoque'));
     await userEvent.type(screen.getByLabelText('Estoque'), '2');
     await userEvent.click(screen.getByRole('checkbox', { name: 'Rústico boho' }));
@@ -169,6 +188,7 @@ describe('ItemsPage', () => {
       name: 'Painel ripado',
       categoryId: PAINEIS.id,
       priceCents: 20000,
+      venuePriceCents: 15000,
       stock: 2,
       themeIds: [BOHO.id],
     });
@@ -182,8 +202,37 @@ describe('ItemsPage', () => {
     await userEvent.type(screen.getByLabelText('Nome'), 'Sem preço');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
-    expect(await screen.findByText('Informe um valor.')).toBeVisible();
+    // Os dois preços são obrigatórios.
+    expect(await screen.findAllByText('Informe um valor.')).toHaveLength(2);
     expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0);
+  });
+
+  /* A mesma regra da API (§12.5): com a chácara, a decoração nunca sai mais cara. */
+  it('recusa preço com a chácara acima do avulso, sem chamar a API', async () => {
+    const calls = stubFetch(baseRoutes(page([])));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo item' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Painel ripado');
+    await userEvent.type(screen.getByLabelText('Preço avulso'), '200');
+    await userEvent.type(screen.getByLabelText('Preço com a chácara'), '250');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(
+      await screen.findByText('O preço com a chácara não pode passar do preço avulso.'),
+    ).toBeVisible();
+    expect(screen.getByLabelText('Preço com a chácara')).toHaveAttribute('aria-invalid', 'true');
+    expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0);
+  });
+
+  it('abre a edição com os dois preços do item', async () => {
+    stubFetch(baseRoutes());
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Painel ripado' }));
+
+    expect(screen.getByLabelText('Preço avulso')).toHaveValue(200);
+    expect(screen.getByLabelText('Preço com a chácara')).toHaveValue(150);
   });
 
   it('diz quando o item foi desativado em vez de excluído', async () => {

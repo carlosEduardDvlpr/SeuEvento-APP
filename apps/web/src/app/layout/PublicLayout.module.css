@@ -218,8 +218,7 @@
   list-style: none;
 }
 
-.footerContacts a,
-.footerNav a {
+.footerContacts a {
   display: inline-flex;
   align-items: center;
   gap: var(--space-8);
@@ -229,8 +228,7 @@
   text-decoration: none;
 }
 
-.footerContacts a:hover,
-.footerNav a:hover {
+.footerContacts a:hover {
   text-decoration: underline;
 }
 
@@ -239,32 +237,11 @@
   color: var(--hairline);
 }
 
-.footerNav {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.footerNav a {
-  color: var(--on-brand-soft);
-  font-weight: 500;
-}
-
-.footerUser {
-  padding-top: var(--space-24);
-  border-top: 1px solid var(--hairline-soft);
-  color: var(--on-brand-soft);
-  font-size: var(--text-sm);
-}
-
+/* A marca à esquerda e os contatos à direita, sem coluna vazia no meio. */
 @media (min-width: 760px) {
   .footerInner {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     gap: var(--space-48);
     align-items: start;
-  }
-
-  .footerUser {
-    grid-column: 1 / -1;
   }
 }

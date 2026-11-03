@@ -13,10 +13,12 @@ import {
 import { optionalText } from './catalog.js';
 import { dailyPriceSchema } from './pricing.js';
 import { appliedComboSchema, quoteItemsSchema, quoteLineSchema } from './quote.js';
+import { addressSchema } from './address.js';
 import {
   bookingKindSchema,
   bookingStatusSchema,
   centsSchema,
+  fulfillmentSchema,
   isoDateSchema,
   roleSchema,
 } from './schemas.js';
@@ -57,6 +59,11 @@ export const adminBookingSchema = z.object({
   combos: z.array(appliedComboSchema),
   discountTotalCents: centsSchema,
   totalCents: centsSchema,
+
+  /** Retirada ou entrega da decoração (§9.12). Nulo na chácara. */
+  fulfillment: fulfillmentSchema.nullable(),
+  /** Endereço de entrega copiado na reserva. Nulo fora da entrega. */
+  deliveryAddress: addressSchema.nullable(),
 
   customerNotes: z.string().nullable(),
   /** Nota interna do dono. Nunca sai para o cliente (§13.4). */
@@ -122,6 +129,12 @@ export const createAdminBookingBodySchema = z
     endDate: isoDateSchema,
     guestCount: guestCountSchema,
     items: quoteItemsSchema.default([]),
+    /**
+     * Retirada ou entrega da decoração (§9.12). Nulo vira retirada: o painel
+     * ainda não pergunta, e a entrega pede um endereço que o cliente lançado
+     * pelo dono normalmente não tem.
+     */
+    fulfillment: fulfillmentSchema.nullable().default(null),
     customerNotes: optionalText(600).default(null),
     adminNotes: optionalText(2000).default(null),
     expectedTotalCents: centsSchema,

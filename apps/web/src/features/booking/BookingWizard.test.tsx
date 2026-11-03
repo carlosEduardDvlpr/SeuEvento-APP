@@ -1,4 +1,4 @@
-import type { CatalogItem, Combo, PublicVenue } from '@chacara/shared';
+import type { CatalogItem, PublicVenue } from '@chacara/shared';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,10 +7,12 @@ import { BookingWizard } from './BookingWizard';
 import { type BookingDraft, EMPTY_DRAFT, saveDraft } from './draft';
 
 /**
- * O wizard é testado pela borda: rota, requisições e o que a pessoa vê.
+ * Os passos antes da revisão (§13.2), testados pela borda: rota, requisições e o
+ * que a pessoa vê. A revisão e o envio estão em `BookingSubmit.test.tsx`, que é
+ * onde há sessão para a revisão abrir.
  *
  * O relógio é fixado porque o calendário abre no mês corrente e pede a
- * disponibilidade desse período — sem data fixa, o teste mudaria de
+ * disponibilidade desse período: sem data fixa, o teste mudaria de
  * comportamento conforme o dia em que roda.
  */
 
@@ -30,103 +32,45 @@ const VENUE: PublicVenue = {
   holdHours: 48,
 };
 
-const BOHO = {
-  id: 't-boho',
-  slug: 'rustico-boho',
-  name: 'Rústico boho',
-  tagline: 'Tons naturais.',
-  description: null,
-  palette: [{ name: 'Sálvia', hex: '#A7B8A1' }],
-  coverImageUrl: null,
-  sortOrder: 1,
-};
-
-const NUVENS = {
-  id: 't-nuvens',
-  slug: 'nuvens-e-estrelas',
-  name: 'Nuvens e estrelas',
-  tagline: 'Algodão e luz baixa.',
-  description: null,
-  palette: [{ name: 'Céu', hex: '#C6D7E8' }],
-  coverImageUrl: null,
-  sortOrder: 2,
-};
-
 const PAINEIS = { id: 'c-paineis', name: 'Painéis', sortOrder: 1 };
 const MESAS = { id: 'c-mesas', name: 'Mesas', sortOrder: 2 };
 
+/* Ids no formato de uuid: é o que o `?item=` da landing aceita. */
 const PAINEL: CatalogItem = {
-  id: 'i-painel',
+  id: '00000000-0000-4000-8000-000000000001',
   name: 'Painel de balões arco-íris',
   description: 'Painel redondo com balões em degradê.',
   imageUrl: null,
-  priceCents: 12_000,
+  priceCents: 40_000,
+  venuePriceCents: 30_000,
   stock: 2,
   assemblyNotes: 'Encaixe os balões de fora para dentro.',
   sortOrder: 1,
   category: PAINEIS,
-  themeIds: [BOHO.id],
+  themeIds: [],
 };
 
+/** O mesmo preço com e sem a chácara: "sem promoção". */
 const MESA: CatalogItem = {
-  id: 'i-mesa',
+  id: '00000000-0000-4000-8000-000000000002',
   name: 'Mesa de madeira rústica',
   description: null,
   imageUrl: null,
-  priceCents: 8_000,
-  stock: 0,
+  priceCents: 25_000,
+  venuePriceCents: 25_000,
+  stock: 1,
   assemblyNotes: null,
   sortOrder: 2,
   category: MESAS,
-  themeIds: [BOHO.id],
+  themeIds: [],
 };
 
-const COMBO: Combo = {
-  id: 'combo-1',
-  name: 'Combo Rústico completo',
-  description: 'Painel e mesa juntos.',
-  imageUrl: null,
-  themeId: BOHO.id,
-  discountType: 'PERCENT',
-  discountValue: 10,
-  items: [
-    {
-      itemId: PAINEL.id,
-      name: PAINEL.name,
-      quantity: 1,
-      unitPriceCents: PAINEL.priceCents,
-      totalCents: PAINEL.priceCents,
-    },
-    {
-      itemId: MESA.id,
-      name: MESA.name,
-      quantity: 1,
-      unitPriceCents: MESA.priceCents,
-      totalCents: MESA.priceCents,
-    },
-  ],
-  itemsTotalCents: 20_000,
-  discountCents: 2_000,
-  priceCents: 18_000,
+const SEM_ESTOQUE: CatalogItem = {
+  ...MESA,
+  id: '00000000-0000-4000-8000-000000000003',
+  name: 'Arco de flores secas',
+  stock: 0,
 };
-
-/** Dezembro inteiro livre, menos o dia 10. */
-function decemberDays(booked: string[] = ['2026-12-10']) {
-  const days: { date: string; status: 'free' | 'booked' }[] = [];
-
-  for (let month = 12; month <= 13; month += 1) {
-    const year = month > 12 ? 2027 : 2026;
-    const real = month > 12 ? month - 12 : month;
-    const last = new Date(Date.UTC(year, real, 0)).getUTCDate();
-
-    for (let day = 1; day <= last; day += 1) {
-      const date = `${year}-${String(real).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      days.push({ date, status: booked.includes(date) ? 'booked' : 'free' });
-    }
-  }
-
-  return { days };
-}
 
 /*
  * Nome acessível do dia no calendário, como o `react-day-picker` o monta em pt-BR.
@@ -135,33 +79,85 @@ function decemberDays(booked: string[] = ['2026-12-10']) {
 const DIA_9 = /^quarta-feira, 9 de dezembro de 2026$/;
 const DIA_10 = /^quinta-feira, 10 de dezembro de 2026$/;
 
-type Routes = Record<string, unknown>;
+function nextDay(isoDate: string): string {
+  const date = new Date(`${isoDate}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
 
-function stubFetch(overrides: Routes = {}) {
+type Stub = {
+  items?: CatalogItem[];
+  /** Dias ocupados na agenda da chácara. */
+  booked?: string[];
+  /** Dias em que a decoração escolhida já saiu para outra festa. */
+  itemBooked?: string[];
+  /** Dias em que a decoração está fechada. */
+  closed?: string[];
+  /** Estoque livre de cada decoração nas datas; sem a entrada, o estoque dela. */
+  freeStock?: Record<string, number>;
+};
+
+/**
+ * `fetch` de mentira. A agenda responde só o período pedido, como a API: o
+ * passo da data confere o intervalo escolhido com uma consulta própria, e uma
+ * resposta com o mês inteiro faria qualquer intervalo parecer ocupado.
+ */
+function stubFetch({
+  items = [PAINEL, MESA, SEM_ESTOQUE],
+  booked = ['2026-12-10'],
+  itemBooked = [],
+  closed = [],
+  freeStock = {},
+}: Stub = {}) {
   const urls: string[] = [];
 
-  const routes: Routes = {
-    '/api/public/venue': VENUE,
-    '/api/themes': [BOHO, NUVENS],
-    '/api/categories': [PAINEIS, MESAS],
-    '/api/items': [PAINEL, MESA],
-    '/api/combos': [COMBO],
-    ...overrides,
-  };
+  function agenda(url: URL) {
+    const kind = url.searchParams.get('kind') ?? 'VENUE';
+    const itemId = url.searchParams.get('itemId');
+    const days: { date: string; status: 'free' | 'booked' | 'blocked' }[] = [];
+
+    for (let date = url.searchParams.get('from')!; date <= url.searchParams.get('to')!;) {
+      const status =
+        kind === 'DECORATION' && closed.includes(date)
+          ? 'blocked'
+          : (kind === 'VENUE' ? booked : itemId ? itemBooked : []).includes(date)
+            ? 'booked'
+            : 'free';
+
+      days.push({ date, status });
+      date = nextDay(date);
+    }
+
+    return { days };
+  }
 
   vi.stubGlobal(
     'fetch',
-    vi.fn((url: string) => {
-      urls.push(url);
+    vi.fn((input: string) => {
+      urls.push(input);
+      const url = new URL(input, 'http://localhost');
 
-      // Casa primeiro a URL exata (com query), depois só o caminho.
-      const path = url.split('?')[0]!;
-      const body = routes[url] ?? routes[path];
+      const body =
+        url.pathname === '/api/public/venue'
+          ? VENUE
+          : url.pathname === '/api/categories'
+            ? [PAINEIS, MESAS]
+            : url.pathname === '/api/items'
+              ? items
+              : url.pathname === '/api/items/availability'
+                ? {
+                    items: items
+                      .filter((item) => item.stock > 0)
+                      .map((item) => ({
+                        itemId: item.id,
+                        freeStock: freeStock[item.id] ?? item.stock,
+                      })),
+                  }
+                : url.pathname === '/api/availability'
+                  ? agenda(url)
+                  : [];
 
-      if (body !== undefined) return Promise.resolve(jsonResponse(body));
-      if (path === '/api/availability') return Promise.resolve(jsonResponse(decemberDays()));
-
-      return Promise.resolve(jsonResponse([]));
+      return Promise.resolve(jsonResponse(body));
     }),
   );
 
@@ -174,6 +170,11 @@ function renderWizard(route = '/reservar') {
 
 /** Chave do pedido guardado no `sessionStorage`. */
 const DRAFT_KEY = 'chacara:booking-draft';
+
+function storedDraft(): BookingDraft | null {
+  const raw = window.sessionStorage.getItem(DRAFT_KEY);
+  return raw ? (JSON.parse(raw) as BookingDraft) : null;
+}
 
 /**
  * Semeia o pedido guardado, como se a pessoa já tivesse chegado à revisão e
@@ -189,33 +190,196 @@ function seedDraft(draft: Partial<BookingDraft> = {}) {
   });
 }
 
-describe('BookingWizard', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.setSystemTime(new Date('2026-12-01T12:00:00.000Z'));
-    window.sessionStorage.clear();
-  });
+/** O cartão da decoração na lista, pelo nome do rádio. */
+function decorationCard(name: string) {
+  return within(screen.getByRole('radio', { name }).closest('li')!);
+}
 
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-    // Desfaz o `spyOn` do `scrollTo` no caso da rolagem.
-    vi.restoreAllMocks();
-    window.sessionStorage.clear();
-  });
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date('2026-12-01T12:00:00.000Z'));
+  window.sessionStorage.clear();
+});
 
-  it('abre no passo das datas e mostra os limites da chácara', async () => {
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  // Desfaz o `spyOn` do `scrollTo` no caso da rolagem.
+  vi.restoreAllMocks();
+  window.sessionStorage.clear();
+});
+
+function setupUser() {
+  return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+}
+
+describe('passo do tipo', () => {
+  it('abre perguntando o que reservar, com a chácara escolhida', async () => {
     stubFetch();
     renderWizard();
+
+    expect(await screen.findByText('O que você quer reservar?')).toBeVisible();
+    expect(screen.getByRole('radio', { name: /A chácara/ })).toBeChecked();
+    expect(screen.getByRole('button', { name: /Convidados/ })).toBeVisible();
+  });
+
+  it('segue para a data da chácara, com os limites dela', async () => {
+    const user = setupUser();
+    stubFetch();
+    renderWizard();
+
+    await user.click(await screen.findByRole('button', { name: /Continuar/ }));
 
     expect(await screen.findByText('Quando é a festa?')).toBeVisible();
     expect(screen.getByText(/de 1 a 3 dias seguidos/)).toBeVisible();
     expect(screen.getByText(/pelo menos 2 dias de antecedência/)).toBeVisible();
   });
 
-  it('pede a disponibilidade do mês visível e do seguinte', async () => {
-    const urls = stubFetch();
+  /* T32: a decoração é um dia só e não recebe convidados. */
+  it('na decoração, tira o passo dos convidados e pede um dia', async () => {
+    const user = setupUser();
+    stubFetch();
     renderWizard();
+
+    await user.click(await screen.findByRole('radio', { name: /Só a decoração/ }));
+    expect(screen.queryByRole('button', { name: /Convidados/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    expect(await screen.findByText('Qual é o dia da festa?')).toBeVisible();
+  });
+
+  /* Até a revisão, nada de resumo no rodapé: só a navegação (novembro de 2026). */
+  it('o rodapé dos passos só tem Voltar e Continuar', async () => {
+    stubFetch();
+    seedDraft({ itemId: PAINEL.id });
+    renderWizard('/reservar?step=decoracao');
+
+    await screen.findByText('Quer uma decoração?');
+
+    const footer = within(screen.getByRole('contentinfo'));
+    expect(footer.getByRole('button', { name: /Voltar/ })).toBeVisible();
+    expect(footer.getByRole('button', { name: /Continuar/ })).toBeVisible();
+    expect(footer.queryByText(/Total|Itens escolhidos|R\$/)).not.toBeInTheDocument();
+  });
+
+  it('volta um passo com o Voltar', async () => {
+    const user = setupUser();
+    stubFetch();
+    renderWizard('/reservar?step=data');
+
+    await screen.findByText('Quando é a festa?');
+    await user.click(screen.getByRole('button', { name: /Voltar/ }));
+
+    expect(await screen.findByText('O que você quer reservar?')).toBeVisible();
+  });
+});
+
+/*
+ * §13.1: a escolha feita na landing abre o wizard "já preenchido". A aplicação
+ * acontece na inicialização do pedido, não num efeito, para o calendário não
+ * aparecer vazio por um instante.
+ *
+ * E cada escolha começa um pedido **novo** (§12.2): o pedido não é carrinho, e
+ * o que sobrou de outra visita não soma com o clique de agora.
+ */
+describe('escolha vinda da landing', () => {
+  it('aplica a data do link como reserva de um dia', async () => {
+    stubFetch();
+    renderWizard('/reservar?step=data&data=2026-12-09');
+
+    expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
+    expect(screen.getByText('(1 dia)')).toBeVisible();
+  });
+
+  it('começa um pedido novo, sem o que estava guardado', async () => {
+    stubFetch();
+    seedDraft();
+    renderWizard('/reservar?step=convidados&data=2026-12-09');
+
+    // Os convidados eram do pedido guardado, e ficaram com ele.
+    expect(await screen.findByLabelText('Número de convidados')).toHaveValue(null);
+
+    // E o pedido antigo não volta depois pelo "Reservar" do cabeçalho.
+    await waitFor(() => expect(storedDraft()).toBeNull());
+  });
+
+  it('ignora data fora do formato em vez de quebrar', async () => {
+    stubFetch();
+    renderWizard('/reservar?step=data&data=ontem');
+
+    await screen.findByText('Quando é a festa?');
+    expect(screen.queryByText('(1 dia)')).not.toBeInTheDocument();
+  });
+
+  /*
+   * Antes da revisão, o pedido vive só na tela. A limpeza do parâmetro da URL
+   * não é verificável aqui: o `MemoryRouter` não mexe em `window.location`.
+   */
+  it('não guarda o pedido antes da revisão', async () => {
+    stubFetch();
+    renderWizard('/reservar?step=data&data=2026-12-09');
+
+    await screen.findByText('9 de dezembro de 2026');
+    await waitFor(() => expect(storedDraft()).toBeNull());
+  });
+
+  /*
+   * Pedido do dono: quem clica numa decoração da landing está alugando a
+   * decoração. O wizard pula o tipo e abre no dia, com a agenda dela.
+   */
+  it('abre no dia da decoração da vitrine, sem o passo do tipo', async () => {
+    const urls = stubFetch();
+    renderWizard(`/reservar?item=${PAINEL.id}`);
+
+    expect(await screen.findByText('Qual é o dia da festa?')).toBeVisible();
+    expect(
+      screen.getByText(/mostra os dias em que a decoração escolhida está livre/),
+    ).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Tipo/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Voltar/ })).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(urls).toContain(
+        `/api/availability?from=2026-12-01&to=2027-01-31&kind=DECORATION&itemId=${PAINEL.id}`,
+      );
+    });
+  });
+
+  it('o calendário tira os dias em que a decoração já saiu para outra festa', async () => {
+    // O dia 10 ocupado é da chácara, e não conta para a decoração.
+    stubFetch({ itemBooked: ['2026-12-09'] });
+    renderWizard(`/reservar?item=${PAINEL.id}`);
+
+    expect(await screen.findByRole('button', { name: DIA_9 })).toBeDisabled();
+    expect(screen.getByRole('button', { name: DIA_10 })).toBeEnabled();
+  });
+
+  it('chega à decoração com a da vitrine escolhida, sem a que estava guardada', async () => {
+    const user = setupUser();
+    stubFetch();
+    seedDraft({ kind: 'DECORATION', endDate: '2026-12-05', itemId: MESA.id });
+    renderWizard(`/reservar?item=${PAINEL.id}`);
+
+    await user.click(await screen.findByRole('button', { name: DIA_9 }));
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    expect(await screen.findByRole('radio', { name: PAINEL.name })).toBeChecked();
+    expect(screen.getByRole('radio', { name: MESA.name })).not.toBeChecked();
+  });
+
+  it('ignora decoração fora do formato em vez de quebrar', async () => {
+    stubFetch();
+    renderWizard('/reservar?item=nao-e-um-id');
+
+    expect(await screen.findByText('O que você quer reservar?')).toBeVisible();
+    expect(screen.getByRole('radio', { name: /A chácara/ })).toBeChecked();
+  });
+});
+
+describe('passo da data', () => {
+  it('pede a agenda do mês visível e do seguinte', async () => {
+    const urls = stubFetch();
+    renderWizard('/reservar?step=data');
 
     await screen.findByText('Quando é a festa?');
 
@@ -224,192 +388,309 @@ describe('BookingWizard', () => {
     });
   });
 
-  it('respeita o passo pedido na URL', async () => {
+  it('bloqueia o avanço e aponta o que falta sem a data', async () => {
+    const user = setupUser();
     stubFetch();
-    seedDraft();
-    renderWizard('/reservar?step=itens');
-
-    expect(await screen.findByText('Escolha o estilo da festa')).toBeVisible();
-  });
-
-  /*
-   * §13.1: a escolha feita na landing abre o wizard "já preenchido". A aplicação
-   * acontece na inicialização do pedido, não num efeito, para o calendário não
-   * aparecer vazio por um instante.
-   *
-   * E cada escolha começa um pedido **novo** (§12.2): o pedido não é carrinho, e
-   * o que sobrou de outra visita não soma com o clique de agora.
-   */
-  describe('escolha vinda da landing', () => {
-    it('aplica a data do link como reserva de um dia', async () => {
-      stubFetch();
-      renderWizard('/reservar?data=2026-12-09');
-
-      expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
-      expect(screen.getByText('(1 dia)')).toBeVisible();
-    });
-
-    it('começa um pedido novo, sem o que estava guardado', async () => {
-      stubFetch();
-      seedDraft({ startDate: '2026-12-05', endDate: '2026-12-06' });
-      renderWizard('/reservar?data=2026-12-09');
-
-      expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
-      // Os convidados eram do pedido guardado, e ficaram com ele.
-      expect(screen.getByLabelText('Número de convidados')).toHaveValue(null);
-
-      // E o pedido antigo não volta depois pelo "Reservar" do cabeçalho.
-      await waitFor(() => {
-        expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
-      });
-    });
-
-    it('ignora data fora do formato em vez de quebrar', async () => {
-      stubFetch();
-      renderWizard('/reservar?data=ontem');
-
-      await screen.findByText('Quando é a festa?');
-      expect(screen.queryByText('(1 dia)')).not.toBeInTheDocument();
-    });
-
-    it('aplica o estilo do link ao filtro de itens', async () => {
-      const urls = stubFetch();
-      renderWizard(`/reservar?step=itens&estilo=${BOHO.id}`);
-
-      await screen.findByText('Escolha o estilo da festa');
-
-      await waitFor(() => {
-        expect(urls).toContain(`/api/items?themeId=${BOHO.id}`);
-      });
-    });
-
-    /*
-     * Antes da revisão, o pedido vive só na tela: nada vai para o
-     * armazenamento, e sair e voltar começa do zero (ver o caso "esquece o
-     * pedido" mais abaixo). O que é guardado a partir da revisão está em
-     * `BookingSubmit.test.tsx`, que é onde há sessão para a revisão abrir.
-     *
-     * A limpeza do parâmetro da URL não é verificável aqui — o `MemoryRouter` não
-     * mexe em `window.location`, e um teste que passa por vacuidade seria pior
-     * que nenhum. Ela está coberta na verificação ao vivo.
-     */
-    it('não guarda o pedido antes da revisão', async () => {
-      stubFetch();
-      renderWizard('/reservar?data=2026-12-09');
-
-      await screen.findByText('9 de dezembro de 2026');
-
-      await waitFor(() => {
-        expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
-      });
-    });
-
-    /*
-     * O cartão da vitrine de itens da landing manda `?item=`. O id precisa ter o
-     * formato de uuid, por isso o item aqui não é o `PAINEL` dos outros casos.
-     *
-     * O que entrou no pedido se vê pelo rodapé, que conta as linhas e estima o
-     * valor dos itens: antes da revisão, não há mais onde olhar.
-     */
-    const VITRINE: CatalogItem = { ...PAINEL, id: '00000000-0000-4000-8000-000000000001' };
-
-    /*
-     * Pedido do dono: quem clica numa peça da vitrine está alugando a decoração,
-     * e o wizard já abre em "Só a decoração", com o item no pedido.
-     */
-    it('abre em "só a decoração", com uma unidade do item que veio da vitrine', async () => {
-      stubFetch({ '/api/items': [VITRINE, MESA] });
-      renderWizard(`/reservar?item=${VITRINE.id}`);
-
-      expect(await screen.findByText('Qual é o dia da festa?')).toBeVisible();
-      expect(screen.getByRole('radio', { name: /Só a decoração/ })).toBeChecked();
-      // Sem a chácara, não há convidados a perguntar.
-      expect(screen.queryByLabelText('Número de convidados')).not.toBeInTheDocument();
-
-      expect(screen.getByText('Itens escolhidos (1)')).toBeVisible();
-      expect(await screen.findByText('R$ 120,00')).toBeVisible();
-    });
-
-    /*
-     * O defeito que o dono encontrou: escolher um item, voltar à landing e
-     * escolher outro abria a reserva com os dois.
-     */
-    it('começa o pedido só com o item da vitrine, sem somar ao que estava guardado', async () => {
-      stubFetch({ '/api/items': [VITRINE, MESA] });
-      // O que sobrou de outra visita: a mesa, que levaria a estimativa a R$ 200,00.
-      seedDraft({ items: [{ itemId: MESA.id, quantity: 1 }] });
-      renderWizard(`/reservar?item=${VITRINE.id}`);
-
-      expect(await screen.findByText('Itens escolhidos (1)')).toBeVisible();
-      expect(await screen.findByText('R$ 120,00')).toBeVisible();
-    });
-
-    it('ignora item fora do formato em vez de quebrar', async () => {
-      stubFetch();
-      renderWizard('/reservar?item=nao-e-um-id');
-
-      expect(await screen.findByText('Só a chácara, sem itens')).toBeVisible();
-    });
-  });
-
-  /*
-   * §13.2: o passo mora na URL para o botão voltar do navegador andar um passo.
-   * No celular esse botão é o gesto de voltar do sistema.
-   */
-  it('avança para os itens quando o passo 1 está completo', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubFetch();
-    seedDraft();
-    renderWizard();
-
-    await screen.findByText('Quando é a festa?');
-    await user.click(screen.getByRole('button', { name: /Continuar/ }));
-
-    expect(await screen.findByText('Escolha o estilo da festa')).toBeVisible();
-  });
-
-  it('bloqueia o avanço e aponta o que falta quando o passo 1 está incompleto', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubFetch();
-    renderWizard();
+    renderWizard('/reservar?step=data');
 
     await screen.findByText('Quando é a festa?');
     await user.click(screen.getByRole('button', { name: /Continuar/ }));
 
     expect(await screen.findByText('Escolha as datas da festa.')).toBeVisible();
-    expect(screen.getByText('Informe quantas pessoas são esperadas.')).toBeVisible();
-    // Continua no passo 1: nada de pular para uma tela que não sabe as datas.
     expect(screen.getByText('Quando é a festa?')).toBeVisible();
   });
 
-  it('não deixa pular direto para os itens antes de o passo 1 fechar', async () => {
+  /*
+   * O nome acessível do dia é a data inteira, e não o número: é o que o leitor
+   * de tela anuncia, e é o que distingue os dois meses visíveis ao mesmo tempo.
+   */
+  it('mostra o dia ocupado como indisponível no calendário', async () => {
+    stubFetch();
+    renderWizard('/reservar?step=data');
+
+    expect(await screen.findByRole('button', { name: DIA_10 })).toBeDisabled();
+    expect(screen.getByRole('button', { name: DIA_9 })).toBeEnabled();
+  });
+
+  it('trata clique único como reserva de um dia', async () => {
+    const user = setupUser();
+    stubFetch();
+    renderWizard('/reservar?step=data');
+
+    await user.click(await screen.findByRole('button', { name: DIA_9 }));
+
+    expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
+    expect(screen.getByText('(1 dia)')).toBeVisible();
+  });
+
+  /*
+   * §13.2: dizer **qual** dia atrapalha, não só recusar a escolha. O
+   * `react-day-picker` desabilita dia a dia, mas não impede um intervalo que
+   * pule por cima de um dia ocupado.
+   */
+  it('diz qual dia do intervalo está indisponível e não deixa seguir', async () => {
+    const user = setupUser();
+    const urls = stubFetch();
+    seedDraft({ startDate: '2026-12-09', endDate: '2026-12-11' });
+    renderWizard('/reservar?step=data');
+
+    expect(await screen.findByText(/10 de dezembro de 2026 não está disponível/)).toBeVisible();
+    // A conferência é da agenda exata do intervalo, não dos meses na tela.
+    expect(urls).toContain('/api/availability?from=2026-12-09&to=2026-12-11');
+
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    expect(screen.queryByText('Quantas pessoas?')).not.toBeInTheDocument();
+  });
+
+  it('avisa quando o intervalo passa do máximo de dias e não deixa seguir', async () => {
+    const user = setupUser();
+    stubFetch();
+    seedDraft({ startDate: '2026-12-12', endDate: '2026-12-17' });
+    renderWizard('/reservar?step=data');
+
+    expect(await screen.findByText(/no máximo 3 dias seguidos/)).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    expect(screen.queryByText('Quantas pessoas?')).not.toBeInTheDocument();
+  });
+
+  it('avança para os convidados quando a data serve', async () => {
+    const user = setupUser();
+    stubFetch();
+    seedDraft();
+    renderWizard('/reservar?step=data');
+
+    expect(await screen.findByText(/5 a 6 de dezembro de 2026/)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    expect(await screen.findByText('Quantas pessoas?')).toBeVisible();
+  });
+});
+
+describe('passo dos convidados', () => {
+  it('pede o número quando a pessoa tenta seguir sem ele', async () => {
+    const user = setupUser();
+    stubFetch();
+    seedDraft({ guestCount: null });
+    renderWizard('/reservar?step=convidados');
+
+    await user.click(await screen.findByRole('button', { name: /Continuar/ }));
+
+    expect(await screen.findByText('Informe quantas pessoas são esperadas.')).toBeVisible();
+    expect(screen.getByText('Quantas pessoas?')).toBeVisible();
+  });
+
+  /* O teto é o `maxGuests` das configurações, e o aviso não espera o clique. */
+  it('trava no máximo de convidados da chácara', async () => {
+    const user = setupUser();
+    stubFetch();
+    seedDraft({ guestCount: null });
+    renderWizard('/reservar?step=convidados');
+
+    await user.type(await screen.findByLabelText('Número de convidados'), '150');
+
+    expect(
+      await screen.findByText('São mais pessoas do que a chácara recebe. O máximo é 120.'),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    expect(screen.getByText('Quantas pessoas?')).toBeVisible();
+    expect(screen.queryByText('Quer uma decoração?')).not.toBeInTheDocument();
+  });
+
+  it('segue para a decoração com o número dentro do limite', async () => {
+    const user = setupUser();
+    stubFetch();
+    seedDraft({ guestCount: null });
+    renderWizard('/reservar?step=convidados');
+
+    await user.type(await screen.findByLabelText('Número de convidados'), '80');
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    expect(await screen.findByText('Quer uma decoração?')).toBeVisible();
+  });
+});
+
+describe('passo da decoração', () => {
+  it('pede o estoque livre das datas do pedido', async () => {
+    const urls = stubFetch();
+    seedDraft();
+    renderWizard('/reservar?step=decoracao');
+
+    await screen.findByText('Quer uma decoração?');
+    await waitFor(() => {
+      expect(urls).toContain('/api/items/availability?from=2026-12-05&to=2026-12-06');
+    });
+  });
+
+  /* Com a chácara, a decoração sai pelo preço com a chácara (novembro de 2026). */
+  it('na chácara, mostra o preço com a chácara e o avulso riscado', async () => {
+    stubFetch();
+    seedDraft();
+    renderWizard('/reservar?step=decoracao');
+
+    await screen.findByRole('radio', { name: PAINEL.name });
+    const painel = decorationCard(PAINEL.name);
+
+    expect(painel.getByText('R$ 300,00')).toBeVisible();
+    expect(painel.getByText('R$ 400,00').closest('s')).not.toBeNull();
+    expect(painel.getByText('com a chácara')).toBeVisible();
+    expect(painel.getByText(/Encaixe os balões de fora para dentro/)).toBeVisible();
+
+    // Preço igual nos dois é sem promoção: nada riscado.
+    const mesa = decorationCard(MESA.name);
+    expect(mesa.getByText('R$ 250,00')).toBeVisible();
+    expect(mesa.queryByText('com a chácara')).not.toBeInTheDocument();
+  });
+
+  it('começa sem decoração e deixa escolher uma só', async () => {
+    const user = setupUser();
+    stubFetch();
+    seedDraft();
+    renderWizard('/reservar?step=decoracao');
+
+    expect(await screen.findByRole('radio', { name: 'Sem decoração' })).toBeChecked();
+
+    await user.click(screen.getByRole('radio', { name: PAINEL.name }));
+    await user.click(screen.getByRole('radio', { name: MESA.name }));
+
+    expect(screen.getByRole('radio', { name: MESA.name })).toBeChecked();
+    expect(screen.getByRole('radio', { name: PAINEL.name })).not.toBeChecked();
+    await waitFor(() => expect(storedDraft()?.itemId).toBe(MESA.id));
+  });
+
+  it('mostra a decoração em uso nessa data, sem deixar escolher', async () => {
+    stubFetch({ freeStock: { [MESA.id]: 0 } });
+    seedDraft({ endDate: '2026-12-05' });
+    renderWizard('/reservar?step=decoracao');
+
+    expect(await screen.findByRole('radio', { name: MESA.name })).toBeDisabled();
+    expect(decorationCard(MESA.name).getByText('Em uso nessa data')).toBeVisible();
+    expect(screen.getByRole('radio', { name: PAINEL.name })).toBeEnabled();
+  });
+
+  it('não oferece decoração sem estoque nenhum', async () => {
+    stubFetch();
+    seedDraft();
+    renderWizard('/reservar?step=decoracao');
+
+    await screen.findByRole('radio', { name: PAINEL.name });
+    expect(screen.queryByRole('radio', { name: SEM_ESTOQUE.name })).not.toBeInTheDocument();
+  });
+
+  it('filtra pela categoria', async () => {
+    const user = setupUser();
+    stubFetch();
+    seedDraft();
+    renderWizard('/reservar?step=decoracao');
+
+    await screen.findByRole('radio', { name: PAINEL.name });
+    await user.click(screen.getByRole('button', { name: 'Mesas' }));
+
+    expect(screen.getByRole('radio', { name: MESA.name })).toBeVisible();
+    expect(screen.queryByRole('radio', { name: PAINEL.name })).not.toBeInTheDocument();
+  });
+
+  it('avisa quando a escolhida está em uso nessa data e não deixa seguir', async () => {
+    const user = setupUser();
+    stubFetch({ freeStock: { [MESA.id]: 0 } });
+    seedDraft({ endDate: '2026-12-05', itemId: MESA.id });
+    renderWizard('/reservar?step=decoracao');
+
+    expect(
+      await screen.findByText(
+        'A decoração escolhida não está livre nessa data. Escolha outra ou siga sem decoração.',
+      ),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    expect(screen.getByText('Quer uma decoração?')).toBeVisible();
+  });
+
+  it('na decoração sozinha, pede a escolha antes de seguir e cobra o preço avulso', async () => {
+    const user = setupUser();
+    stubFetch();
+    seedDraft({ kind: 'DECORATION', endDate: '2026-12-05', guestCount: null });
+    renderWizard('/reservar?step=decoracao');
+
+    expect(await screen.findByText('Escolha a decoração')).toBeVisible();
+    await screen.findByRole('radio', { name: PAINEL.name });
+    expect(screen.queryByRole('radio', { name: 'Sem decoração' })).not.toBeInTheDocument();
+    expect(decorationCard(PAINEL.name).getByText('R$ 400,00')).toBeVisible();
+    expect(decorationCard(PAINEL.name).queryByText('com a chácara')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    expect(await screen.findByText('Escolha a decoração da festa.')).toBeVisible();
+  });
+
+  /*
+   * Decoração desativada sai do `GET /items`. Mantê-la no pedido faria a API
+   * recusar o envio com "um dos itens saiu do catálogo" sem a pessoa saber qual.
+   */
+  it('tira do pedido a decoração que saiu do catálogo', async () => {
+    stubFetch({ items: [MESA] });
+    seedDraft({ itemId: PAINEL.id });
+    renderWizard('/reservar?step=decoracao');
+
+    await screen.findByRole('radio', { name: MESA.name });
+    await waitFor(() => expect(storedDraft()?.itemId).toBeNull());
+  });
+
+  it('explica quando a decoração está fechada nas datas da chácara', async () => {
+    const user = setupUser();
+    stubFetch({ closed: ['2026-12-05'] });
+    seedDraft({ endDate: '2026-12-05', itemId: PAINEL.id });
+    renderWizard('/reservar?step=decoracao');
+
+    expect(await screen.findByText('A decoração não sai nessas datas')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Tirar a decoração do pedido' }));
+    await waitFor(() => expect(storedDraft()?.itemId).toBeNull());
+  });
+});
+
+/*
+ * §13.2: o passo mora na URL para o botão voltar do navegador andar um passo.
+ * No celular esse botão é o gesto de voltar do sistema.
+ */
+describe('navegação', () => {
+  it('não deixa pular para a frente antes de responder', async () => {
     stubFetch();
     renderWizard();
 
-    await screen.findByText('Quando é a festa?');
+    await screen.findByText('O que você quer reservar?');
 
-    expect(screen.getByRole('button', { name: /Itens/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Data/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Convidados/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Decoração/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Revisão/ })).toBeDisabled();
   });
 
-  it('libera os atalhos dos passos quando o rascunho está completo', async () => {
+  it('libera os atalhos quando o pedido está completo', async () => {
     stubFetch();
     seedDraft();
     renderWizard();
 
-    await screen.findByText('Quando é a festa?');
+    await screen.findByText('O que você quer reservar?');
 
-    expect(screen.getByRole('button', { name: /Itens/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Decoração/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Revisão/ })).toBeEnabled();
+  });
+
+  /* Um link para um passo adiante com o pedido pela metade cai no que falta. */
+  it('cai no primeiro passo que falta quando a URL pede um adiante', async () => {
+    stubFetch();
+    renderWizard('/reservar?step=revisao');
+
+    expect(await screen.findByText('Quando é a festa?')).toBeVisible();
   });
 
   it('recupera o rascunho guardado, que é o que sobrevive ao desvio por login', async () => {
     stubFetch();
     seedDraft();
-    renderWizard();
+    renderWizard('/reservar?step=convidados');
 
-    // 5 a 6 de dezembro de 2026, sem repetir o mês.
-    expect(await screen.findByText(/5 a 6 de dezembro de 2026/)).toBeVisible();
-    expect(screen.getByLabelText('Número de convidados')).toHaveValue(60);
+    expect(await screen.findByLabelText('Número de convidados')).toHaveValue(60);
   });
 
   /*
@@ -418,21 +699,19 @@ describe('BookingWizard', () => {
    * só acontece a partir da revisão, e lá ele é guardado.
    */
   it('esquece o pedido que não chegou à revisão', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = setupUser();
     stubFetch();
-    const first = renderWizard();
+    const first = renderWizard('/reservar?step=data');
 
-    await screen.findByText('Quando é a festa?');
     await user.click(await screen.findByRole('button', { name: DIA_9 }));
-    await user.type(screen.getByLabelText('Número de convidados'), '80');
     expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
 
     first.unmount();
-    renderWizard();
+    renderWizard('/reservar?step=data');
 
-    expect(await screen.findByLabelText('Número de convidados')).toHaveValue(null);
+    await screen.findByText('Quando é a festa?');
     expect(screen.queryByText('9 de dezembro de 2026')).not.toBeInTheDocument();
-    expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+    expect(storedDraft()).toBeNull();
   });
 
   /*
@@ -440,214 +719,14 @@ describe('BookingWizard', () => {
    * quem tocava em "Continuar" no fim do passo caía no meio do seguinte.
    */
   it('começa o passo seguinte do topo', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = setupUser();
     const scrollTo = vi.spyOn(window, 'scrollTo');
     stubFetch();
-    seedDraft();
     renderWizard();
 
-    await screen.findByText('Quando é a festa?');
-    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+    await user.click(await screen.findByRole('button', { name: /Continuar/ }));
 
-    expect(await screen.findByText('Escolha o estilo da festa')).toBeVisible();
+    expect(await screen.findByText('Quando é a festa?')).toBeVisible();
     expect(scrollTo).toHaveBeenCalledWith(0, 0);
-  });
-
-  /*
-   * §13.2: dizer **qual** dia atrapalha, não só recusar a escolha. O
-   * `react-day-picker` desabilita dia a dia, mas não impede um intervalo que
-   * pule por cima de um dia ocupado.
-   */
-  it('diz qual dia do intervalo está indisponível', async () => {
-    stubFetch();
-    seedDraft({ startDate: '2026-12-09', endDate: '2026-12-11' });
-    renderWizard();
-
-    expect(await screen.findByText(/10 de dezembro de 2026 não está disponível/)).toBeVisible();
-  });
-
-  it('avisa quando o intervalo passa do máximo de dias', async () => {
-    stubFetch();
-    seedDraft({ startDate: '2026-12-01', endDate: '2026-12-06' });
-    renderWizard();
-
-    expect(await screen.findByText(/no máximo 3 dias seguidos/)).toBeVisible();
-  });
-
-  /*
-   * O nome acessível do dia é a data inteira ("quinta-feira, 10 de dezembro de
-   * 2026"), e não o número: é o que o leitor de tela anuncia, e é o que distingue
-   * os dois meses visíveis ao mesmo tempo.
-   */
-  it('mostra o dia ocupado como indisponível no calendário', async () => {
-    stubFetch();
-    renderWizard();
-
-    await screen.findByText('Quando é a festa?');
-
-    expect(await screen.findByRole('button', { name: DIA_10 })).toBeDisabled();
-    expect(screen.getByRole('button', { name: DIA_9 })).toBeEnabled();
-  });
-
-  it('trata clique único como reserva de um dia', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubFetch();
-    renderWizard();
-
-    await screen.findByText('Quando é a festa?');
-    await user.click(await screen.findByRole('button', { name: DIA_9 }));
-
-    expect(await screen.findByText('9 de dezembro de 2026')).toBeVisible();
-    expect(screen.getByText('(1 dia)')).toBeVisible();
-  });
-});
-
-describe('BookingWizard, passo de itens', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.setSystemTime(new Date('2026-12-01T12:00:00.000Z'));
-    window.sessionStorage.clear();
-    seedDraft();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-    window.sessionStorage.clear();
-  });
-
-  function renderItems() {
-    return renderWizard('/reservar?step=itens');
-  }
-
-  it('lista os itens com preço, categoria e dica de montagem', async () => {
-    stubFetch();
-    renderItems();
-
-    const name = await screen.findByText('Painel de balões arco-íris');
-    const card = within(name.closest('li')!);
-
-    expect(card.getByText('R$ 120,00')).toBeVisible();
-    // A categoria aparece no card e também como chip de filtro: aqui só o card.
-    expect(card.getByText('Painéis')).toBeVisible();
-    expect(card.getByText(/Encaixe os balões de fora para dentro/)).toBeVisible();
-  });
-
-  it('marca o item sem estoque como esgotado, sem seletor de quantidade', async () => {
-    stubFetch();
-    renderItems();
-
-    expect(await screen.findByText('Esgotado')).toBeVisible();
-    expect(
-      screen.queryByRole('button', { name: 'Aumentar Mesa de madeira rústica' }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('filtra os itens pelo estilo escolhido', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const urls = stubFetch();
-    renderItems();
-
-    await screen.findByText('Painel de balões arco-íris');
-    await user.click(screen.getByRole('button', { name: /Nuvens e estrelas/ }));
-
-    await waitFor(() => {
-      expect(urls).toContain(`/api/items?themeId=${NUVENS.id}`);
-    });
-  });
-
-  it('conta no rótulo da aba as unidades escolhidas', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubFetch();
-    renderItems();
-
-    await screen.findByText('Painel de balões arco-íris');
-    await user.click(screen.getByRole('button', { name: 'Aumentar Painel de balões arco-íris' }));
-
-    expect(await screen.findByRole('tab', { name: 'Itens (1)' })).toBeVisible();
-  });
-
-  it('não deixa passar do estoque do item', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubFetch();
-    renderItems();
-
-    await screen.findByText('Painel de balões arco-íris');
-    const more = screen.getByRole('button', { name: 'Aumentar Painel de balões arco-íris' });
-
-    await user.click(more);
-    await user.click(more);
-
-    expect(await screen.findByRole('tab', { name: 'Itens (2)' })).toBeVisible();
-    expect(more).toBeDisabled();
-  });
-
-  it('mostra a economia do combo e o que falta para fechá-lo', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubFetch();
-    renderItems();
-
-    await screen.findByText('Painel de balões arco-íris');
-    await user.click(screen.getByRole('tab', { name: 'Combos' }));
-
-    expect(await screen.findByText('Combo Rústico completo')).toBeVisible();
-    expect(screen.getByText('R$ 20,00')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Completar o combo' })).toBeVisible();
-  });
-
-  it('completa o combo pondo no pedido o que falta', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubFetch();
-    renderItems();
-
-    await screen.findByText('Painel de balões arco-íris');
-    await user.click(screen.getByRole('tab', { name: 'Combos' }));
-    await user.click(await screen.findByRole('button', { name: 'Completar o combo' }));
-
-    expect(await screen.findByText(/Combo completo/)).toBeVisible();
-    expect(screen.getByRole('tab', { name: 'Itens (2)' })).toBeVisible();
-  });
-
-  /*
-   * Item desativado sai do `GET /items`. Mantê-lo no pedido faria a API recusar
-   * o envio com "um dos itens saiu do catálogo" sem a pessoa saber qual era.
-   */
-  it('tira do pedido o item que saiu do catálogo', async () => {
-    stubFetch({ '/api/items': [MESA] });
-    seedDraft({ items: [{ itemId: PAINEL.id, quantity: 2 }] });
-    renderItems();
-
-    await screen.findByText('Mesa de madeira rústica');
-
-    await waitFor(() => {
-      const stored = JSON.parse(window.sessionStorage.getItem(DRAFT_KEY) ?? '{}') as BookingDraft;
-      expect(stored.items).toEqual([]);
-    });
-  });
-
-  it('explica o vazio quando o filtro não devolve item', async () => {
-    stubFetch({ '/api/items': [] });
-    renderItems();
-
-    expect(await screen.findByText('Nenhum item neste filtro')).toBeVisible();
-  });
-
-  it('mostra a estimativa como estimativa, deixando as diárias para a revisão', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubFetch();
-    renderItems();
-
-    await screen.findByText('Painel de balões arco-íris');
-    await user.click(screen.getByRole('button', { name: 'Aumentar Painel de balões arco-íris' }));
-
-    expect(await screen.findByText('Itens escolhidos (1)')).toBeVisible();
-    expect(screen.getByText('As diárias entram no total na revisão.')).toBeVisible();
-  });
-
-  it('deixa claro que dá para alugar só a chácara', async () => {
-    stubFetch();
-    renderItems();
-
-    expect(await screen.findByText('Só a chácara, sem itens')).toBeVisible();
   });
 });

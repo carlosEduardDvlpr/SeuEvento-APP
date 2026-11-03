@@ -274,6 +274,24 @@ export function ArrowRightIcon(props: IconProps) {
   );
 }
 
+/** Pausa a troca automática do carrossel da landing (WCAG 2.2.2). */
+export function PauseIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M9 5.5v13M15 5.5v13" />
+    </Icon>
+  );
+}
+
+/** Volta a passar as fotos do carrossel sozinhas. */
+export function PlayIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.4-6.8a.8.8 0 0 0 0-1.4L9.2 4.5a.8.8 0 0 0-1.2.7Z" />
+    </Icon>
+  );
+}
+
 /** A chácara, no seletor do que reservar (T32). */
 export function HouseIcon(props: IconProps) {
   return (

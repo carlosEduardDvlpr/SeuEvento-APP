@@ -145,10 +145,58 @@ describe('orçamento', () => {
       expect(response.json().dailyTotalCents).toBe(BASE_DAILY * 3);
     });
 
-    it('aplica o combo e desconta do total', async () => {
+    /*
+     * Dois preços por decoração (novembro de 2026): quem aluga a chácara leva
+     * pelo preço com a chácara, e quem leva só a decoração paga o avulso.
+     */
+    it('a chácara cobra a decoração pelo preço com a chácara', async () => {
+      const item = await createItem({
+        categoryId,
+        name: 'Decoração boho',
+        priceCents: 40000,
+        venuePriceCents: 30000,
+      });
+
+      const response = await quote({
+        startDate: '2027-03-05',
+        endDate: '2027-03-05',
+        items: [{ itemId: item.id, quantity: 1 }],
+      });
+
+      expect(response.json().lines).toEqual([
+        {
+          itemId: item.id,
+          name: 'Decoração boho',
+          quantity: 1,
+          unitPriceCents: 30000,
+          totalCents: 30000,
+        },
+      ]);
+      expect(response.json().totalCents).toBe(BASE_DAILY + 30000);
+    });
+
+    it('a decoração sozinha cobra o preço avulso', async () => {
+      const item = await createItem({ categoryId, priceCents: 40000, venuePriceCents: 30000 });
+
+      const response = await quote({
+        kind: 'DECORATION',
+        startDate: '2027-03-05',
+        endDate: '2027-03-05',
+        items: [{ itemId: item.id, quantity: 1 }],
+      });
+
+      expect(response.json().lines[0]).toMatchObject({ unitPriceCents: 40000, totalCents: 40000 });
+      expect(response.json().totalCents).toBe(40000);
+    });
+
+    /*
+     * O preço com a chácara tomou o lugar dos combos: um combo ativo, que antes
+     * daria 10% de desconto neste pedido, não entra mais na conta.
+     */
+    it('não aplica combo, nem o ativo que caberia no pedido', async () => {
       const painel = await createItem({ categoryId, priceCents: 20000 });
       const mesa = await createItem({ categoryId, priceCents: 12000 });
-      const combo = await createCombo({ name: 'Kit boho', itemIds: [painel.id, mesa.id] });
+      await createCombo({ name: 'Kit boho', itemIds: [painel.id, mesa.id] });
 
       const response = await quote({
         startDate: '2027-03-05',
@@ -159,27 +207,12 @@ describe('orçamento', () => {
         ],
       });
 
-      // Itens 32000; o combo do factory dá 10%, ou seja, 3200 de desconto.
-      expect(response.json().combos).toEqual([
-        { comboId: combo.id, name: 'Kit boho', times: 1, discountCents: 3200 },
-      ]);
-      expect(response.json().discountTotalCents).toBe(3200);
-      expect(response.json().totalCents).toBe(BASE_DAILY + 32000 - 3200);
-    });
-
-    it('ignora combo desativado', async () => {
-      const item = await createItem({ categoryId, priceCents: 20000 });
-      const combo = await createCombo({ itemIds: [item.id] });
-      await prisma.combo.update({ where: { id: combo.id }, data: { active: false } });
-
-      const response = await quote({
-        startDate: '2027-03-05',
-        endDate: '2027-03-05',
-        items: [{ itemId: item.id, quantity: 1 }],
+      expect(response.json()).toMatchObject({
+        combos: [],
+        discountTotalCents: 0,
+        itemsTotalCents: 32000,
+        totalCents: BASE_DAILY + 32000,
       });
-
-      expect(response.json().combos).toEqual([]);
-      expect(response.json().discountTotalCents).toBe(0);
     });
 
     it('não é cacheada: o resultado depende do que está reservado agora', async () => {

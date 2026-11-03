@@ -1,6 +1,8 @@
+import { VENUE_PRICE_ABOVE_PRICE_ERROR } from '@chacara/shared';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
+import { PG_CHECK_VIOLATION, postgresErrorCode } from '../src/lib/errors.js';
 import { slugify } from '../src/modules/themes/service.js';
 import { prisma, truncateAll } from './helpers/db.js';
 import {
@@ -261,6 +263,7 @@ describe('catálogo pelo admin', () => {
         categoryId: category.id,
         name: 'Painel de nuvens',
         priceCents: 18000,
+        venuePriceCents: 16000,
         stock: 2,
         themeIds: [theme.id],
         assemblyNotes: 'Fixe com fita dupla face nos cantos.',
@@ -270,11 +273,137 @@ describe('catálogo pelo admin', () => {
       expect(response.json()).toEqual(
         expect.objectContaining({
           name: 'Painel de nuvens',
+          priceCents: 18000,
+          venuePriceCents: 16000,
           category: expect.objectContaining({ name: 'Painéis' }),
           themeIds: [theme.id],
           active: true,
         }),
       );
+    });
+
+    /*
+     * Os dois preços da decoração (novembro de 2026). O preço com a chácara é
+     * promoção de quem aluga a chácara junto: obrigatório, e nunca acima do
+     * avulso. O CHECK do banco também recusaria, mas como 500, sem campo.
+     */
+    describe('preço com a chácara', () => {
+      async function item(prices: { priceCents: number; venuePriceCents: number }) {
+        const category = await createCategory({});
+        return createItem({ categoryId: category.id, ...prices });
+      }
+
+      it('é obrigatório na criação', async () => {
+        const category = await createCategory({});
+
+        const response = await asAdmin('POST', '/api/admin/items', {
+          categoryId: category.id,
+          name: 'Sem o segundo preço',
+          priceCents: 1000,
+          stock: 1,
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json().error.details.fields[0].field).toBe('venuePriceCents');
+      });
+
+      it('recusa na criação o preço com a chácara acima do avulso', async () => {
+        const category = await createCategory({});
+
+        const response = await asAdmin('POST', '/api/admin/items', {
+          categoryId: category.id,
+          name: 'Promoção ao contrário',
+          priceCents: 1000,
+          venuePriceCents: 1001,
+          stock: 1,
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json().error.details.fields).toEqual([
+          { field: 'venuePriceCents', message: VENUE_PRICE_ABOVE_PRICE_ERROR },
+        ]);
+        expect(await prisma.item.count()).toBe(0);
+      });
+
+      it('aceita os dois preços iguais, que é o item sem promoção', async () => {
+        const category = await createCategory({});
+
+        const response = await asAdmin('POST', '/api/admin/items', {
+          categoryId: category.id,
+          name: 'Sem promoção',
+          priceCents: 1000,
+          venuePriceCents: 1000,
+          stock: 1,
+        });
+
+        expect(response.statusCode).toBe(201);
+      });
+
+      /* Com um preço só no corpo, a API compara com o outro, que está gravado. */
+      it('na edição, compara o preço com a chácara enviado com o avulso gravado', async () => {
+        const current = await item({ priceCents: 20000, venuePriceCents: 15000 });
+
+        const above = await asAdmin('PATCH', `/api/admin/items/${current.id}`, {
+          venuePriceCents: 20001,
+        });
+
+        expect(above.statusCode).toBe(400);
+        expect(above.json().error.details.fields).toEqual([
+          { field: 'venuePriceCents', message: VENUE_PRICE_ABOVE_PRICE_ERROR },
+        ]);
+
+        const within = await asAdmin('PATCH', `/api/admin/items/${current.id}`, {
+          venuePriceCents: 18000,
+        });
+
+        expect(within.statusCode).toBe(200);
+        expect(within.json()).toMatchObject({ priceCents: 20000, venuePriceCents: 18000 });
+      });
+
+      it('na edição, compara o avulso enviado com o preço com a chácara gravado', async () => {
+        const current = await item({ priceCents: 20000, venuePriceCents: 15000 });
+
+        const below = await asAdmin('PATCH', `/api/admin/items/${current.id}`, {
+          priceCents: 14999,
+        });
+
+        expect(below.statusCode).toBe(400);
+        expect(below.json().error.details.fields[0].field).toBe('venuePriceCents');
+        // Nada mudou: a recusa vem antes da escrita.
+        expect(await prisma.item.findUniqueOrThrow({ where: { id: current.id } })).toMatchObject({
+          priceCents: 20000,
+          venuePriceCents: 15000,
+        });
+
+        const lowered = await asAdmin('PATCH', `/api/admin/items/${current.id}`, {
+          priceCents: 15000,
+        });
+
+        expect(lowered.statusCode).toBe(200);
+      });
+
+      it('na edição com os dois preços, vale a comparação entre eles', async () => {
+        const current = await item({ priceCents: 20000, venuePriceCents: 15000 });
+
+        const response = await asAdmin('PATCH', `/api/admin/items/${current.id}`, {
+          priceCents: 50000,
+          venuePriceCents: 30000,
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(response.json()).toMatchObject({ priceCents: 50000, venuePriceCents: 30000 });
+      });
+
+      /* A última linha de defesa: o CHECK da migration, para quem escreve direto. */
+      it('o banco recusa preço com a chácara acima do avulso', async () => {
+        const current = await item({ priceCents: 20000, venuePriceCents: 15000 });
+
+        const error = await prisma.item
+          .update({ where: { id: current.id }, data: { venuePriceCents: 20001 } })
+          .catch((caught: unknown) => caught);
+
+        expect(postgresErrorCode(error)).toBe(PG_CHECK_VIOLATION);
+      });
     });
 
     /* Id inexistente viraria violação de chave estrangeira, ou seja, um 500. */
@@ -283,6 +412,7 @@ describe('catálogo pelo admin', () => {
         categoryId: '00000000-0000-4000-8000-000000000000',
         name: 'Sem gaveta',
         priceCents: 1000,
+        venuePriceCents: 1000,
         stock: 1,
       });
 
@@ -299,6 +429,7 @@ describe('catálogo pelo admin', () => {
         categoryId: category.id,
         name: 'Item solto',
         priceCents: 1000,
+        venuePriceCents: 1000,
         stock: 1,
         themeIds: ['00000000-0000-4000-8000-000000000000'],
       });
@@ -329,6 +460,7 @@ describe('catálogo pelo admin', () => {
         categoryId: category.id,
         name: 'Repetido',
         priceCents: 1000,
+        venuePriceCents: 1000,
         stock: 1,
         themeIds: [theme.id, theme.id],
       });
@@ -344,6 +476,7 @@ describe('catálogo pelo admin', () => {
         categoryId: category.id,
         name: 'Com link suspeito',
         priceCents: 1000,
+        venuePriceCents: 1000,
         stock: 1,
         imageUrl: 'javascript:alert(1)',
       });
@@ -359,6 +492,7 @@ describe('catálogo pelo admin', () => {
         categoryId: category.id,
         name: 'Com imagem local',
         priceCents: 1000,
+        venuePriceCents: 1000,
         stock: 1,
         imageUrl: '/imagens/painel.webp',
       });

@@ -3,6 +3,7 @@ import type {
   BookingKind,
   BookingStatus,
   DayStatus,
+  FulfillmentMethod,
   GalleryKind,
   PaymentKind,
   PaymentStatus,
@@ -84,3 +85,9 @@ export function paymentLabel(
 
   return `Parcela ${payment.number} de ${plan.installments}`;
 }
+
+/** Como a decoração chega à festa (§9.12), na revisão, no detalhe e no painel. */
+export const FULFILLMENT_LABELS: Record<FulfillmentMethod, string> = {
+  PICKUP: 'Retirada na chácara',
+  DELIVERY: 'Entrega no endereço',
+};

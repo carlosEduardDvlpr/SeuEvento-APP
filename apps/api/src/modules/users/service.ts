@@ -1,4 +1,4 @@
-import type { PrismaClient } from '../../generated/prisma/client.js';
+import { Prisma, type PrismaClient } from '../../generated/prisma/client.js';
 import { AppError } from '../../lib/errors.js';
 import { activeBookingsFilter } from '../availability/service.js';
 
@@ -71,6 +71,10 @@ export async function anonymizeOwnAccount(
         name: ANONYMIZED_NAME,
         email: null,
         phone: null,
+        // O endereço de entrega (§9.12) é dado pessoal como o telefone, e sai
+        // junto. A cópia que uma reserva de entrega guardou fica com ela, como o
+        // resto do histórico que a §10.8 manda manter.
+        address: Prisma.DbNull,
         passwordHash: null,
         googleId: null,
         /*

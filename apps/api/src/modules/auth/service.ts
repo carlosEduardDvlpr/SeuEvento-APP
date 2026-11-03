@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import type { RegisterBody } from '@chacara/shared';
+import type { ChangePasswordBody, RegisterBody } from '@chacara/shared';
 import { env } from '../../config/env.js';
 import type { PrismaClient } from '../../generated/prisma/client.js';
 import type { UserModel } from '../../generated/prisma/models.js';
-import { AppError } from '../../lib/errors.js';
+import { AppError, fieldError } from '../../lib/errors.js';
 import {
   accountExistsTemplate,
   resetPasswordTemplate,
@@ -277,6 +277,60 @@ export async function resetPassword(
       data: { revokedAt: new Date() },
     }),
   ]);
+}
+
+/**
+ * Troca de senha por quem está logado (§10.5, novembro de 2026).
+ *
+ * Pede a senha atual: o token prova que a sessão é válida, não que quem está
+ * diante da tela é o dono da conta — um computador esquecido aberto passaria.
+ *
+ * Senha atual errada é `400` no campo, e não `401`: o SPA trata todo `401` como
+ * sessão vencida, renova o token, repete a requisição e, na segunda recusa,
+ * desconecta a pessoa (§10.4). Errar a senha atual derrubaria a sessão de quem
+ * só digitou errado.
+ *
+ * Como na redefinição, toda sessão aberta cai: a senha antiga pode ter vazado, e
+ * é comum trocar de senha justamente por isso. A rota abre em seguida uma sessão
+ * nova para quem trocou, e só a aba de onde a troca partiu continua logada.
+ */
+export async function changePassword(
+  prisma: PrismaClient,
+  userId: string,
+  { currentPassword, newPassword }: ChangePasswordBody,
+  now: Date = new Date(),
+): Promise<UserModel> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+
+  // Token válido de uma conta que não existe mais (§10.8).
+  if (!user) {
+    throw new AppError('UNAUTHORIZED', 401, 'Sua sessão expirou. Entre de novo para continuar.');
+  }
+
+  if (user.passwordHash === null) {
+    throw new AppError(
+      'VALIDATION_ERROR',
+      400,
+      'Sua conta entra com o Google e não tem senha para trocar.',
+    );
+  }
+
+  if (!(await verifyPassword(user.passwordHash, currentPassword))) {
+    throw fieldError('currentPassword', 'A senha atual não confere.');
+  }
+
+  // O hash é calculado antes da transação, que fica só com as duas escritas.
+  const passwordHash = await hashPassword(newPassword);
+
+  const [updated] = await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+    prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: now },
+    }),
+  ]);
+
+  return updated;
 }
 
 /**

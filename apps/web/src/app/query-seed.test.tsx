@@ -1,4 +1,4 @@
-import type { CatalogItem, Combo, GalleryImage, PublicVenue, Theme } from '@chacara/shared';
+import type { CatalogItem, GalleryImage, PublicVenue } from '@chacara/shared';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -42,35 +42,6 @@ const GALLERY: GalleryImage[] = [
   },
 ];
 
-const THEMES: Theme[] = [
-  {
-    id: 't-1',
-    slug: 'rustico-boho',
-    name: 'Rústico Boho',
-    tagline: 'Madeira, linho e capim-dos-pampas.',
-    description: null,
-    palette: [{ name: 'Sálvia', hex: '#A7B8A1' }],
-    coverImageUrl: null,
-    sortOrder: 1,
-  },
-];
-
-const COMBOS: Combo[] = [
-  {
-    id: 'c-1',
-    name: 'Combo Nuvens',
-    description: null,
-    imageUrl: null,
-    themeId: null,
-    discountType: 'PERCENT',
-    discountValue: 10,
-    items: [],
-    itemsTotalCents: 0,
-    discountCents: 0,
-    priceCents: 0,
-  },
-];
-
 const ITEMS: CatalogItem[] = [
   {
     id: '00000000-0000-4000-8000-000000000001',
@@ -78,6 +49,7 @@ const ITEMS: CatalogItem[] = [
     description: null,
     imageUrl: '/catalogo/casamento/1.jpg',
     priceCents: 40_000,
+    venuePriceCents: 40_000,
     stock: 1,
     assemblyNotes: null,
     sortOrder: 1,
@@ -86,7 +58,7 @@ const ITEMS: CatalogItem[] = [
   },
 ];
 
-const SEED = { venue: VENUE, gallery: GALLERY, themes: THEMES, combos: COMBOS, items: ITEMS };
+const SEED = { venue: VENUE, gallery: GALLERY, items: ITEMS };
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -116,7 +88,6 @@ describe('applySeed', () => {
 
     // A landing já desenha com o conteúdo, sem passar pelo estado de carregamento.
     expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument();
-    expect(screen.getByText('Rústico Boho')).toBeInTheDocument();
     expect(screen.getByText('Decoração casamento 1')).toBeInTheDocument();
 
     /*
@@ -135,6 +106,11 @@ describe('readSeed', () => {
     expect(readSeed({ [SEED_GLOBAL]: SEED })).toEqual(SEED);
   });
 
+  /* HTML de antes de novembro de 2026 ainda traz estilos e combos: o resto vale. */
+  it('aceita o pacote antigo, que ainda traz estilos e combos', () => {
+    expect(readSeed({ [SEED_GLOBAL]: { ...SEED, themes: [], combos: [] } })).toMatchObject(SEED);
+  });
+
   it('devolve null quando não há pacote', () => {
     expect(readSeed({})).toBeNull();
     expect(readSeed({ [SEED_GLOBAL]: null })).toBeNull();
@@ -144,7 +120,7 @@ describe('readSeed', () => {
   // HTML velho em cache com o formato antigo não pode virar hidratação quebrada.
   it('recusa pacote incompleto', () => {
     expect(readSeed({ [SEED_GLOBAL]: { venue: VENUE } })).toBeNull();
-    expect(readSeed({ [SEED_GLOBAL]: { ...SEED, themes: undefined } })).toBeNull();
+    expect(readSeed({ [SEED_GLOBAL]: { ...SEED, gallery: undefined } })).toBeNull();
     expect(readSeed({ [SEED_GLOBAL]: { ...SEED, venue: undefined } })).toBeNull();
     // Pacote de antes da vitrine de itens: a landing busca da rede em vez de quebrar.
     expect(readSeed({ [SEED_GLOBAL]: { ...SEED, items: undefined } })).toBeNull();

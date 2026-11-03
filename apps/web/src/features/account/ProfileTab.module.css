@@ -1,0 +1,97 @@
+/*
+ * "Meu perfil": blocos empilhados na largura de leitura (§14.5), cada um com o
+ * título, o conteúdo e o próprio botão. A separação vem do respiro e de um fio
+ * entre os blocos, sem cartão em volta: é uma página de conta, não um painel.
+ */
+.tab {
+  display: flex;
+  flex-direction: column;
+  max-width: var(--measure);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding-block: var(--space-24);
+  border-top: 1px solid var(--line);
+}
+
+.section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+}
+
+/* O e-mail é mostrado como texto, com o rótulo no mesmo desenho do `Field`. */
+.readonly {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.readonlyLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.readonlyValue {
+  overflow-wrap: anywhere;
+}
+
+.note,
+.empty {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+.address {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Confirmação do que acabou de ser salvo. Vazia, não ocupa nada; com texto,
+ * ganha o fundo de "confirmada", sempre com a frase escrita (§14.2).
+ */
+.status {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.status:not(:empty) {
+  padding: var(--space-12);
+  border-radius: var(--r-sm);
+  background: var(--st-confirmed-bg);
+  color: var(--st-confirmed-fg);
+  font-weight: 600;
+}
+
+/* Resumo do erro que não pertence a um campo, anunciado na hora (§18.1). */
+.formError {
+  margin: 0;
+  padding: var(--space-12);
+  border-radius: var(--r-sm);
+  background: var(--st-cancelled-bg);
+  color: var(--st-cancelled-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

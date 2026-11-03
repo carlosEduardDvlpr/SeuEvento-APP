@@ -11,6 +11,7 @@
  * nesta borda.
  */
 
+import type { Address } from './address.js';
 import { BUSINESS_TIMEZONE } from './dates.js';
 import type { BookingKind } from './enums.js';
 
@@ -187,4 +188,22 @@ export function formatDateRange(startISO: string, endISO: string): string {
     return `${start.getUTCDate()} a ${formatDateLong(endISO)}`;
   }
   return `${formatDateLong(startISO)} a ${formatDateLong(endISO)}`;
+}
+
+/** 12954000 como 12954-000. CEP fora do formato volta como veio. */
+export function formatCep(cep: string): string {
+  return /^\d{8}$/.test(cep) ? `${cep.slice(0, 5)}-${cep.slice(5)}` : cep;
+}
+
+/**
+ * Endereço numa linha, como se escreve num envelope (§9.12):
+ * "Rua das Orquídeas, 265, casa 2 – Chácaras Fernão Dias, Atibaia/SP – CEP 12954-000".
+ *
+ * Mora aqui pelo mesmo motivo das datas: a tela da reserva, o painel e o e-mail
+ * mostram o mesmo endereço, e precisam mostrá-lo do mesmo jeito.
+ */
+export function formatAddress(address: Address): string {
+  const street = [address.street, address.number, address.complement].filter(Boolean).join(', ');
+
+  return `${street} – ${address.district}, ${address.city}/${address.state} – CEP ${formatCep(address.cep)}`;
 }

@@ -1,7 +1,10 @@
+import type { ItemsAvailability, ItemsAvailabilityQuery } from '@chacara/shared';
+import type { PrismaClient } from '../../generated/prisma/client.js';
 import type { Db } from '../../lib/db.js';
 import { type ISODate, eachDay, toISODate } from '../../lib/dates.js';
 import {
   activeBookingsFilter,
+  assertAvailabilityPeriod,
   findBlockedDaysIn,
   overlappingRangeFilter,
 } from '../availability/service.js';
@@ -99,6 +102,74 @@ async function loadReservedPerDay(
   return reserved;
 }
 
+export type FreeStockInput = {
+  itemIds: readonly string[];
+  from: ISODate;
+  to: ISODate;
+  /** Reserva a ignorar na conta, ao recalcular uma que já existe. */
+  ignoreBookingId?: string;
+  now?: Date;
+};
+
+/**
+ * Quantas unidades de cada item estão livres em cada dia do intervalo (§9.3).
+ *
+ * É a conta do topo deste arquivo, dia a dia: o estoque menos o que as reservas
+ * ativas dos dois produtos já levaram, e zero no dia em que a decoração está
+ * fechada. Nunca negativo: se a dona baixou o estoque depois de reservas já
+ * feitas, o dia fica sem unidade livre, e não com unidade "devendo".
+ *
+ * Mora num lugar só porque três perguntas usam a mesma conta: o pedido cabe
+ * (`findStockShortages`), o calendário de uma decoração e o passo de
+ * decoração do pedido, que mostra o que ainda está livre no período. Item
+ * inexistente simplesmente não aparece no resultado.
+ */
+export async function freeStockPerDay(
+  db: Db,
+  { itemIds, from, to, ignoreBookingId, now = new Date() }: FreeStockInput,
+): Promise<Map<string, Map<ISODate, number>>> {
+  const free = new Map<string, Map<ISODate, number>>();
+
+  if (itemIds.length === 0) return free;
+
+  const ids = [...itemIds];
+
+  const [items, reserved, closedDays] = await Promise.all([
+    db.item.findMany({ where: { id: { in: ids } }, select: { id: true, stock: true } }),
+    loadReservedPerDay(db, { from, to, itemIds: ids, ignoreBookingId, now }),
+    findBlockedDaysIn(db, from, to, 'DECORATION'),
+  ]);
+
+  const closed = new Set(closedDays);
+  const days = eachDay(from, to);
+
+  for (const item of items) {
+    const perDay = reserved.get(item.id);
+
+    free.set(
+      item.id,
+      new Map(
+        days.map((day) => [
+          day,
+          closed.has(day) ? 0 : Math.max(0, item.stock - (perDay?.get(day) ?? 0)),
+        ]),
+      ),
+    );
+  }
+
+  return free;
+}
+
+/**
+ * Quanto cabe no intervalo inteiro: o pior dia manda (§9.3).
+ *
+ * O período nunca é vazio (`from <= to` chega validado), então sempre há um dia
+ * para comparar.
+ */
+function worstDay(perDay: ReadonlyMap<ISODate, number>): number {
+  return Math.min(...perDay.values());
+}
+
 /**
  * Itens do pedido que não cabem no estoque de algum dia (§9.3).
  *
@@ -112,37 +183,67 @@ export async function findStockShortages(
 ): Promise<StockShortage[]> {
   if (lines.length === 0) return [];
 
-  const itemIds = lines.map((line) => line.itemId);
+  const free = await freeStockPerDay(db, {
+    itemIds: lines.map((line) => line.itemId),
+    from,
+    to,
+    ignoreBookingId,
+    now,
+  });
 
-  const [items, reserved, closedDays] = await Promise.all([
-    db.item.findMany({ where: { id: { in: itemIds } }, select: { id: true, stock: true } }),
-    loadReservedPerDay(db, { from, to, itemIds, ignoreBookingId, now }),
-    findBlockedDaysIn(db, from, to, 'DECORATION'),
-  ]);
-
-  const stockOf = new Map(items.map((item) => [item.id, item.stock]));
-  const closed = new Set(closedDays);
-  const days = eachDay(from, to);
   const shortages: StockShortage[] = [];
 
   for (const line of lines) {
-    const stock = stockOf.get(line.itemId);
+    const perDay = free.get(line.itemId);
 
     // Item fora do catálogo é problema do chamador, não escassez.
-    if (stock === undefined) continue;
-
-    const perDay = reserved.get(line.itemId);
+    if (perDay === undefined) continue;
 
     // O pior dia manda: o pedido vale pelo intervalo inteiro.
-    const worstAvailable = days.reduce((worst, day) => {
-      const free = closed.has(day) ? 0 : stock - (perDay?.get(day) ?? 0);
-      return free < worst ? free : worst;
-    }, stock);
+    const available = worstDay(perDay);
 
-    if (line.quantity > worstAvailable) {
-      shortages.push({ itemId: line.itemId, available: Math.max(0, worstAvailable) });
-    }
+    if (line.quantity > available) shortages.push({ itemId: line.itemId, available });
   }
 
   return shortages;
+}
+
+/**
+ * Unidades livres de cada decoração ativa no período (novembro de 2026).
+ *
+ * É o passo de decoração do pedido: quem já escolheu a data vê, em cada
+ * cartão, se aquela decoração ainda tem unidade livre para a festa. O número é
+ * o do pior dia do período, como na conta do pedido, então o que a tela mostra
+ * livre é o que o pedido aceita.
+ *
+ * Só decoração ativa entra: a vitrine não mostra a desativada, e o número dela
+ * não serviria a ninguém.
+ */
+export async function getItemsAvailability(
+  prisma: PrismaClient,
+  { from, to }: ItemsAvailabilityQuery,
+  now: Date = new Date(),
+): Promise<ItemsAvailability> {
+  assertAvailabilityPeriod(from, to);
+
+  const items = await prisma.item.findMany({
+    where: { active: true },
+    select: { id: true },
+    orderBy: { id: 'asc' },
+  });
+
+  const free = await freeStockPerDay(prisma, {
+    itemIds: items.map((item) => item.id),
+    from,
+    to,
+    now,
+  });
+
+  return {
+    items: items.map((item) => {
+      const perDay = free.get(item.id);
+
+      return { itemId: item.id, freeStock: perDay ? worstDay(perDay) : 0 };
+    }),
+  };
 }

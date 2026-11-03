@@ -171,20 +171,29 @@ test('fotografa todas as telas em 375 px', async ({ page, browser }) => {
   await captureDialog(page, '01-landing-menu');
   await page.keyboard.press('Escape');
 
+  // O wizard, um passo por vez (§13.2): tipo, data, convidados, decoração e revisão.
   await page.goto('/reservar');
+  await expect(page.getByRole('group', { name: 'O que você quer reservar?' })).toBeVisible();
+  await capture(page, '02-wizard-tipo');
+
+  await page.getByRole('button', { name: 'Continuar' }).click();
   await expect(page.getByRole('heading', { name: 'Quando é a festa?' })).toBeVisible();
   await capture(page, '02-wizard-datas');
 
-  // Avança o wizard para fotografar os passos de itens e de revisão.
   await page.locator('[data-day] button:not([disabled])').first().click();
-  await page.getByLabel('Número de convidados').fill('60');
   await page.getByRole('button', { name: 'Continuar' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Escolha o estilo da festa' })).toBeVisible();
-  await capture(page, '03-wizard-itens');
+  await expect(page.getByRole('heading', { name: 'Quantas pessoas?' })).toBeVisible();
+  await page.getByLabel('Número de convidados').fill('60');
+  await capture(page, '02-wizard-convidados');
+  await page.getByRole('button', { name: 'Continuar' }).click();
 
-  await page.getByRole('button', { name: 'Aumentar Painel de nuvens' }).click();
-  await page.getByRole('button', { name: 'Aumentar Arco de balões pastel' }).click();
+  await expect(page.getByRole('heading', { name: 'Quer uma decoração?' })).toBeVisible();
+  await capture(page, '03-wizard-decoracao');
+
+  // O rádio fica oculto para o olho: o toque é no cartão, que é o rótulo dele.
+  await page.locator('label', { hasText: 'Painel de nuvens' }).click();
+  await expect(page.getByRole('radio', { name: 'Painel de nuvens' })).toBeChecked();
   await page.getByRole('button', { name: 'Continuar' }).click();
 
   await expect(page.getByRole('heading', { name: 'Confira seu pedido' })).toBeVisible();

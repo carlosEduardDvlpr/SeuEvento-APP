@@ -1,14 +1,17 @@
 import {
+  type Address,
   type Booking,
   type BookingStatus,
   type CreateBookingBody,
+  type FulfillmentMethod,
   HOLD_EXPIRED_REASON,
   type Quote,
+  addressSchema,
   formatBRL,
   formatDateRange,
 } from '@chacara/shared';
 import { env } from '../../config/env.js';
-import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
+import { Prisma, type PrismaClient } from '../../generated/prisma/client.js';
 import {
   type ISODate,
   addDays,
@@ -93,6 +96,9 @@ function toBooking(row: BookingRow, cancelRules: CancelRules): Booking {
    */
   const days = (row.dailyBreakdown ?? []) as Booking['days'];
   const combos = (row.appliedCombos ?? []) as Booking['combos'];
+  // O endereço copiado na entrega segue a mesma confiança: este service o
+  // gravou depois de validar com o `addressSchema` (§9.12).
+  const deliveryAddress = (row.deliveryAddress ?? null) as Booking['deliveryAddress'];
   const startDate = toISODate(row.startDate);
 
   const { canCancel, cancelUntil } = cancelPermission(
@@ -126,6 +132,9 @@ function toBooking(row: BookingRow, cancelRules: CancelRules): Booking {
     combos,
     discountTotalCents: row.discountTotalCents,
     totalCents: row.totalCents,
+
+    fulfillment: row.fulfillment,
+    deliveryAddress,
 
     customerNotes: row.customerNotes,
     cancelReason: row.cancelReason,
@@ -172,9 +181,17 @@ async function loadEligibleUser(
 ) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    // §18.2: só o que a elegibilidade e o e-mail de confirmação usam. Sem isto,
-    // todo pedido de reserva lia o hash da senha sem precisar.
-    select: { id: true, name: true, email: true, phone: true, emailVerifiedAt: true },
+    // §18.2: só o que a elegibilidade, a entrega (§9.12) e o e-mail de
+    // confirmação usam. Sem isto, todo pedido de reserva lia o hash da senha
+    // sem precisar.
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      emailVerifiedAt: true,
+      address: true,
+    },
   });
 
   if (!user) {
@@ -231,6 +248,44 @@ function throwFirstIssue(quote: Quote): never {
   throw new AppError('INTERNAL', 500, 'Não foi possível validar o pedido.');
 }
 
+type Fulfillment = { fulfillment: FulfillmentMethod | null; deliveryAddress: Address | null };
+
+/**
+ * Como a decoração chega à festa, e para onde (§9.12).
+ *
+ * Na chácara não há o que decidir: a decoração já está no lugar da festa, e o
+ * valor que vier é ignorado, como os convidados na decoração (T32). Na
+ * decoração, a falta da escolha vira retirada: o pedido do site já exige a
+ * escolha no schema, e o painel ainda não pergunta.
+ *
+ * Na entrega, o endereço é o do perfil de quem pede, e a reserva guarda uma
+ * cópia dele: a pessoa pode mudar de endereço depois sem mudar o destino de uma
+ * entrega já combinada (§2.1). Endereço gravado fora do formato conta como
+ * ausente. Pedir para cadastrar de novo é melhor que mandar a decoração para um
+ * endereço pela metade.
+ */
+function resolveFulfillment(
+  body: Pick<CreateBookingBody, 'kind' | 'fulfillment'>,
+  savedAddress: Prisma.JsonValue | null,
+): Fulfillment {
+  if (body.kind === 'VENUE') return { fulfillment: null, deliveryAddress: null };
+
+  const fulfillment = body.fulfillment ?? 'PICKUP';
+
+  if (fulfillment === 'PICKUP') return { fulfillment, deliveryAddress: null };
+
+  const address = addressSchema.safeParse(savedAddress);
+
+  if (!address.success) {
+    throw fieldError(
+      'fulfillment',
+      'Cadastre o endereço de entrega no seu perfil antes de pedir a entrega.',
+    );
+  }
+
+  return { fulfillment, deliveryAddress: address.data };
+}
+
 /** Pedido vencido que o cliente precisa saber que caiu, avisado após o commit. */
 type ExpiredHold = { email: string; name: string; startDate: ISODate; endDate: ISODate };
 
@@ -284,6 +339,9 @@ export async function createBooking({
     throw fieldError('guestCount', `A chácara recebe até ${rules.maxGuests} pessoas.`);
   }
 
+  // Antes do orçamento: entrega sem endereço é pedido incompleto, não falta de data.
+  const { fulfillment, deliveryAddress } = resolveFulfillment(body, user.address);
+
   /*
    * O mesmo `quoteFromDatabase` que `POST /pricing/quote` usa (§9.7). É isso que
    * garante que o número do resumo e o número gravado na reserva saem da mesma
@@ -319,7 +377,7 @@ export async function createBooking({
    * pode falhar, e a §17 manda a falha não desfazer nada. O `sendMail` já engole
    * o próprio erro.
    */
-  await notify({ prisma, row, user, rules, expiredHolds, asAdmin });
+  await notify({ prisma, row, user, rules, expiredHolds, asAdmin, deliveryAddress });
 
   return toBooking(row, { freeCancelUntilDays: rules.freeCancelUntilDays, now });
 
@@ -529,6 +587,11 @@ export async function createBooking({
             createdByAdmin: asAdmin !== undefined,
             customerNotes: body.customerNotes,
 
+            // Retirada ou entrega (§9.12). `DbNull` é o NULL do SQL: o JSON
+            // `null` contaria como endereço para o CHECK `booking_delivery_address`.
+            fulfillment,
+            deliveryAddress: deliveryAddress ?? Prisma.DbNull,
+
             // Snapshot do que foi contratado (§2.1).
             dailyBreakdown: quote.days,
             dailyTotalCents: quote.dailyTotalCents,
@@ -604,6 +667,7 @@ async function notify({
   rules,
   expiredHolds,
   asAdmin,
+  deliveryAddress,
 }: {
   prisma: PrismaClient;
   row: BookingRow;
@@ -611,8 +675,12 @@ async function notify({
   rules: VenueRules;
   expiredHolds: ExpiredHold[];
   asAdmin?: { confirmed: boolean };
+  /** O endereço que acabou de ser copiado na reserva, já validado. */
+  deliveryAddress: Address | null;
 }): Promise<void> {
   const dates = formatDateRange(toISODate(row.startDate), toISODate(row.endDate));
+  // A linha "Retirada na chácara" ou "Entrega em …" dos e-mails da decoração (§9.12).
+  const handoff = { fulfillment: row.fulfillment, deliveryAddress };
 
   if (asAdmin) {
     if (user.email && row.status === 'CONFIRMED') {
@@ -641,6 +709,7 @@ async function notify({
             whatsapp: settings.whatsapp,
             bookingUrl: `${env.APP_URL}/reservas/${row.id}`,
             kind: row.kind,
+            ...handoff,
           }),
         });
       }
@@ -656,6 +725,7 @@ async function notify({
           holdHours: rules.holdHours,
           bookingUrl: `${env.APP_URL}/reservas/${row.id}`,
           kind: row.kind,
+          ...handoff,
         }),
       });
     }
@@ -676,6 +746,7 @@ async function notify({
           totalFormatted: formatBRL(row.totalCents),
           adminUrl: `${env.APP_URL}/admin/reservas/${row.id}`,
           kind: row.kind,
+          ...handoff,
         }),
       });
     }

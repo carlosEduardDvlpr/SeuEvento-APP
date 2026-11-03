@@ -1,16 +1,27 @@
 import { z } from 'zod';
+import { addressSchema } from './address.js';
 import {
+  DECORATION_NEEDS_FULFILLMENT_ERROR,
   DECORATION_NEEDS_ITEMS_ERROR,
   DECORATION_ONE_DAY_ERROR,
+  ONE_DECORATION_ERROR,
   VENUE_NEEDS_GUESTS_ERROR,
+  hasFulfillmentWhenDecoration,
   hasGuestsWhenVenue,
   hasItemsWhenDecoration,
+  hasOneDecorationAtMost,
   isOneDayWhenDecoration,
 } from './booking-kind.js';
 import { optionalText } from './catalog.js';
 import { dailyPriceSchema } from './pricing.js';
 import { appliedComboSchema, quoteItemsSchema, quoteLineSchema } from './quote.js';
-import { bookingKindSchema, bookingStatusSchema, centsSchema, isoDateSchema } from './schemas.js';
+import {
+  bookingKindSchema,
+  bookingStatusSchema,
+  centsSchema,
+  fulfillmentSchema,
+  isoDateSchema,
+} from './schemas.js';
 
 /**
  * Contrato da reserva (§11.3).
@@ -47,6 +58,12 @@ export const createBookingBodySchema = z
     endDate: isoDateSchema,
     guestCount: guestCountSchema,
     items: quoteItemsSchema.default([]),
+    /**
+     * Retirada ou entrega, só na decoração (§9.12). Na chácara a decoração já
+     * está lá, e o valor que vier é ignorado. Na entrega, o endereço é o do
+     * perfil de quem pede, copiado para a reserva.
+     */
+    fulfillment: fulfillmentSchema.nullable().default(null),
     customerNotes: optionalText(600).default(null),
     /**
      * Total que o cliente viu na tela (§9.7).
@@ -63,6 +80,12 @@ export const createBookingBodySchema = z
   })
   .refine(isOneDayWhenDecoration, { error: DECORATION_ONE_DAY_ERROR, path: ['endDate'] })
   .refine(hasItemsWhenDecoration, { error: DECORATION_NEEDS_ITEMS_ERROR, path: ['items'] })
+  // O pedido do site leva uma decoração, uma vez. O painel não tem esse limite.
+  .refine(hasOneDecorationAtMost, { error: ONE_DECORATION_ERROR, path: ['items'] })
+  .refine(hasFulfillmentWhenDecoration, {
+    error: DECORATION_NEEDS_FULFILLMENT_ERROR,
+    path: ['fulfillment'],
+  })
   .refine(hasGuestsWhenVenue, { error: VENUE_NEEDS_GUESTS_ERROR, path: ['guestCount'] });
 
 export const bookingSchema = z.object({
@@ -102,6 +125,14 @@ export const bookingSchema = z.object({
   combos: z.array(appliedComboSchema),
   discountTotalCents: centsSchema,
   totalCents: centsSchema,
+
+  /** Retirada ou entrega da decoração (§9.12). Nulo na chácara. */
+  fulfillment: fulfillmentSchema.nullable(),
+  /**
+   * Para onde a decoração vai, copiado do perfil no envio. Nulo fora da
+   * entrega. A taxa de entrega é combinada com a chácara e não está no total.
+   */
+  deliveryAddress: addressSchema.nullable(),
 
   customerNotes: z.string().nullable(),
   cancelReason: z.string().nullable(),

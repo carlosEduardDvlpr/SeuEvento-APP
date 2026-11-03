@@ -10,14 +10,16 @@ import styles from './ItemsSection.module.css';
 /**
  * Decoração pegue e monte: os itens do catálogo na vitrine.
  *
- * Aparece **mesmo sem estilos cadastrados**: o estilo é um jeito de organizar, e
- * a dona pode começar o catálogo só com itens e categorias. Sem item nenhum, a
- * seção some, como as outras (§16.6).
+ * Cada item é uma decoração completa (novembro de 2026, a pedido do dono), e a
+ * vitrine se organiza só por categoria. Sem item nenhum, a seção some, como as
+ * outras (§16.6).
  *
  * Cada item é a foto na moldura da marca, com categoria, nome e preço embaixo,
  * sem caixa em volta: é catálogo de decoração, não lista de produtos. O cartão
  * inteiro leva ao wizard com o item já no pedido (`?item=`). O preço é o de
- * tabela; o total, com diária e combos, continua saindo do orçamento (§9.7).
+ * tabela, o avulso; quando a decoração sai mais barata junto com a chácara, a
+ * segunda linha diz quanto. O total do pedido continua saindo do orçamento
+ * (§9.7).
  */
 
 /** Cartões antes do "mostrar mais": o catálogo inteiro mora no wizard. */
@@ -122,8 +124,16 @@ export function ItemsSection({ items }: ItemsSectionProps) {
                 <h3 className={styles.name}>{item.name}</h3>
 
                 <span className={styles.footer}>
-                  <span className={styles.price}>
-                    <Money cents={item.priceCents} />
+                  <span className={styles.prices}>
+                    <span className={styles.price}>
+                      <Money cents={item.priceCents} />
+                    </span>
+                    {/* Igual ao avulso é "sem promoção": a linha só diria o mesmo preço de novo. */}
+                    {item.venuePriceCents < item.priceCents ? (
+                      <span className={styles.venuePrice}>
+                        <Money cents={item.venuePriceCents} /> com a chácara
+                      </span>
+                    ) : null}
                   </span>
                   <span className={styles.cta}>Reservar</span>
                 </span>

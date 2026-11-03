@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { SessionResponse, SessionUser } from '@chacara/shared';
+import { type SessionResponse, type SessionUser, addressSchema } from '@chacara/shared';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { env } from '../../config/env.js';
 import { AppError } from '../../lib/errors.js';
@@ -24,9 +24,13 @@ import { generateToken, hashToken } from '../../lib/tokens.js';
  * Colunas de `User` que uma sessão precisa — e nenhuma além delas.
  *
  * Existe para ser usada como `select` nas consultas (§18.2): com `UserModel`
- * inteiro, toda renovação de token trazia `passwordHash` do banco para a memória
- * do processo sem nenhum uso. O hash só deve circular no login, onde é
- * comparado (§10.1).
+ * inteiro, toda renovação de token trazia do banco colunas sem nenhum uso.
+ *
+ * `passwordHash` entra desde novembro de 2026 só para a sessão dizer se a conta
+ * **tem** senha (`hasPassword`): é isso que faz "Meu perfil" oferecer a troca de
+ * senha a quem tem uma, e não a quem entra só com o Google. O hash é lido e
+ * descartado em `toSessionUser`, e nunca sai de lá. O Prisma não seleciona uma
+ * expressão como `passwordHash IS NOT NULL`, então ler a coluna é o caminho.
  */
 export const sessionUserSelect = {
   id: true,
@@ -35,6 +39,8 @@ export const sessionUserSelect = {
   phone: true,
   role: true,
   emailVerifiedAt: true,
+  address: true,
+  passwordHash: true,
 } as const;
 
 export type SessionUserRow = Pick<UserModel, keyof typeof sessionUserSelect>;
@@ -45,6 +51,13 @@ export type SessionUserRow = Pick<UserModel, keyof typeof sessionUserSelect>;
  * sem obrigar quem já tem a linha inteira a mudar.
  */
 export function toSessionUser(user: SessionUserRow): SessionUser {
+  /*
+   * O endereço foi gravado por `PATCH /me` já no formato do schema (§9.12). Um
+   * JSON fora dele vira "sem endereço", e não erro: um dado estragado não pode
+   * impedir ninguém de entrar, e a pessoa só precisa cadastrar de novo.
+   */
+  const address = addressSchema.safeParse(user.address);
+
   return {
     id: user.id,
     name: user.name,
@@ -52,6 +65,9 @@ export function toSessionUser(user: SessionUserRow): SessionUser {
     phone: user.phone,
     role: user.role,
     emailVerified: user.emailVerifiedAt !== null,
+    address: address.success ? address.data : null,
+    // Só o fato de a senha existir sai daqui. O hash, nunca.
+    hasPassword: user.passwordHash !== null,
   };
 }
 
@@ -132,7 +148,9 @@ export async function rotateRefreshToken(
   const stored = await prisma.refreshToken.findUnique({
     where: { tokenHash },
     // §18.2: este é o caminho mais quente da API — o SPA passa por aqui em toda
-    // carga de página e em todo 401 (§10.4). Nada aqui precisa do hash da senha.
+    // carga de página e em todo 401 (§10.4), então lê só as colunas da sessão.
+    // O hash da senha está entre elas apenas para virar o `hasPassword`, e
+    // `toSessionUser` o descarta ali mesmo.
     select: { familyId: true, user: { select: sessionUserSelect } },
   });
 

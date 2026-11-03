@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { addressInputSchema, addressSchema } from './address.js';
 import { roleSchema } from './schemas.js';
 import { emailSchema, nameSchema, passwordSchema, phoneSchema } from './schemas.js';
 
@@ -46,14 +47,39 @@ export const resetPasswordBodySchema = z.object({
   password: passwordSchema,
 });
 
-/** Perfil editável pelo próprio cliente (§11.2). E-mail e papel não entram. */
+/**
+ * Perfil editável pelo próprio cliente (§11.2). E-mail e papel não entram: a
+ * troca de e-mail vai exigir um código enviado por e-mail, que ainda não existe.
+ *
+ * `address: null` apaga o endereço; ausente, não mexe (§9.12).
+ */
 export const updateMeBodySchema = z
   .object({
     name: nameSchema.optional(),
     phone: phoneSchema.optional(),
+    address: addressInputSchema.nullable().optional(),
   })
-  .refine((body) => body.name !== undefined || body.phone !== undefined, {
-    error: 'Informe o que você quer mudar.',
+  .refine(
+    (body) => body.name !== undefined || body.phone !== undefined || body.address !== undefined,
+    { error: 'Informe o que você quer mudar.' },
+  );
+
+/**
+ * Troca de senha por quem está logado (§10.5, novembro de 2026).
+ *
+ * Pede a senha atual: um computador esquecido aberto não pode virar a conta de
+ * outra pessoa. A confirmação por código enviado por e-mail entra quando o envio
+ * de código existir.
+ */
+export const changePasswordBodySchema = z
+  .object({
+    currentPassword: z.string().min(1, { error: 'Informe a senha atual.' }),
+    // Aqui a senha é nova, então vale a faixa completa do cadastro.
+    newPassword: passwordSchema,
+  })
+  .refine((body) => body.newPassword !== body.currentPassword, {
+    error: 'A senha nova precisa ser diferente da atual.',
+    path: ['newPassword'],
   });
 
 export const resendVerificationBodySchema = z.object({
@@ -78,6 +104,13 @@ export const sessionUserSchema = z.object({
   phone: z.string().nullable(),
   role: roleSchema,
   emailVerified: z.boolean(),
+  /** Endereço de entrega da decoração (§9.12). Nulo até a pessoa cadastrar. */
+  address: addressSchema.nullable(),
+  /**
+   * A conta tem senha. Falso na conta que só entra com o Google e na criada pelo
+   * painel: para elas, "Meu perfil" não oferece trocar uma senha que não existe.
+   */
+  hasPassword: z.boolean(),
 });
 
 /**
@@ -93,5 +126,6 @@ export const sessionResponseSchema = z.object({
 });
 
 export type RegisterBody = z.infer<typeof registerBodySchema>;
+export type ChangePasswordBody = z.infer<typeof changePasswordBodySchema>;
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;

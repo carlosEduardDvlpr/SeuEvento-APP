@@ -1,6 +1,12 @@
+import type { Address, FulfillmentMethod } from '@chacara/shared';
 import { describe, expect, it } from 'vitest';
 import { escapeHtml, renderEmail } from './render.js';
-import { verifyEmailTemplate } from './templates.js';
+import {
+  bookingConfirmedTemplate,
+  bookingReceivedTemplate,
+  newBookingForAdminTemplate,
+  verifyEmailTemplate,
+} from './templates.js';
 
 const CONTENT = {
   preheader: 'Falta um clique.',
@@ -110,5 +116,101 @@ describe('verifyEmailTemplate', () => {
 
   it('diz o que fazer se não foi a pessoa', () => {
     expect(email.text).toMatch(/ignore/i);
+  });
+});
+
+/*
+ * A linha da retirada ou da entrega (§9.12), nos três e-mails da reserva de
+ * decoração: o do cliente quando o pedido chega, o do dono e o da confirmação.
+ */
+describe('retirada e entrega nos e-mails da decoração', () => {
+  const ADDRESS: Address = {
+    cep: '12954000',
+    street: 'Rua das Orquídeas',
+    number: '265',
+    complement: 'casa 2',
+    district: 'Chácaras Fernão Dias',
+    city: 'Atibaia',
+    state: 'SP',
+  };
+
+  const DELIVERY_LINE =
+    'Entrega em Rua das Orquídeas, 265, casa 2 – Chácaras Fernão Dias, Atibaia/SP – CEP 12954-000. A taxa de entrega é combinada com a chácara.';
+
+  type Handoff = { fulfillment: FulfillmentMethod | null; deliveryAddress?: Address | null };
+
+  function received(handoff: Handoff, kind: 'VENUE' | 'DECORATION' = 'DECORATION') {
+    return bookingReceivedTemplate({
+      name: 'Ana Beatriz',
+      dates: '10 de abril de 2027',
+      totalFormatted: 'R$ 120,00',
+      holdHours: 48,
+      bookingUrl: 'https://exemplo.com/reservas/1',
+      kind,
+      ...handoff,
+    });
+  }
+
+  function toOwner(handoff: Handoff) {
+    return newBookingForAdminTemplate({
+      customerName: 'Ana Beatriz',
+      customerPhone: '11999990000',
+      dates: '10 de abril de 2027',
+      guestCount: null,
+      totalFormatted: 'R$ 120,00',
+      adminUrl: 'https://exemplo.com/admin/reservas/1',
+      kind: 'DECORATION',
+      ...handoff,
+    });
+  }
+
+  function confirmed(handoff: Handoff) {
+    return bookingConfirmedTemplate({
+      name: 'Ana Beatriz',
+      dates: '10 de abril de 2027',
+      checkInTime: '08:00',
+      checkOutTime: '22:00',
+      totalFormatted: 'R$ 120,00',
+      address: 'Estrada do Sol, 100',
+      houseRules: null,
+      whatsapp: '11988887777',
+      bookingUrl: 'https://exemplo.com/reservas/1',
+      kind: 'DECORATION',
+      ...handoff,
+    });
+  }
+
+  it('a entrega diz o endereço inteiro e que a taxa fica fora do total', () => {
+    const email = received({ fulfillment: 'DELIVERY', deliveryAddress: ADDRESS });
+
+    expect(email.text).toContain(DELIVERY_LINE);
+    expect(email.text).toContain('O pagamento e a entrega dos itens são combinados');
+  });
+
+  it('o aviso ao dono e a confirmação levam a mesma linha da entrega', () => {
+    const handoff = { fulfillment: 'DELIVERY' as const, deliveryAddress: ADDRESS };
+
+    expect(toOwner(handoff).text).toContain(DELIVERY_LINE);
+    expect(confirmed(handoff).text).toContain(DELIVERY_LINE);
+    // Na entrega, o que se combina com a dona é a entrega, e não a retirada.
+    expect(confirmed(handoff).text).toContain('Para combinar a entrega e a devolução dos itens');
+  });
+
+  it('a retirada diz que é na chácara', () => {
+    for (const email of [
+      received({ fulfillment: 'PICKUP' }),
+      toOwner({ fulfillment: 'PICKUP' }),
+      confirmed({ fulfillment: 'PICKUP' }),
+    ]) {
+      expect(email.text).toContain('Retirada na chácara.');
+      expect(email.text).not.toContain('Entrega em');
+    }
+  });
+
+  it('a chácara não ganha linha de retirada nem de entrega', () => {
+    const email = received({ fulfillment: null }, 'VENUE');
+
+    expect(email.text).not.toContain('Retirada na chácara');
+    expect(email.text).not.toContain('Entrega em');
   });
 });

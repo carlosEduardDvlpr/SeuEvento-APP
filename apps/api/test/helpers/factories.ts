@@ -1,5 +1,10 @@
 import { parseISODate, type ISODate } from '../../src/lib/dates.js';
-import type { BookingStatus, GalleryKind, Role } from '../../src/generated/prisma/enums.js';
+import type {
+  BookingKind,
+  BookingStatus,
+  GalleryKind,
+  Role,
+} from '../../src/generated/prisma/enums.js';
 import { prisma } from './db.js';
 
 let sequence = 0;
@@ -25,6 +30,8 @@ type BookingInput = {
   /** Dia de saída, inclusivo (§7.3). */
   endDate: ISODate;
   status?: BookingStatus;
+  /** Padrão `VENUE`. A decoração nasce como retirada, sem convidados (§9.12). */
+  kind?: BookingKind;
   guestCount?: number;
   holdExpiresAt?: Date | null;
   /** Só onde o valor aparece na resposta, como nos resumos do painel. */
@@ -41,13 +48,18 @@ type BookingInput = {
  * reserva pelo computeQuote.
  */
 export function createBooking(input: BookingInput) {
+  const kind = input.kind ?? 'VENUE';
+
   return prisma.booking.create({
     data: {
       userId: input.userId,
+      kind,
       startDate: parseISODate(input.startDate),
       endDate: parseISODate(input.endDate),
       status: input.status ?? 'PENDING',
-      guestCount: input.guestCount ?? 40,
+      // O CHECK `booking_fulfillment_by_kind` exige a modalidade na decoração.
+      fulfillment: kind === 'DECORATION' ? 'PICKUP' : null,
+      guestCount: kind === 'DECORATION' ? null : (input.guestCount ?? 40),
       holdExpiresAt: input.holdExpiresAt ?? null,
       createdByAdmin: input.createdByAdmin ?? false,
       dailyBreakdown: [],
@@ -98,17 +110,22 @@ export function createItem(overrides: {
   categoryId: string;
   name?: string;
   priceCents?: number;
+  /** Preço com a chácara. Sem ele, igual ao avulso: o item "sem promoção". */
+  venuePriceCents?: number;
   stock?: number;
   active?: boolean;
   sortOrder?: number;
   themeIds?: string[];
 }) {
   sequence += 1;
+  const priceCents = overrides.priceCents ?? 12000;
+
   return prisma.item.create({
     data: {
       categoryId: overrides.categoryId,
       name: overrides.name ?? `Item ${sequence}`,
-      priceCents: overrides.priceCents ?? 12000,
+      priceCents,
+      venuePriceCents: overrides.venuePriceCents ?? priceCents,
       stock: overrides.stock ?? 5,
       active: overrides.active ?? true,
       sortOrder: overrides.sortOrder ?? 0,

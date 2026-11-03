@@ -66,10 +66,11 @@ const detailInclude = {
 /**
  * Colunas da **lista**, que é bem menos que as do detalhe (§18.2).
  *
- * `Booking` tem duas colunas JSON (`dailyBreakdown`, `appliedCombos`), três de
- * texto livre e a relação de itens. O cartão da lista não mostra nenhuma delas,
- * e com `detailInclude` tudo isso era lido e jogado fora a cada página — mais
- * uma consulta em `BookingItem` que ninguém usava.
+ * `Booking` tem três colunas JSON (`dailyBreakdown`, `appliedCombos` e o
+ * `deliveryAddress` da entrega), três de texto livre e a relação de itens. O
+ * cartão da lista não mostra nenhuma delas, e com `detailInclude` tudo isso era
+ * lido e jogado fora a cada página — mais uma consulta em `BookingItem` que
+ * ninguém usava.
  */
 const summarySelect = {
   id: true,
@@ -93,6 +94,8 @@ function toAdminBooking(row: BookingRow): AdminBooking {
    */
   const days = (row.dailyBreakdown ?? []) as AdminBooking['days'];
   const combos = (row.appliedCombos ?? []) as AdminBooking['combos'];
+  // Mesma confiança para o endereço da entrega, validado antes de ser copiado (§9.12).
+  const deliveryAddress = (row.deliveryAddress ?? null) as AdminBooking['deliveryAddress'];
 
   return {
     id: row.id,
@@ -116,6 +119,9 @@ function toAdminBooking(row: BookingRow): AdminBooking {
     combos,
     discountTotalCents: row.discountTotalCents,
     totalCents: row.totalCents,
+
+    fulfillment: row.fulfillment,
+    deliveryAddress,
 
     customerNotes: row.customerNotes,
     adminNotes: row.adminNotes,
@@ -332,6 +338,9 @@ async function notifyCustomer(
         whatsapp: settings.whatsapp,
         bookingUrl: `${env.APP_URL}/reservas/${row.id}`,
         kind: row.kind,
+        // A retirada ou a entrega (§9.12), como a reserva gravou.
+        fulfillment: row.fulfillment,
+        deliveryAddress: (row.deliveryAddress ?? null) as AdminBooking['deliveryAddress'],
       }),
     });
     return;
@@ -387,6 +396,8 @@ export async function createManualBooking(
       endDate: body.endDate,
       guestCount: body.guestCount,
       items: body.items,
+      // Nulo na decoração vira retirada no `createBooking`: o painel ainda não pergunta (§9.12).
+      fulfillment: body.fulfillment,
       customerNotes: body.customerNotes,
       expectedTotalCents: body.expectedTotalCents,
     },

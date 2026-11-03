@@ -43,6 +43,7 @@ describe('contratos do catálogo', () => {
       categoryId: '00000000-0000-4000-8000-000000000000',
       name: 'Painel de balões',
       priceCents: 12000,
+      venuePriceCents: 10000,
       stock: 3,
     });
 
@@ -54,6 +55,29 @@ describe('contratos do catálogo', () => {
       sortOrder: 0,
       active: true,
     });
+  });
+
+  /* O preço com a chácara é promoção: nunca passa do avulso, e igual é "sem promoção". */
+  it('recusa preço com a chácara acima do avulso, apontando o campo', () => {
+    const base = {
+      categoryId: '00000000-0000-4000-8000-000000000000',
+      name: 'Decoração casamento',
+      priceCents: 40000,
+      stock: 1,
+    };
+
+    expect(createItemBodySchema.safeParse({ ...base, venuePriceCents: 40000 }).success).toBe(true);
+
+    const above = createItemBodySchema.safeParse({ ...base, venuePriceCents: 40001 });
+    expect(above.success).toBe(false);
+    expect(above.error?.issues[0]?.path).toEqual(['venuePriceCents']);
+  });
+
+  it('na edição, só compara os dois preços quando os dois vêm', () => {
+    expect(updateItemBodySchema.safeParse({ venuePriceCents: 99999 }).success).toBe(true);
+    expect(
+      updateItemBodySchema.safeParse({ priceCents: 30000, venuePriceCents: 30001 }).success,
+    ).toBe(false);
   });
 
   /*

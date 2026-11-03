@@ -3,6 +3,7 @@ import { type Location, Link, NavLink, Outlet, useLocation, useNavigate } from '
 import { useVenue } from '@/api/venue';
 import {
   CalendarIcon,
+  GridIcon,
   HexMarkIcon,
   InstagramIcon,
   ListIcon,
@@ -30,7 +31,8 @@ const INSTAGRAM = {
 
 /**
  * Cabeçalho fixo e discreto (§13.1): o logo e as ações do site, que são
- * reservar, ver as reservas de quem entrou e entrar ou sair.
+ * reservar, ver as reservas de quem entrou e entrar ou sair. Quem entrou como
+ * admin ganha também o atalho para o painel.
  *
  * No desktop as ações são links alinhados, cada um com o seu ícone, e as
  * reservas aparecem por extenso, "Minhas reservas". No celular elas moram no
@@ -38,8 +40,10 @@ const INSTAGRAM = {
  * controles espremidos numa linha, e o rótulo precisava encolher para caber.
  * Pedido do dono, outubro de 2026.
  *
- * O rodapé fecha a página no tom de ameixa da marca, com o que a §13.1 pede
- * para ele: contato, redes, termos e privacidade.
+ * O rodapé fecha a página no tom de ameixa da marca, com o contato e as redes.
+ * Os links dos termos e da privacidade e o "Você entrou como" saíram dele a
+ * pedido do dono, em novembro de 2026; as duas páginas continuam no ar, ligadas
+ * pelo aceite do cadastro (§10.8).
  */
 export function PublicLayout() {
   const { data: venue } = useVenue();
@@ -72,10 +76,22 @@ export function PublicLayout() {
   ];
 
   if (status === 'authenticated') {
-    actions.push(
-      { type: 'link', to: '/minhas-reservas', label: 'Minhas reservas', Icon: ListIcon },
-      { type: 'signOut', label: 'Sair', Icon: LogOutIcon },
-    );
+    actions.push({
+      type: 'link',
+      to: '/minhas-reservas',
+      label: 'Minhas reservas',
+      Icon: ListIcon,
+    });
+
+    /*
+     * Só o admin vê o atalho. Esconder o link é conforto, não proteção: quem
+     * protege o painel é o `RequireRole` e a API, que conferem o papel (§10.6).
+     */
+    if (user?.role === 'ADMIN') {
+      actions.push({ type: 'link', to: '/admin', label: 'Painel admin', Icon: GridIcon });
+    }
+
+    actions.push({ type: 'signOut', label: 'Sair', Icon: LogOutIcon });
   }
 
   if (status === 'anonymous') {
@@ -182,14 +198,6 @@ export function PublicLayout() {
               </a>
             </li>
           </ul>
-
-          <nav aria-label="Rodapé" className={styles.footerNav}>
-            <Link to="/termos">Termos de uso</Link>
-            <Link to="/privacidade">Política de privacidade</Link>
-          </nav>
-
-          {/* Redação neutra: o cadastro não pergunta gênero. */}
-          {user ? <p className={styles.footerUser}>Você entrou como {user.name}.</p> : null}
         </div>
       </footer>
     </>

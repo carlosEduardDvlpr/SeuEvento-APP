@@ -5,8 +5,10 @@ import styles from './KindPicker.module.css';
 /**
  * O que reservar: a chácara ou só a decoração (T32).
  *
- * É a primeira escolha do wizard porque muda tudo o que vem depois: a agenda que
- * o calendário mostra, se o pedido tem um dia ou vários, e se há convidados.
+ * É o primeiro passo do wizard porque muda tudo o que vem depois: a agenda que
+ * o calendário mostra, se o pedido tem um dia ou vários, se há convidados e o
+ * preço da decoração. Quem chega pelo cartão de uma decoração na landing não
+ * passa por aqui: já disse que quer a decoração (novembro de 2026).
  *
  * É um grupo de rádio de verdade (`fieldset` com inputs `radio`), e não botões:
  * a navegação por setas e o anúncio de "1 de 2" vêm de graça, e o teclado
@@ -26,7 +28,7 @@ const OPTIONS: { kind: BookingKind; title: string; text: string; Icon: typeof Ho
   {
     kind: 'DECORATION',
     title: 'Só a decoração',
-    text: 'Você leva os itens do pegue e monte e monta a festa em outro lugar.',
+    text: 'A decoração do pegue e monte para uma festa em outro lugar. Você retira na chácara ou recebe no seu endereço.',
     Icon: BalloonIcon,
   },
 ];

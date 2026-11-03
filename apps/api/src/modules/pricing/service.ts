@@ -4,7 +4,7 @@ import { type ISODate, daysBetweenInclusive, eachDay } from '../../lib/dates.js'
 import { AppError, fieldError } from '../../lib/errors.js';
 import { findUnavailableDates } from '../availability/service.js';
 import { findStockShortages } from '../items/stock.js';
-import { type CartLine, type ComboDef, computeQuote } from './quote.js';
+import { type CartLine, computeQuote } from './quote.js';
 import { loadActivePriceRules } from './rules.js';
 
 /**
@@ -71,16 +71,22 @@ function assertDayCount(days: number, { minDays, maxDays }: VenueLimits): void {
  * desativado derruba a requisição: a vitrine não oferece item inativo, então isso
  * é aba velha ou pedido adulterado, e seguir com ele daria um orçamento por um
  * item que a chácara não aluga mais.
+ *
+ * Cada decoração tem dois preços (novembro de 2026): quem reserva a chácara
+ * leva pelo preço com a chácara, e quem leva só a decoração paga o avulso. O
+ * produto do pedido decide qual dos dois entra na linha, e é este o preço que
+ * vai para o snapshot da reserva.
  */
 async function loadCartLines(
   prisma: PrismaClient,
   items: QuoteRequest['items'],
+  kind: BookingKind,
 ): Promise<CartLine[]> {
   if (items.length === 0) return [];
 
   const rows = await prisma.item.findMany({
     where: { id: { in: items.map((item) => item.itemId) }, active: true },
-    select: { id: true, name: true, priceCents: true },
+    select: { id: true, name: true, priceCents: true, venuePriceCents: true },
   });
 
   const byId = new Map(rows.map((row) => [row.id, row]));
@@ -99,32 +105,9 @@ async function loadCartLines(
       itemId: row.id,
       name: row.name,
       quantity: item.quantity,
-      unitPriceCents: row.priceCents,
+      unitPriceCents: kind === 'VENUE' ? row.venuePriceCents : row.priceCents,
     };
   });
-}
-
-/**
- * Combos ativos, com a composição.
- *
- * Carrega todos, sem filtrar por estilo: o cliente pode montar um pedido que
- * atravessa estilos, e o desconto é do pedido, não da seleção de filtro. Combo que
- * contém item desativado simplesmente não encaixa, porque item desativado nunca
- * entra no carrinho.
- */
-async function loadActiveCombos(prisma: PrismaClient): Promise<ComboDef[]> {
-  const rows = await prisma.combo.findMany({
-    where: { active: true },
-    select: {
-      id: true,
-      name: true,
-      discountType: true,
-      discountValue: true,
-      items: { select: { itemId: true, quantity: true } },
-    },
-  });
-
-  return rows;
 }
 
 /** Problemas que dependem do estado do banco neste instante (§11.3). */
@@ -174,23 +157,33 @@ export async function quoteFromDatabase(
    */
   if (kind === 'VENUE') assertDayCount(daysBetweenInclusive(startDate, endDate), limits);
 
-  const [lines, rules, combos] = await Promise.all([
-    loadCartLines(prisma, request.items),
+  const [lines, rules] = await Promise.all([
+    loadCartLines(prisma, request.items, kind),
     loadActivePriceRules(prisma),
-    loadActiveCombos(prisma),
   ]);
 
   const quote = computeQuote({
     /*
      * Decoração não paga diária: sem a chácara, não há dia de chácara a cobrar.
      * Sem dias, o `computeQuote` devolve `days: []` e `dailyTotalCents: 0`, e o
-     * total vira só itens menos combos — o mesmo cálculo, sem caminho paralelo.
+     * total vira só a soma dos itens — o mesmo cálculo, sem caminho paralelo.
      */
     days: kind === 'VENUE' ? eachDay(startDate, endDate) : [],
     rules,
     baseDailyPriceCents: limits.baseDailyPriceCents,
     lines,
-    combos,
+    /*
+     * O pedido não aplica mais combo (novembro de 2026). Cada item virou uma
+     * decoração completa, e o desconto de quem leva com a chácara agora mora no
+     * próprio item, como o preço com a chácara que `loadCartLines` já escolheu.
+     * Aplicar combo por cima daria dois descontos pela mesma promoção.
+     *
+     * O cálculo puro continua sabendo aplicar combo, e o `comboValue` segue
+     * servindo a prévia do painel e a vitrine de combos. A lista vazia aqui faz
+     * o orçamento sair com `combos: []` e desconto zero, no formato de sempre,
+     * e o snapshot da reserva grava exatamente isso.
+     */
+    combos: [],
   });
 
   const issues = await collectIssues(prisma, { from: startDate, to: endDate, lines, now, kind });

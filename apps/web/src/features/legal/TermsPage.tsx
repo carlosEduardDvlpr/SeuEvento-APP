@@ -25,8 +25,8 @@ export function TermsPage() {
           <LegalSection title="O que este site faz">
             <p>
               Este site é o canal de reservas da {venue.name}. Por aqui você vê as datas livres,
-              monta o pedido com os itens de decoração e envia para a chácara confirmar. Quem decide
-              sobre cada pedido é a chácara.
+              monta o pedido com a chácara, a decoração do pegue e monte ou as duas, e envia para a
+              chácara confirmar. Quem decide sobre cada pedido é a chácara.
             </p>
             {venue.address ? <p>A chácara fica em {venue.address}.</p> : null}
           </LegalSection>
@@ -34,8 +34,9 @@ export function TermsPage() {
           <LegalSection title="Como a reserva funciona">
             <ul className={styles.list}>
               <li>
-                Você escolhe as datas, quantas pessoas espera e os itens que vai querer. O valor
-                total aparece antes do envio e é calculado pela chácara, não pelo seu navegador.
+                Você escolhe o que reservar, a data, quantas pessoas espera (na chácara) e a
+                decoração, uma por pedido. O valor total aparece antes do envio e é calculado pela
+                chácara, não pelo seu navegador.
               </li>
               <li>
                 Ao enviar, o pedido entra como <strong>aguardando confirmação</strong> e as datas
@@ -77,13 +78,18 @@ export function TermsPage() {
 
           <LegalSection title="Pegue e monte">
             <p>
-              Os itens de decoração são alugados por reserva, não por dia, e o serviço é{' '}
-              <strong>pegue e monte</strong>: você retira os itens, monta a decoração e devolve ao
-              final. Montagem e transporte são por sua conta.
+              A decoração é alugada por reserva, não por dia, e o serviço é{' '}
+              <strong>pegue e monte</strong>: você monta a decoração e devolve os itens ao final. A
+              montagem é sempre por sua conta.
             </p>
             <p>
-              A quantidade disponível de cada item é conferida para todos os dias da sua reserva no
-              momento do envio. Item sem unidade suficiente não entra no pedido.
+              Com a chácara, a decoração já está no espaço e sai pelo preço com a chácara. Só a
+              decoração, você retira os itens na chácara ou escolhe a entrega no seu endereço. A
+              taxa de entrega é combinada com a chácara e não entra no total do site.
+            </p>
+            <p>
+              A disponibilidade da decoração é conferida para todos os dias da sua reserva no
+              momento do envio. A que já saiu para outra festa nessas datas não entra no pedido.
             </p>
           </LegalSection>
 

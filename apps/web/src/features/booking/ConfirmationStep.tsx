@@ -1,10 +1,17 @@
-import type { Booking, PublicVenue } from '@chacara/shared';
+import type { Booking, FulfillmentMethod, PublicVenue } from '@chacara/shared';
+import { FULFILLMENT_LABELS } from '@chacara/shared';
 import { Link } from 'react-router';
 import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { CheckIcon } from '@/components/icons';
-import { describeGuests, describeItems, formatDateRange, formatDeadline } from '@/lib/format';
+import {
+  describeGuests,
+  describeItems,
+  formatAddress,
+  formatDateRange,
+  formatDeadline,
+} from '@/lib/format';
 import { formErrorMessage } from '@/lib/form';
 import { whatsappUrl } from '@/lib/whatsapp';
 import styles from './ConfirmationStep.module.css';
@@ -56,6 +63,9 @@ export function ConfirmationStep({ booking, venue, isLoading, error }: Confirmat
   const dates = formatDateRange(booking.startDate, booking.endDate);
   /** Só a decoração (T32): itens separados, não datas seguras. */
   const decoration = booking.kind === 'DECORATION';
+  /** Retirada ou entrega (§9.12); sem a escolha gravada, a decoração saía por retirada. */
+  const fulfillment: FulfillmentMethod = booking.fulfillment ?? 'PICKUP';
+  const delivery = decoration && fulfillment === 'DELIVERY';
 
   const message = decoration
     ? `Olá! Acabei de enviar um pedido de decoração para ${dates}. Pode confirmar?`
@@ -98,7 +108,24 @@ export function ConfirmationStep({ booking, venue, isLoading, error }: Confirmat
             <dt>Itens</dt>
             <dd>{describeItems(booking.items.length)}</dd>
           </div>
+          {decoration ? (
+            <div>
+              <dt>Como a decoração chega</dt>
+              <dd>{FULFILLMENT_LABELS[fulfillment]}</dd>
+            </div>
+          ) : null}
+          {/* O endereço que a reserva guardou no envio, para a pessoa conferir. */}
+          {delivery && booking.deliveryAddress ? (
+            <div className={styles.factWide}>
+              <dt>Endereço de entrega</dt>
+              <dd>{formatAddress(booking.deliveryAddress)}</dd>
+            </div>
+          ) : null}
         </dl>
+
+        {delivery ? (
+          <p className={styles.note}>A taxa de entrega é combinada com a chácara.</p>
+        ) : null}
 
         {booking.holdExpiresAt ? (
           decoration ? (
@@ -127,7 +154,11 @@ export function ConfirmationStep({ booking, venue, isLoading, error }: Confirmat
               : 'A chácara confere a agenda e responde ao seu pedido.'}
           </li>
           <li>Você recebe um e-mail assim que a reserva for confirmada.</li>
-          <li>Aí vocês combinam o pagamento e a retirada dos itens.</li>
+          <li>
+            {delivery
+              ? 'Aí vocês combinam o pagamento, a entrega e a taxa.'
+              : 'Aí vocês combinam o pagamento e a retirada dos itens.'}
+          </li>
         </ol>
       </section>
 

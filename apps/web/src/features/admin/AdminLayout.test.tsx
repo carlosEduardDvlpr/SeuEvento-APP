@@ -21,6 +21,8 @@ const OWNER: SessionUser = {
   phone: '11988880000',
   role: 'ADMIN',
   emailVerified: true,
+  address: null,
+  hasPassword: true,
 };
 
 function renderPanel() {

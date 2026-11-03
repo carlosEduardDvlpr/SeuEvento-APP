@@ -132,6 +132,17 @@
   font-size: var(--text-sm);
 }
 
+/* Retirada ou entrega da decoração (§9.12): a resposta vem antes do endereço. */
+.fulfillment {
+  margin: 0;
+  font-weight: 600;
+}
+
+.address {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .lines {
   display: flex;
   flex-direction: column;

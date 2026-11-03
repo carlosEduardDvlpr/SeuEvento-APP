@@ -1,5 +1,5 @@
-import type { AdminBooking, BookingKind, BookingStatus } from '@chacara/shared';
-import { BOOKING_KIND_LABELS, BOOKING_STATUS_LABELS } from '@chacara/shared';
+import type { AdminBooking, BookingKind, BookingStatus, FulfillmentMethod } from '@chacara/shared';
+import { BOOKING_KIND_LABELS, BOOKING_STATUS_LABELS, FULFILLMENT_LABELS } from '@chacara/shared';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
@@ -18,6 +18,7 @@ import { ArrowLeftIcon } from '@/components/icons';
 import { formErrorMessage } from '@/lib/form';
 import {
   describeGuests,
+  formatAddress,
   formatDateLong,
   formatDateRange,
   formatDeadline,
@@ -73,7 +74,19 @@ const DECORATION_ACTION_EFFECT: Partial<Record<BookingStatus, string>> = {
     'Os itens voltam a ficar livres e o cliente recebe um e-mail com o motivo que você escrever.',
 };
 
-function actionEffect(target: BookingStatus, kind: BookingKind): string {
+/** Na decoração entregue (§9.12) o que se combina direto é a entrega, com a taxa. */
+const DELIVERY_CONFIRMED_EFFECT =
+  'O cliente recebe um e-mail de confirmação e os itens deixam de ter prazo. A entrega e a taxa vocês combinam direto.';
+
+function actionEffect(
+  target: BookingStatus,
+  kind: BookingKind,
+  fulfillment: FulfillmentMethod,
+): string {
+  if (kind === 'DECORATION' && target === 'CONFIRMED' && fulfillment === 'DELIVERY') {
+    return DELIVERY_CONFIRMED_EFFECT;
+  }
+
   const decoration = kind === 'DECORATION' ? DECORATION_ACTION_EFFECT[target] : undefined;
   return decoration ?? ACTION_EFFECT[target];
 }
@@ -122,6 +135,11 @@ export function BookingDetailPage() {
   const data: AdminBooking = booking.data;
   const dates = formatDateRange(data.startDate, data.endDate);
   const decoration = data.kind === 'DECORATION';
+  /*
+   * Decoração sem a escolha gravada é de antes da entrega existir (§9.12), e
+   * até ali toda decoração saía por retirada.
+   */
+  const fulfillment: FulfillmentMethod = data.fulfillment ?? 'PICKUP';
   const needsReason = pendingAction === 'CANCELLED';
   const notes = draftNotes ?? data.adminNotes ?? '';
 
@@ -240,6 +258,28 @@ export function BookingDetailPage() {
           </a>
         ) : null}
       </section>
+
+      {/*
+        §9.12: na decoração, o dono precisa saber se ela sai daqui ou vai até o
+        cliente. O endereço é o que a reserva guardou no envio, e não o do perfil
+        de hoje: é para lá que a entrega foi combinada.
+      */}
+      {decoration ? (
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Como a decoração chega</h2>
+
+          <p className={styles.fulfillment}>{FULFILLMENT_LABELS[fulfillment]}</p>
+
+          {fulfillment === 'DELIVERY' ? (
+            <>
+              {data.deliveryAddress ? (
+                <p className={styles.address}>{formatAddress(data.deliveryAddress)}</p>
+              ) : null}
+              <p className={styles.hint}>A taxa de entrega é combinada com o cliente.</p>
+            </>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className={styles.card}>
         <h2 className={styles.cardTitle}>Valores</h2>
@@ -415,7 +455,9 @@ export function BookingDetailPage() {
         </p>
 
         {pendingAction ? (
-          <p className={styles.confirmDetail}>{actionEffect(pendingAction, data.kind)}</p>
+          <p className={styles.confirmDetail}>
+            {actionEffect(pendingAction, data.kind, fulfillment)}
+          </p>
         ) : null}
 
         {/* §11.3: o motivo é obrigatório para cancelar — vai no e-mail do cliente. */}

@@ -100,10 +100,7 @@ export function SubmitGate({
     return (
       <section className={styles.gate}>
         <h2 className={styles.title}>Falta só entrar</h2>
-        <p className={styles.lead}>
-          Seu pedido está montado e guardado. Entre ou crie uma conta para enviar — nada do que você
-          escolheu se perde.
-        </p>
+        <p className={styles.lead}>Seu pedido está montado e guardado. Entre ou crie uma conta</p>
 
         {formErrorMessage(googleLogin.error) ? (
           <p className={styles.problem} role="alert">
@@ -262,7 +259,8 @@ export function SubmitGate({
       </Button>
 
       <p className={styles.fine}>
-        Enviar não cobra nada. A chácara confirma e combina o pagamento com você.
+        Fazer o pedido não cobra nada, em breve entraremos em contato para confirmar e combinar o
+        pagamento com você.
       </p>
     </section>
   );

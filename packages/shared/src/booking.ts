@@ -88,6 +88,18 @@ export const createBookingBodySchema = z
   })
   .refine(hasGuestsWhenVenue, { error: VENUE_NEEDS_GUESTS_ERROR, path: ['guestCount'] });
 
+/**
+ * Linha de decoração de uma reserva gravada (§11.3).
+ *
+ * Nome, quantidade e preço são o snapshot do envio (§2.1). A foto, não: vem do
+ * catálogo na hora da leitura, e é a foto de hoje da decoração (novembro de
+ * 2026). Foto não é o que foi contratado, e ler do catálogo faz as reservas
+ * antigas também mostrarem a foto. Nula quando a decoração não tem foto.
+ */
+export const bookingLineSchema = quoteLineSchema.extend({
+  imageUrl: z.string().nullable(),
+});
+
 export const bookingSchema = z.object({
   id: z.string(),
   kind: bookingKindSchema,
@@ -120,7 +132,7 @@ export const bookingSchema = z.object({
 
   days: z.array(dailyPriceSchema),
   dailyTotalCents: centsSchema,
-  items: z.array(quoteLineSchema),
+  items: z.array(bookingLineSchema),
   itemsTotalCents: centsSchema,
   combos: z.array(appliedComboSchema),
   discountTotalCents: centsSchema,
@@ -152,6 +164,7 @@ export const cancelBookingBodySchema = z.object({
 
 export type CreateBookingBody = z.infer<typeof createBookingBodySchema>;
 export type CancelBookingBody = z.infer<typeof cancelBookingBodySchema>;
+export type BookingLine = z.infer<typeof bookingLineSchema>;
 export type Booking = z.infer<typeof bookingSchema>;
 
 /** Motivo gravado quando o prazo do pedido vence (§9.2, §9.9). */

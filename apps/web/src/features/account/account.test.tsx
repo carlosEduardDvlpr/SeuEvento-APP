@@ -75,6 +75,7 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
         quantity: 2,
         unitPriceCents: 12_000,
         totalCents: 24_000,
+        imageUrl: '/catalogo/paineis/arco-iris.jpg',
       },
     ],
     itemsTotalCents: 24_000,
@@ -381,6 +382,29 @@ describe('BookingDetailPage', () => {
     expect(screen.getByText('2× Painel de balões arco-íris')).toBeVisible();
     expect(screen.getByText('Combo Nuvens')).toBeVisible();
     expect(screen.getByText('R$ 3.500,00')).toBeVisible();
+  });
+
+  /*
+   * A foto vem do catálogo, junto com a reserva (§11.3). Decorativa: o nome da
+   * decoração está logo ao lado, e o leitor de tela não repete.
+   */
+  it('mostra a foto de cada decoração do pedido', async () => {
+    renderDetail(makeBooking({ status: 'CONFIRMED' }));
+
+    const line = (await screen.findByText('2× Painel de balões arco-íris')).closest('li')!;
+
+    expect(line.querySelector('img')).toHaveAttribute('src', '/catalogo/paineis/arco-iris.jpg');
+    expect(line.querySelector('img')).toHaveAttribute('alt', '');
+  });
+
+  it('põe o ícone no lugar da foto quando a decoração não tem uma', async () => {
+    const booking = makeBooking({ status: 'CONFIRMED' });
+    renderDetail({ ...booking, items: booking.items.map((item) => ({ ...item, imageUrl: null })) });
+
+    const line = (await screen.findByText('2× Painel de balões arco-íris')).closest('li')!;
+
+    expect(line.querySelector('img')).toBeNull();
+    expect(line.querySelector('svg')).not.toBeNull();
   });
 
   it('diz que foi só a chácara quando não havia itens', async () => {

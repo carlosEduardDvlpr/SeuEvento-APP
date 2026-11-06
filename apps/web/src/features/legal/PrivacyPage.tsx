@@ -1,201 +1,240 @@
 import { Link } from 'react-router';
+
 import { LegalPage, LegalSection, legalStyles as styles } from './LegalPage';
 
-/**
- * Política de privacidade (§10.8).
- *
- * Descreve o tratamento que o sistema **de fato** faz. Cada afirmação aqui
- * corresponde a algo verificável no código, e é isso que diferencia esta página
- * de um texto genérico copiado:
- *
- * - os dados listados são os campos que existem em `User` e `Booking` (§8);
- * - o cookie descrito é o único que o site grava (§10.1, `refresh_token`);
- * - o endereço IP aparece porque o log da API registra a origem da requisição e
- *   o limite de requisições usa o IP como chave (§10.7);
- * - o rascunho no navegador existe porque o wizard guarda o pedido em
- *   `sessionStorage` (§12.4);
- * - o endereço é o `User.address`, e a reserva com entrega guarda uma cópia em
- *   `Booking.deliveryAddress` (§9.12);
- * - a busca do CEP vai do navegador direto ao ViaCEP (`lib/cep.ts`);
- * - a remoção descrita é a que o `DELETE /me` executa.
- *
- * Não há medição de audiência nem rastreador de publicidade no site, então a
- * página diz isso em vez de abrir uma exceção que não existe.
- */
 export function PrivacyPage() {
   return (
     <LegalPage
-      title="Política de privacidade"
-      lead="Que dados este site coleta, para que servem e como você manda neles."
+      title="Política de Privacidade"
+      lead="Conheça como cuidamos das suas informações e protegemos sua privacidade."
       sibling={{ to: '/termos', label: 'Termos de uso' }}
     >
       {(venue) => (
         <>
-          <LegalSection title="Quem trata seus dados">
+          <LegalSection title="Quem somos">
             <p>
-              A {venue.name} é responsável pelos dados coletados neste site.
-              {venue.address ? ` Endereço: ${venue.address}.` : ''}
-              {venue.whatsapp ? ` Contato: WhatsApp ${venue.whatsapp}.` : ''}
+              A {venue.name} é responsável pelo tratamento das informações pessoais fornecidas neste
+              site.
+              {venue.address ? ` Nosso endereço é ${venue.address}.` : ''}
+              {venue.whatsapp
+                ? ` Se precisar falar conosco, entre em contato pelo WhatsApp ${venue.whatsapp}.`
+                : ''}
             </p>
           </LegalSection>
 
-          <LegalSection title="O que coletamos">
+          <LegalSection title="Quais informações coletamos?">
+            <p>
+              Para oferecer nossos serviços, realizar reservas e manter contato com você, podemos
+              coletar as seguintes informações:
+            </p>
+
             <ul className={styles.list}>
               <li>
-                <strong>Cadastro:</strong> nome, e-mail e telefone. Nem CPF, nem data de nascimento.
+                <strong>Dados pessoais:</strong> nome, e-mail e telefone informados no cadastro.
               </li>
+
               <li>
-                <strong>Endereço de entrega:</strong> só se você quiser receber a decoração no seu
-                endereço. São CEP, rua, número, complemento, bairro, cidade e estado. Ele fica no
-                seu perfil, e a reserva com entrega guarda uma cópia, para a entrega ir ao lugar
-                certo mesmo que você mude de endereço depois.
+                <strong>Endereço:</strong> CEP, rua, número, complemento, bairro, cidade e estado,
+                quando você optar pela entrega da decoração.
               </li>
+
               <li>
-                <strong>Senha:</strong> guardada apenas como código embaralhado, do qual não é
-                possível voltar à senha original. Nem a chácara consegue ver a sua.
+                <strong>Informações da reserva:</strong> data do evento, quantidade de convidados,
+                decoração escolhida, modalidade de entrega ou retirada, valores e observações
+                informadas durante o pedido.
               </li>
+
               <li>
-                <strong>Reserva:</strong> datas, número de convidados, a decoração escolhida, se ela
-                é retirada ou entregue, valores e o que você escrever no campo de observações.
+                <strong>Acesso com Google:</strong> caso escolha entrar utilizando sua conta Google,
+                recebemos seu nome, e-mail e identificador da conta para realizar seu acesso.
               </li>
+
               <li>
-                <strong>Login com o Google:</strong> se você entrar por aí, recebemos do Google o
-                seu identificador, nome e e-mail. Nenhum outro dado da sua conta Google.
-              </li>
-              <li>
-                <strong>Registros técnicos:</strong> data, hora, endereço e endereço IP das
-                requisições, no log do servidor. Servem para investigar erro e para o limite de
-                requisições que protege o site de abuso.
+                <strong>Dados de navegação:</strong> algumas informações, como data, horário e
+                endereço IP, são registradas para manter a segurança do site e identificar possíveis
+                problemas.
               </li>
             </ul>
+
+            <p>Não solicitamos CPF ou data de nascimento para realizar seu cadastro.</p>
           </LegalSection>
 
-          <LegalSection title="Para que usamos">
+          <LegalSection title="Como utilizamos suas informações?">
+            <p>
+              Utilizamos seus dados exclusivamente para atender às necessidades relacionadas aos
+              nossos serviços, como:
+            </p>
+
             <ul className={styles.list}>
-              <li>Criar sua conta e confirmar que o e-mail é seu.</li>
-              <li>Receber seu pedido, calcular o valor e registrar a reserva.</li>
-              <li>
-                Permitir que a chácara fale com você sobre a reserva — é por isso que o telefone é
-                obrigatório para reservar.
-              </li>
-              <li>
-                Levar a decoração até o endereço que você informou, quando você escolhe a entrega.
-              </li>
-              <li>Avisar por e-mail a cada mudança no andamento do pedido.</li>
-              <li>Manter o histórico de reservas por obrigação fiscal.</li>
+              <li>Criar e administrar sua conta.</li>
+              <li>Receber, organizar e acompanhar suas reservas.</li>
+              <li>Entrar em contato sobre pedidos, pagamentos e eventos.</li>
+              <li>Organizar a entrega ou retirada dos itens de decoração.</li>
+              <li>Enviar atualizações sobre o andamento da sua reserva.</li>
+              <li>Manter os registros necessários para cumprir obrigações legais.</li>
             </ul>
+
             <p>
-              Não usamos seus dados para publicidade, não traçamos perfil de consumo e não vendemos
-              nem alugamos sua informação para ninguém.
+              Seus dados não são vendidos ou alugados a terceiros, nem utilizados para criar perfis
+              de consumo ou enviar publicidade.
             </p>
           </LegalSection>
 
-          <LegalSection title="Por que podemos tratar">
+          <LegalSection title="Como utilizamos seus dados de acordo com a LGPD?">
             <p>
-              Cadastro e reserva são tratados para <strong>executar o contrato</strong> entre você e
-              a chácara. O histórico das reservas fica guardado por <strong>obrigação legal</strong>
-              . O aceite destes termos no cadastro registra o seu <strong>consentimento</strong>{' '}
-              para o que não se encaixa nos dois primeiros casos.
+              O tratamento das suas informações acontece de acordo com a Lei Geral de Proteção de
+              Dados (LGPD).
+            </p>
+
+            <p>
+              Utilizamos seus dados principalmente para realizar os serviços contratados,
+              administrar suas reservas e cumprir obrigações legais. Quando necessário, também
+              poderemos solicitar seu consentimento para outras finalidades.
             </p>
           </LegalSection>
 
-          <LegalSection title="Cookies e dados no seu navegador">
+          <LegalSection title="Compartilhamento de informações">
             <p>
-              O site grava <strong>um</strong> cookie: o da sua sessão, que mantém você conectado
-              sem precisar digitar a senha a cada página. Ele não pode ser lido por JavaScript, só é
-              enviado para as rotas de autenticação e desaparece quando você sai. Não há cookie de
-              publicidade nem de medição de audiência, porque o site não usa nenhuma dessas
-              ferramentas.
+              Para manter o site funcionando e oferecer nossos serviços, algumas informações podem
+              ser compartilhadas com empresas responsáveis pela hospedagem do site, armazenamento de
+              dados e envio de e-mails.
             </p>
+
             <p>
-              Enquanto você monta um pedido, o rascunho fica guardado na memória da aba do seu
-              navegador, para você não perder o que escolheu se precisar entrar na conta no meio do
-              caminho. Esse rascunho não sai do seu aparelho e se apaga ao fechar a aba.
+              Também utilizamos serviços do Google, como o login com a conta Google e o mapa
+              disponível na página inicial. Esses serviços possuem suas próprias políticas de
+              privacidade.
             </p>
+
             <p>
-              O mapa da seção “Como chegar”, na página inicial, é do Google Maps. Ele só carrega
-              quando você chega perto dele na página, e aí o seu navegador se conecta ao Google, que
-              pode registrar o acesso e gravar cookies próprios, conforme a política de privacidade
-              do Google.
+              Ao informar seu CEP, o site consulta o ViaCEP para preencher automaticamente
+              informações como rua, bairro e cidade. Nessa consulta, somente o CEP é enviado.
+            </p>
+
+            <p>
+              As informações das suas reservas são acessíveis a você e à administração da{' '}
+              {venue.name}. No calendário público, mostramos apenas as datas ocupadas, sem divulgar
+              informações pessoais de quem realizou a reserva.
+            </p>
+
+            <p>
+              Alguns dos serviços utilizados podem armazenar informações em servidores localizados
+              fora do Brasil.
             </p>
           </LegalSection>
 
-          <LegalSection title="Com quem compartilhamos">
+          <LegalSection title="Cookies e armazenamento no navegador">
             <p>
-              Só com quem é necessário para o site funcionar: o serviço que entrega os e-mails, a
-              hospedagem do site e do banco de dados e, se você escolher entrar com o Google, o
-              próprio Google. O mapa do Google na página inicial também conecta o seu navegador ao
-              Google. Esses serviços podem manter servidores fora do Brasil.
+              Utilizamos um cookie necessário para manter você conectado à sua conta enquanto
+              utiliza o site. Ele é removido quando você encerra sua sessão.
             </p>
+
             <p>
-              Quando você digita o CEP no cadastro do endereço, o seu navegador consulta o ViaCEP,
-              um serviço público de busca de CEP, para preencher a rua, o bairro e a cidade. Só o
-              CEP vai nessa consulta.
+              Durante a montagem de uma reserva, algumas escolhas podem ficar temporariamente salvas
+              no seu navegador para que você não perca o pedido caso precise entrar na sua conta.
+              Essas informações permanecem no seu dispositivo e são apagadas ao fechar a aba.
             </p>
+
             <p>
-              Fora disso, seus dados de reserva aparecem apenas para você e para a administração da
-              chácara. As datas ocupadas que o calendário público mostra não trazem nome, e-mail nem
-              qualquer detalhe de quem reservou.
+              O mapa disponível na seção "Como chegar" utiliza o Google Maps. Ao carregar esse
+              recurso, seu navegador pode se conectar ao Google, que poderá coletar informações de
+              acesso conforme sua própria política de privacidade.
+            </p>
+
+            <p>
+              Não utilizamos ferramentas próprias de rastreamento publicitário ou medição de
+              audiência.
             </p>
           </LegalSection>
 
-          <LegalSection title="Por quanto tempo guardamos">
+          <LegalSection title="Por quanto tempo guardamos seus dados?">
+            <p>As informações do seu cadastro são mantidas enquanto sua conta estiver ativa.</p>
+
             <p>
-              Os dados da sua conta ficam enquanto a conta existir. O registro das reservas fica
-              pelo prazo da obrigação fiscal, mesmo depois de você apagar a conta, mas sem o seu
-              nome, e-mail e telefone.
+              Os registros das reservas podem ser armazenados pelo período necessário para cumprir
+              obrigações legais e fiscais, mesmo após a exclusão da sua conta.
+            </p>
+
+            <p>
+              Quando você solicita a exclusão da conta, seus dados pessoais de cadastro são
+              removidos. Entretanto, algumas informações vinculadas às reservas, como o endereço
+              utilizado para uma entrega, poderão permanecer armazenadas junto ao histórico do
+              pedido.
             </p>
           </LegalSection>
 
-          <LegalSection title="Seus direitos">
+          <LegalSection title="Quais são seus direitos?">
             <p>
-              A Lei Geral de Proteção de Dados garante que você possa confirmar o tratamento,
-              acessar, corrigir, pedir anonimização ou remoção, saber com quem compartilhamos e
-              revogar o consentimento.
+              A LGPD garante a você o direito de consultar, corrigir e solicitar a exclusão dos seus
+              dados pessoais, quando permitido pela legislação, além de obter informações sobre como
+              eles são utilizados.
             </p>
+
+            <p>Você pode exercer esses direitos diretamente pelo site:</p>
+
             <ul className={styles.list}>
               <li>
-                <strong>Ver e corrigir:</strong> seus dados e suas reservas estão em{' '}
-                <Link to="/minhas-reservas">Minhas reservas</Link>. Nome, telefone e endereço você
-                edita na aba “Meu perfil”.
+                <strong>Consultar suas informações:</strong> acesse{' '}
+                <Link to="/minhas-reservas">Minhas reservas</Link> e consulte seus pedidos e dados
+                cadastrados.
               </li>
+
               <li>
-                <strong>Apagar a conta:</strong> no fim da aba “Meu perfil”. Seu nome, e-mail,
-                telefone e endereço saem do sistema na hora, as sessões abertas caem em todos os
-                aparelhos e o registro das reservas permanece sem esses dados. O endereço que uma
-                reserva com entrega copiou fica com ela, como o resto do histórico. Enquanto houver
-                reserva em andamento a remoção fica bloqueada, porque a chácara precisa poder falar
-                com você até a festa acontecer.
+                <strong>Atualizar seus dados:</strong> acesse a aba "Meu perfil" para alterar seu
+                nome, telefone e endereço.
               </li>
+
               <li>
-                <strong>Qualquer outro pedido:</strong>{' '}
+                <strong>Excluir sua conta:</strong> a opção está disponível no final da aba "Meu
+                perfil". A exclusão remove seus dados de cadastro e encerra suas sessões abertas. Os
+                registros que precisem ser mantidos por obrigações legais poderão permanecer
+                armazenados. Caso exista uma reserva em andamento, a exclusão ficará indisponível
+                até que o evento seja realizado.
+              </li>
+
+              <li>
+                <strong>Outras solicitações:</strong>{' '}
                 {venue.whatsapp
-                  ? `fale com a chácara pelo WhatsApp ${venue.whatsapp}.`
-                  : 'fale com a chácara pelo canal de contato informado no site.'}
+                  ? `entre em contato pelo WhatsApp ${venue.whatsapp}.`
+                  : 'entre em contato pelos canais de atendimento informados no site.'}
               </li>
             </ul>
           </LegalSection>
 
-          <LegalSection title="Segurança">
+          <LegalSection title="Como protegemos seus dados?">
             <p>
-              A conexão com o site é cifrada. Senhas e códigos de confirmação são guardados
-              embaralhados, nunca em texto legível, e os links de confirmação e de nova senha têm
-              prazo e valem uma única vez. Nenhuma medida elimina todo risco, mas estas são as que
-              estão aplicadas.
+              Adotamos medidas de segurança para proteger suas informações contra acessos não
+              autorizados, alterações ou utilização indevida.
+            </p>
+
+            <p>
+              Sua conexão com o site é protegida, e informações confidenciais, como senhas, são
+              armazenadas de forma segura, sem que possam ser consultadas diretamente pela
+              administração.
+            </p>
+
+            <p>
+              Apesar dos cuidados adotados, nenhum ambiente digital está completamente livre de
+              riscos.
             </p>
           </LegalSection>
 
           <LegalSection title="Menores de idade">
             <p>
-              O site não é destinado a menores de 18 anos. A reserva deve ser feita por quem pode
-              responder por ela.
+              Nosso site é destinado a pessoas maiores de 18 anos. As reservas devem ser realizadas
+              por pessoas legalmente responsáveis pela contratação dos serviços.
             </p>
           </LegalSection>
 
-          <LegalSection title="Mudanças nesta política">
+          <LegalSection title="Alterações nesta política">
             <p>
-              Se o tratamento mudar, esta página muda com ele. Vale a versão publicada aqui no
-              momento em que você usa o site.
+              Esta Política de Privacidade poderá ser atualizada sempre que houver mudanças nos
+              nossos serviços ou na forma como tratamos suas informações.
+            </p>
+
+            <p>
+              Recomendamos consultar esta página periodicamente para acompanhar eventuais
+              atualizações.
             </p>
           </LegalSection>
         </>

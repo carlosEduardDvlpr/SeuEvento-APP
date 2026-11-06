@@ -22,13 +22,13 @@ const OPTIONS: { kind: BookingKind; title: string; text: string; Icon: typeof Ho
   {
     kind: 'VENUE',
     title: 'A chácara',
-    text: 'Para fazer a festa no espaço, com ou sem a decoração do pegue e monte.',
+    text: '',
     Icon: HouseIcon,
   },
   {
     kind: 'DECORATION',
     title: 'Só a decoração',
-    text: 'A decoração do pegue e monte para uma festa em outro lugar. Você retira na chácara ou recebe no seu endereço.',
+    text: '',
     Icon: BalloonIcon,
   },
 ];

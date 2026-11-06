@@ -54,14 +54,16 @@ export function allowedAdminTransitions(status: BookingStatus): BookingStatus[] 
   }
 }
 
-type BookingRow = Prisma.BookingGetPayload<{
-  include: { items: true; user: { select: { id: true; name: true; email: true; phone: true } } };
-}>;
-
+/*
+ * A foto de cada decoração vem da relação com o item, e não de uma coluna da
+ * linha: é a foto de hoje no catálogo, não um snapshot (§11.3).
+ */
 const detailInclude = {
-  items: true,
+  items: { include: { item: { select: { imageUrl: true } } } },
   user: { select: { id: true, name: true, email: true, phone: true } },
-} as const;
+} satisfies Prisma.BookingInclude;
+
+type BookingRow = Prisma.BookingGetPayload<{ include: typeof detailInclude }>;
 
 /**
  * Colunas da **lista**, que é bem menos que as do detalhe (§18.2).
@@ -114,6 +116,7 @@ function toAdminBooking(row: BookingRow): AdminBooking {
       quantity: item.quantity,
       unitPriceCents: item.unitPriceCents,
       totalCents: item.quantity * item.unitPriceCents,
+      imageUrl: item.item.imageUrl,
     })),
     itemsTotalCents: row.itemsTotalCents,
     combos,

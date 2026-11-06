@@ -68,7 +68,6 @@ export function DateStep({ draft, dispatch, venue, unavailable, error, notice }:
 
   const total = draft.startDate && draft.endDate ? dayCount(draft.startDate, draft.endDate) : 0;
   const lengthError = rangeLengthError(draft, venue);
-  const leadDays = `${venue.minLeadDays} ${venue.minLeadDays === 1 ? 'dia' : 'dias'}`;
 
   function handleSelect(range: DateRange | undefined) {
     dispatch({
@@ -105,18 +104,6 @@ export function DateStep({ draft, dispatch, venue, unavailable, error, notice }:
         <h2 className={styles.title} id="titulo-datas">
           {decoration ? 'Qual é o dia da festa?' : 'Quando é a festa?'}
         </h2>
-        {decoration ? (
-          <p className={styles.hint}>
-            A decoração é reservada para um dia de uso, com pelo menos {leadDays} de antecedência.
-            {itemId ? ' O calendário mostra os dias em que a decoração escolhida está livre.' : ''}
-          </p>
-        ) : (
-          <p className={styles.hint}>
-            Escolha o dia, ou arraste para mais de um. A chácara aceita de {venue.minDays} a{' '}
-            {venue.maxDays} {venue.maxDays === 1 ? 'dia' : 'dias'} seguidos, com pelo menos{' '}
-            {leadDays} de antecedência.
-          </p>
-        )}
 
         <div className={styles.calendarWrap}>
           {days.isLoading ? (

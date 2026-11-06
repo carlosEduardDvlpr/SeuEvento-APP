@@ -32,7 +32,7 @@ import {
   requestItems,
   saveDraft,
 } from './draft';
-import { STEP_LABELS, type WizardStep, parseStep, stepsFor } from './steps';
+import { type WizardStep, parseStep, stepsFor } from './steps';
 import { useUnavailableInRange } from './useAvailableDays';
 import { useDebouncedValue } from './useDebouncedValue';
 import styles from './BookingWizard.module.css';
@@ -458,38 +458,6 @@ export function BookingWizard() {
     <div className={styles.wizard}>
       <header className={styles.header}>
         <h1 className={styles.title}>Montar meu pedido</h1>
-
-        <nav aria-label="Passos do pedido">
-          <ol className={styles.steps}>
-            {steps.map((candidate, index) => {
-              const current = candidate === step;
-              const done = index < position;
-              // Pular para a frente só com os passos anteriores respondidos.
-              const reachable = reachableStep(draft, steps, candidate, limits) === candidate;
-
-              return (
-                <li key={candidate} className={styles.stepItem}>
-                  <button
-                    type="button"
-                    className={[
-                      styles.stepLink,
-                      current ? styles.stepLinkCurrent : null,
-                      done ? styles.stepLinkDone : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    onClick={() => goTo(candidate)}
-                    disabled={!reachable}
-                    aria-current={current ? 'step' : undefined}
-                  >
-                    <span className={styles.stepNumber}>{index + 1}</span>
-                    {STEP_LABELS[candidate]}
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
       </header>
 
       {step === 'tipo' ? (
@@ -528,6 +496,7 @@ export function BookingWizard() {
           }}
           notice={notice}
           error={decorationError}
+          whatsapp={limits.whatsapp}
         />
       ) : null}
 

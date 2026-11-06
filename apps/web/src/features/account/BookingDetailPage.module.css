@@ -164,6 +164,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Linha da decoração com a foto: a pessoa reconhece a peça pelo que vê. */
+.itemLine {
+  align-items: center;
+}
+
+.itemName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
 .rule {
   padding: 1px var(--space-8);
   border-radius: 999px;

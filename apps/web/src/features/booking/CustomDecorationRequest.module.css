@@ -1,0 +1,65 @@
+/*
+ * Aviso no fim da lista de decorações: chama a atenção sem parecer erro. A cor é
+ * a da Decoração na identidade (magenta, ver `tokens.css`), e a borda grossa à
+ * esquerda marca o bloco além da cor (§14.2).
+ */
+.note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: var(--space-16) var(--space-24);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--decor);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.texts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: 1.2;
+}
+
+.text {
+  margin: 0;
+  color: var(--fg-soft);
+  font-size: var(--text-sm);
+}
+
+/* Preenchimento na versão `-ink`, a que passa contraste com texto claro. */
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-24);
+  border: 1px solid var(--decor-ink);
+  border-radius: var(--r-sm);
+  background: var(--decor-ink);
+  color: var(--on-brand);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.action:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* No celular o botão ocupa a linha: é o alvo do polegar. */
+@media (max-width: 560px) {
+  .action {
+    width: 100%;
+  }
+}

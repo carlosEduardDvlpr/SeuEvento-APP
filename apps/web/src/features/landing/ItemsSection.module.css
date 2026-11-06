@@ -164,6 +164,12 @@
   cursor: pointer;
 }
 
+/* O "Não achou o que queria?" fecha a vitrine, centralizado como o "mostrar mais". */
+.request {
+  max-width: 760px;
+  margin: var(--space-48) auto 0;
+}
+
 @media (min-width: 760px) {
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));

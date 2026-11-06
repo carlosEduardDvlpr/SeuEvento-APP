@@ -180,6 +180,64 @@ describe('criação de reserva', () => {
       });
     });
 
+    /*
+     * A foto de cada decoração vem junto com a reserva, para o cliente e para o
+     * painel, e é a de hoje no catálogo: foto não é snapshot (§11.3). O nome e o
+     * preço continuam os gravados.
+     */
+    it('devolve a foto atual de cada decoração, no detalhe do cliente e do painel', async () => {
+      const { token } = await createClient();
+      const admin = await createUser({ email: 'dono@chacara.local', role: 'ADMIN' });
+      const adminToken = app.jwt.sign({ sub: admin.id, role: admin.role });
+      const item = await createItem({
+        categoryId,
+        name: 'Painel de nuvens',
+        imageUrl: '/catalogo/paineis/nuvens.jpg',
+      });
+
+      const created = await post(token, {
+        ...TWO_DAYS,
+        items: [{ itemId: item.id, quantity: 1 }],
+        expectedTotalCents: BASE_DAILY * 2 + 12000,
+      });
+
+      expect(created.statusCode).toBe(201);
+      expect(created.json().items).toEqual([
+        expect.objectContaining({
+          name: 'Painel de nuvens',
+          imageUrl: '/catalogo/paineis/nuvens.jpg',
+        }),
+      ]);
+
+      // A dona troca a foto no painel: a reserva mostra a nova.
+      await prisma.item.update({
+        where: { id: item.id },
+        data: { name: 'Painel renomeado', imageUrl: '/catalogo/paineis/nuvens-2.jpg' },
+      });
+
+      const id = created.json().id as string;
+      const [mine, inPanel] = await Promise.all([
+        app.inject({
+          method: 'GET',
+          url: `/api/bookings/${id}`,
+          headers: { authorization: `Bearer ${token}` },
+        }),
+        app.inject({
+          method: 'GET',
+          url: `/api/admin/bookings/${id}`,
+          headers: { authorization: `Bearer ${adminToken}` },
+        }),
+      ]);
+
+      for (const response of [mine, inPanel]) {
+        expect(response.statusCode).toBe(200);
+        expect(response.json().items[0]).toMatchObject({
+          name: 'Painel de nuvens',
+          imageUrl: '/catalogo/paineis/nuvens-2.jpg',
+        });
+      }
+    });
+
     /* O preço com a chácara tomou o lugar dos combos: nada de combo no snapshot. */
     it('não aplica combo, e o snapshot grava a reserva sem combo', async () => {
       const { token } = await createClient();

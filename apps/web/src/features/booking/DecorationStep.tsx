@@ -7,7 +7,8 @@ import { Skeleton } from '@/components/Skeleton';
 import { CheckIcon, ImageIcon } from '@/components/icons';
 import { useAvailability, useCategories, useItems } from '@/api/storefront';
 import { formErrorMessage } from '@/lib/form';
-import { formatDateLong } from '@/lib/format';
+import { formatDateLong, formatDateRange } from '@/lib/format';
+import { CustomDecorationRequest } from './CustomDecorationRequest';
 import type { BookingDraft, DraftAction } from './draft';
 import styles from './DecorationStep.module.css';
 
@@ -41,7 +42,21 @@ export type DecorationStepProps = {
   notice?: string;
   /** Falta escolher a decoração, ou a escolhida não está livre nessa data. */
   error?: string;
+  /** WhatsApp da chácara, para o "Não achou o que queria?" no fim da lista. */
+  whatsapp: string | null;
 };
+
+/**
+ * A mensagem do "Não achou o que queria?": com a data, a dona já sabe para
+ * quando é a decoração que a pessoa vai pedir.
+ */
+function requestMessage(draft: BookingDraft): string {
+  if (!draft.startDate || !draft.endDate) {
+    return 'Olá! Estou montando um pedido no site e não encontrei a decoração que eu queria. Vocês podem me ajudar?';
+  }
+
+  return `Olá! Estou montando um pedido para ${formatDateRange(draft.startDate, draft.endDate)} e não encontrei a decoração que eu queria. Vocês podem me ajudar?`;
+}
 
 /**
  * Dias do pedido em que a decoração não sai (T32).
@@ -59,7 +74,14 @@ function useDecorationClosedDays(draft: BookingDraft): string[] {
   return (agenda.data?.days ?? []).filter((day) => day.status === 'blocked').map((day) => day.date);
 }
 
-export function DecorationStep({ draft, dispatch, stock, notice, error }: DecorationStepProps) {
+export function DecorationStep({
+  draft,
+  dispatch,
+  stock,
+  notice,
+  error,
+  whatsapp,
+}: DecorationStepProps) {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const closedDays = useDecorationClosedDays(draft);
   const categories = useCategories();
@@ -160,11 +182,6 @@ export function DecorationStep({ draft, dispatch, stock, notice, error }: Decora
 
       <section className={styles.intro}>
         <h2 className={styles.title}>{venue ? 'Quer uma decoração?' : 'Escolha a decoração'}</h2>
-        <p className={styles.hint}>
-          {venue
-            ? 'Com a chácara, a decoração do pegue e monte sai pelo preço com a chácara. É uma decoração por festa, e dá para seguir sem nenhuma.'
-            : 'É uma decoração por festa. A que já saiu para outra festa nesse dia aparece, mas sem poder ser escolhida.'}
-        </p>
       </section>
 
       {visibleCategories.length > 1 ? (
@@ -253,6 +270,11 @@ export function DecorationStep({ draft, dispatch, stock, notice, error }: Decora
             </ul>
           )}
         </fieldset>
+      ) : null}
+
+      {/* No fim da lista, depois de a pessoa ter visto o que há (pedido do dono). */}
+      {items.data && !stock.isPending ? (
+        <CustomDecorationRequest whatsapp={whatsapp} message={requestMessage(draft)} />
       ) : null}
     </div>
   );

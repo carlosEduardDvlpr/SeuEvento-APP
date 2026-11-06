@@ -56,7 +56,16 @@ import { quoteFromDatabase } from '../pricing/service.js';
  * constraint não conhece.
  */
 
-type BookingRow = Prisma.BookingGetPayload<{ include: { items: true } }>;
+/**
+ * O que a leitura de uma reserva traz junto: as linhas e, de cada uma, a foto da
+ * decoração no catálogo. A foto não é snapshot (§11.3): é a de hoje, e por isso
+ * vem da relação com o item, e não de uma coluna da linha.
+ */
+const bookingInclude = {
+  items: { include: { item: { select: { imageUrl: true } } } },
+} satisfies Prisma.BookingInclude;
+
+type BookingRow = Prisma.BookingGetPayload<{ include: typeof bookingInclude }>;
 
 /**
  * Pode o cliente cancelar esta reserva pelo site, e até quando (§9.2).
@@ -127,6 +136,7 @@ function toBooking(row: BookingRow, cancelRules: CancelRules): Booking {
       quantity: item.quantity,
       unitPriceCents: item.unitPriceCents,
       totalCents: item.quantity * item.unitPriceCents,
+      imageUrl: item.item.imageUrl,
     })),
     itemsTotalCents: row.itemsTotalCents,
     combos,
@@ -609,7 +619,7 @@ export async function createBooking({
               })),
             },
           },
-          include: { items: true },
+          include: bookingInclude,
         });
       },
       /*
@@ -795,7 +805,7 @@ export async function listMyBookings(
   const [rows, rules] = await Promise.all([
     prisma.booking.findMany({
       where: { userId },
-      include: { items: true },
+      include: bookingInclude,
       orderBy: [{ startDate: 'desc' }, { id: 'asc' }],
     }),
     loadVenueRules(prisma),
@@ -818,7 +828,7 @@ export async function getMyBooking(
   now: Date = new Date(),
 ): Promise<Booking> {
   const [row, rules] = await Promise.all([
-    prisma.booking.findFirst({ where: { id, userId }, include: { items: true } }),
+    prisma.booking.findFirst({ where: { id, userId }, include: bookingInclude }),
     loadVenueRules(prisma),
   ]);
 
@@ -925,7 +935,7 @@ export async function cancelMyBooking({
     );
   }
 
-  const row = await prisma.booking.findUniqueOrThrow({ where: { id }, include: { items: true } });
+  const row = await prisma.booking.findUniqueOrThrow({ where: { id }, include: bookingInclude });
 
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },

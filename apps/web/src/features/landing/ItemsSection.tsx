@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { Money } from '@/components/Money';
 import { PhotoFrame } from '@/components/PhotoFrame';
+import { CustomDecorationRequest } from '@/features/booking/CustomDecorationRequest';
 import landing from './landing.module.css';
 import { revealOnScroll } from './reveal';
 import styles from './ItemsSection.module.css';
@@ -20,16 +21,26 @@ import styles from './ItemsSection.module.css';
  * tabela, o avulso; quando a decoração sai mais barata junto com a chácara, a
  * segunda linha diz quanto. O total do pedido continua saindo do orçamento
  * (§9.7).
+ *
+ * No fim, o "Não achou o que queria?" leva ao WhatsApp da chácara (novembro de
+ * 2026, a pedido do dono): a decoração que a pessoa procura pode não estar no
+ * catálogo.
  */
 
 /** Cartões antes do "mostrar mais": o catálogo inteiro mora no wizard. */
 const PREVIEW = 8;
 
+/** A conversa já começa dizendo de onde a pessoa veio. */
+const REQUEST_MESSAGE =
+  'Olá! Vi as decorações no site e não encontrei a que eu queria. Vocês podem me ajudar?';
+
 export type ItemsSectionProps = {
   items: CatalogItem[];
+  /** WhatsApp da chácara. Sem ele, o "Não achou o que queria?" não aparece. */
+  whatsapp: string | null;
 };
 
-export function ItemsSection({ items }: ItemsSectionProps) {
+export function ItemsSection({ items, whatsapp }: ItemsSectionProps) {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
@@ -152,6 +163,12 @@ export function ItemsSection({ items }: ItemsSectionProps) {
               Mostrar mais {remaining} {remaining === 1 ? 'decoração' : 'decorações'}
             </button>
           </p>
+        ) : null}
+
+        {whatsapp ? (
+          <div className={styles.request} ref={revealOnScroll}>
+            <CustomDecorationRequest whatsapp={whatsapp} message={REQUEST_MESSAGE} />
+          </div>
         ) : null}
       </div>
     </section>

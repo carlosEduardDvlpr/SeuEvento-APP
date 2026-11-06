@@ -13,6 +13,7 @@ import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Textarea } from '@/components/Textarea';
+import { Thumbnail } from '@/components/Thumbnail';
 import { useToast } from '@/components/Toast';
 import { ArrowLeftIcon } from '@/components/icons';
 import { formErrorMessage } from '@/lib/form';
@@ -312,10 +313,14 @@ export function BookingDetailPage() {
 
         {data.items.length > 0 ? (
           <ul className={styles.lines}>
+            {/* A foto é a de hoje no catálogo; o nome e o preço são os gravados (§11.3). */}
             {data.items.map((item) => (
-              <li key={item.itemId} className={styles.line}>
-                <span className={styles.lineName}>
-                  {item.quantity}× {item.name}
+              <li key={item.itemId} className={[styles.line, styles.itemLine].join(' ')}>
+                <span className={styles.itemName}>
+                  <Thumbnail src={item.imageUrl} />
+                  <span>
+                    {item.quantity}× {item.name}
+                  </span>
                 </span>
                 <span className={styles.lineValue}>
                   <Money cents={item.totalCents} />

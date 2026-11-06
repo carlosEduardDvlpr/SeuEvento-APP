@@ -95,6 +95,8 @@ type Stub = {
   closed?: string[];
   /** Estoque livre de cada decoração nas datas; sem a entrada, o estoque dela. */
   freeStock?: Record<string, number>;
+  /** A chácara que o `GET /public/venue` devolve. */
+  venue?: PublicVenue;
 };
 
 /**
@@ -108,6 +110,7 @@ function stubFetch({
   itemBooked = [],
   closed = [],
   freeStock = {},
+  venue = VENUE,
 }: Stub = {}) {
   const urls: string[] = [];
 
@@ -139,7 +142,7 @@ function stubFetch({
 
       const body =
         url.pathname === '/api/public/venue'
-          ? VENUE
+          ? venue
           : url.pathname === '/api/categories'
             ? [PAINEIS, MESAS]
             : url.pathname === '/api/items'
@@ -220,10 +223,9 @@ describe('passo do tipo', () => {
 
     expect(await screen.findByText('O que você quer reservar?')).toBeVisible();
     expect(screen.getByRole('radio', { name: /A chácara/ })).toBeChecked();
-    expect(screen.getByRole('button', { name: /Convidados/ })).toBeVisible();
   });
 
-  it('segue para a data da chácara, com os limites dela', async () => {
+  it('segue para a data da chácara', async () => {
     const user = setupUser();
     stubFetch();
     renderWizard();
@@ -231,21 +233,23 @@ describe('passo do tipo', () => {
     await user.click(await screen.findByRole('button', { name: /Continuar/ }));
 
     expect(await screen.findByText('Quando é a festa?')).toBeVisible();
-    expect(screen.getByText(/de 1 a 3 dias seguidos/)).toBeVisible();
-    expect(screen.getByText(/pelo menos 2 dias de antecedência/)).toBeVisible();
   });
 
   /* T32: a decoração é um dia só e não recebe convidados. */
-  it('na decoração, tira o passo dos convidados e pede um dia', async () => {
+  it('na decoração, pede um dia e pula os convidados', async () => {
     const user = setupUser();
     stubFetch();
     renderWizard();
 
     await user.click(await screen.findByRole('radio', { name: /Só a decoração/ }));
-    expect(screen.queryByRole('button', { name: /Convidados/ })).not.toBeInTheDocument();
-
     await user.click(screen.getByRole('button', { name: /Continuar/ }));
     expect(await screen.findByText('Qual é o dia da festa?')).toBeVisible();
+
+    await user.click(await screen.findByRole('button', { name: DIA_9 }));
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    expect(await screen.findByText('Escolha a decoração')).toBeVisible();
+    expect(screen.queryByText('Quantas pessoas?')).not.toBeInTheDocument();
   });
 
   /* Até a revisão, nada de resumo no rodapé: só a navegação (novembro de 2026). */
@@ -332,10 +336,7 @@ describe('escolha vinda da landing', () => {
     renderWizard(`/reservar?item=${PAINEL.id}`);
 
     expect(await screen.findByText('Qual é o dia da festa?')).toBeVisible();
-    expect(
-      screen.getByText(/mostra os dias em que a decoração escolhida está livre/),
-    ).toBeVisible();
-    expect(screen.queryByRole('button', { name: /Tipo/ })).not.toBeInTheDocument();
+    // É o primeiro passo deste pedido: não há para onde voltar.
     expect(screen.queryByRole('button', { name: /Voltar/ })).not.toBeInTheDocument();
 
     await waitFor(() => {
@@ -636,6 +637,33 @@ describe('passo da decoração', () => {
     await waitFor(() => expect(storedDraft()?.itemId).toBeNull());
   });
 
+  /*
+   * Pedido do dono (novembro de 2026): no fim da lista, quem não achou a
+   * decoração pede direto pelo WhatsApp, com a data já na mensagem.
+   */
+  it('fecha a lista com o "Não achou o que queria?" levando ao WhatsApp', async () => {
+    stubFetch({ venue: { ...VENUE, whatsapp: '(11) 99999-0000' } });
+    seedDraft({ endDate: '2026-12-05' });
+    renderWizard('/reservar?step=decoracao');
+
+    expect(await screen.findByRole('heading', { name: 'Não achou o que queria?' })).toBeVisible();
+
+    const link = screen.getByRole('link', { name: 'Pedir pelo WhatsApp' });
+    expect(link).toHaveAttribute('href', expect.stringContaining('https://wa.me/5511999990000'));
+    expect(decodeURIComponent(link.getAttribute('href') ?? '')).toContain(
+      'Estou montando um pedido para 5 de dezembro de 2026',
+    );
+  });
+
+  it('não mostra o "Não achou o que queria?" sem WhatsApp cadastrado', async () => {
+    stubFetch();
+    seedDraft();
+    renderWizard('/reservar?step=decoracao');
+
+    await screen.findByRole('radio', { name: PAINEL.name });
+    expect(screen.queryByText('Não achou o que queria?')).not.toBeInTheDocument();
+  });
+
   it('explica quando a decoração está fechada nas datas da chácara', async () => {
     const user = setupUser();
     stubFetch({ closed: ['2026-12-05'] });
@@ -654,30 +682,11 @@ describe('passo da decoração', () => {
  * No celular esse botão é o gesto de voltar do sistema.
  */
 describe('navegação', () => {
-  it('não deixa pular para a frente antes de responder', async () => {
-    stubFetch();
-    renderWizard();
-
-    await screen.findByText('O que você quer reservar?');
-
-    expect(screen.getByRole('button', { name: /Data/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /Convidados/ })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /Decoração/ })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /Revisão/ })).toBeDisabled();
-  });
-
-  it('libera os atalhos quando o pedido está completo', async () => {
-    stubFetch();
-    seedDraft();
-    renderWizard();
-
-    await screen.findByText('O que você quer reservar?');
-
-    expect(screen.getByRole('button', { name: /Decoração/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /Revisão/ })).toBeEnabled();
-  });
-
-  /* Um link para um passo adiante com o pedido pela metade cai no que falta. */
+  /*
+   * A barra com os passos saiu a pedido do dono (novembro de 2026): andar é só
+   * pelo "Voltar" e pelo "Continuar", e um link para um passo adiante com o
+   * pedido pela metade cai no que falta.
+   */
   it('cai no primeiro passo que falta quando a URL pede um adiante', async () => {
     stubFetch();
     renderWizard('/reservar?step=revisao');

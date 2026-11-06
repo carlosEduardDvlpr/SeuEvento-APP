@@ -87,9 +87,9 @@ function issueMessage(issue: QuoteIssue, quote: Quote | undefined, draft: Bookin
 }
 
 const FULFILLMENT_TEXTS: Record<FulfillmentMethod, string> = {
-  PICKUP: 'Você retira os itens na chácara e devolve depois. O horário é combinado com a gente.',
+  PICKUP: 'Você retira os itens. O local e horário para retirada são combinados com a gente.',
   DELIVERY:
-    'A gente leva a decoração até o seu endereço. A taxa de entrega é combinada com a chácara e não entra no total.',
+    'A gente leva a decoração até o seu endereço. A taxa de entrega é combinada posteriormente com a gente e não entra no total.',
 };
 
 export function ReviewStep({
@@ -281,36 +281,24 @@ export function ReviewStep({
         {decoration ? (
           <ul className={styles.rules}>
             <li>
-              O pedido chega como <strong>aguardando confirmação</strong>. A decoração fica separada
-              para você por até {venue.holdHours} horas enquanto a gente responde.
+              O pedido fica <strong>aguardando confirmação</strong> e em breve entraremos em contato
+              com você.
             </li>
             <li>
               Dá para cancelar pelo site até {venue.freeCancelUntilDays} dias antes da festa. Depois
               disso, é só falar com a gente.
             </li>
-            <li>
-              A decoração é <strong>pegue e monte</strong>: você monta a festa e devolve os itens
-              depois.{' '}
-              {delivery
-                ? 'O horário da entrega e da devolução é combinado com a gente.'
-                : 'O horário da retirada e da devolução é combinado com a gente.'}
-            </li>
           </ul>
         ) : (
           <ul className={styles.rules}>
             <li>
-              O pedido chega como <strong>aguardando confirmação</strong>. As datas ficam seguras
-              por até {venue.holdHours} horas enquanto a chácara responde.
+              O pedido fica <strong>aguardando confirmação</strong> e em breve entraremos em contato
+              com você.
             </li>
             <li>
               Dá para cancelar pelo site até {venue.freeCancelUntilDays} dias antes do início.
               Depois disso, é só falar com a gente.
             </li>
-            {draft.itemId ? (
-              <li>
-                A decoração é <strong>pegue e monte</strong>: você monta no dia e devolve ao final.
-              </li>
-            ) : null}
           </ul>
         )}
 

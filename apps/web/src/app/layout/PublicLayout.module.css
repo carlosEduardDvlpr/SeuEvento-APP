@@ -218,7 +218,8 @@
   list-style: none;
 }
 
-.footerContacts a {
+.footerContacts a,
+.footerNav a {
   display: inline-flex;
   align-items: center;
   gap: var(--space-8);
@@ -228,7 +229,8 @@
   text-decoration: none;
 }
 
-.footerContacts a:hover {
+.footerContacts a:hover,
+.footerNav a:hover {
   text-decoration: underline;
 }
 
@@ -237,10 +239,22 @@
   color: var(--hairline);
 }
 
-/* A marca à esquerda e os contatos à direita, sem coluna vazia no meio. */
+/* Os links legais num tom abaixo dos contatos: estão ali para quem procura. */
+.footerNav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.footerNav a {
+  color: var(--on-brand-soft);
+  font-weight: 500;
+}
+
+/* A marca à esquerda, depois os contatos e, por último, os links legais. */
 @media (min-width: 760px) {
   .footerInner {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--space-48);
     align-items: start;
   }

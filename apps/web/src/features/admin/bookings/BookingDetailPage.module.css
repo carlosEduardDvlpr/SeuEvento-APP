@@ -177,6 +177,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Linha da decoração com a foto: o dono separa a peça pelo que vê. */
+.itemLine {
+  align-items: center;
+}
+
+.itemName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
 /* Nome da regra de preço: explica por que a diária daquele dia é diferente. */
 .rule {
   padding: 1px var(--space-8);

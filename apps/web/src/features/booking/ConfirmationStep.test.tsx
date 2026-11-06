@@ -46,6 +46,7 @@ function makeDecoration(overrides: Partial<Booking> = {}): Booking {
         quantity: 1,
         unitPriceCents: 45_000,
         totalCents: 45_000,
+        imageUrl: null,
       },
     ],
     itemsTotalCents: 45_000,

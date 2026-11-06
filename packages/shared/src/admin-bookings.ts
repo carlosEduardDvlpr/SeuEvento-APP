@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { createCustomerBodySchema } from './admin-customers.js';
 import { adminBookingSummarySchema, adminCustomerSummarySchema } from './admin-overview.js';
-import { guestCountSchema } from './booking.js';
+import { bookingLineSchema, guestCountSchema } from './booking.js';
 import {
   DECORATION_NEEDS_ITEMS_ERROR,
   DECORATION_ONE_DAY_ERROR,
@@ -12,7 +12,7 @@ import {
 } from './booking-kind.js';
 import { optionalText } from './catalog.js';
 import { dailyPriceSchema } from './pricing.js';
-import { appliedComboSchema, quoteItemsSchema, quoteLineSchema } from './quote.js';
+import { appliedComboSchema, quoteItemsSchema } from './quote.js';
 import { addressSchema } from './address.js';
 import {
   bookingKindSchema,
@@ -54,7 +54,8 @@ export const adminBookingSchema = z.object({
 
   days: z.array(dailyPriceSchema),
   dailyTotalCents: centsSchema,
-  items: z.array(quoteLineSchema),
+  /** As decorações, com a foto de hoje no catálogo (ver `bookingLineSchema`). */
+  items: z.array(bookingLineSchema),
   itemsTotalCents: centsSchema,
   combos: z.array(appliedComboSchema),
   discountTotalCents: centsSchema,

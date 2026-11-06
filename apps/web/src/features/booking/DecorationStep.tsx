@@ -160,11 +160,6 @@ export function DecorationStep({ draft, dispatch, stock, notice, error }: Decora
 
       <section className={styles.intro}>
         <h2 className={styles.title}>{venue ? 'Quer uma decoração?' : 'Escolha a decoração'}</h2>
-        <p className={styles.hint}>
-          {venue
-            ? 'Com a chácara, a decoração do pegue e monte sai pelo preço com a chácara. É uma decoração por festa, e dá para seguir sem nenhuma.'
-            : 'É uma decoração por festa. A que já saiu para outra festa nesse dia aparece, mas sem poder ser escolhida.'}
-        </p>
       </section>
 
       {visibleCategories.length > 1 ? (

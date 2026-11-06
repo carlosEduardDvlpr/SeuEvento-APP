@@ -368,7 +368,7 @@ describe('ReviewStep', () => {
     stubFetch();
     renderReview();
 
-    expect(await screen.findByText(/as datas ficam seguras por/i)).toBeVisible();
+    expect(await screen.findByText(/em breve entraremos em contato com você/)).toBeVisible();
     expect(screen.getByText(/até 7 dias antes do início/)).toBeVisible();
   });
 

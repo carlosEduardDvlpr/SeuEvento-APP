@@ -13,6 +13,10 @@ import { TermsPage } from './TermsPage';
  * capacidade, horário e contato precisam ser os mesmos que a API aplica, senão a
  * página passa a contradizer o sistema na primeira mudança do painel.
  *
+ * O texto das duas páginas é do dono (revisado em novembro de 2026). Os testes
+ * conferem os números e os contatos que vêm da configuração, e as afirmações que
+ * dependem do código: o cookie, a busca do CEP e a remoção da conta.
+ *
  * A espera é sempre por um título de seção, nunca pelo `h1`: o estado de
  * carregamento também renderiza o `h1` (de propósito, para a página não ficar sem
  * título), então ele não serve de sinal de que os dados chegaram.
@@ -56,14 +60,14 @@ async function renderTerms(venue: PublicVenue | null = VENUE) {
   stubVenue(venue);
   renderWithProviders(<TermsPage />, { route: '/termos', withAuth: false });
 
-  await screen.findByRole('heading', { name: 'O que este site faz' });
+  await screen.findByRole('heading', { name: 'Sobre nossas reservas' });
 }
 
 async function renderPrivacy(venue: PublicVenue | null = VENUE) {
   stubVenue(venue);
   renderWithProviders(<PrivacyPage />, { route: '/privacidade', withAuth: false });
 
-  await screen.findByRole('heading', { name: 'Quem trata seus dados' });
+  await screen.findByRole('heading', { name: 'Quem somos' });
 }
 
 afterEach(() => {
@@ -75,12 +79,13 @@ describe('Termos de uso', () => {
     await renderTerms();
 
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Termos de uso');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Termos de Uso');
 
-    expect(screen.getByText(/48 horas/)).toBeInTheDocument();
-    expect(screen.getByText(/De 1 a 3 dias seguidos/)).toBeInTheDocument();
-    expect(screen.getByText(/Até 120 convidados/)).toBeInTheDocument();
-    expect(screen.getByText(/Entrada a partir das 08:00/)).toBeInTheDocument();
+    expect(screen.getByText(/por até 48 horas/)).toBeInTheDocument();
+    expect(screen.getByText(/de 1 a 3 dias consecutivos/)).toBeInTheDocument();
+    expect(screen.getByText(/até 120 convidados/)).toBeInTheDocument();
+    expect(screen.getByText(/a partir das 08:00/)).toBeInTheDocument();
+    expect(screen.getByText(/pelo menos 2 dias de antecedência/)).toBeInTheDocument();
   });
 
   it('usa o prazo de cancelamento da chácara, não um número fixo', async () => {
@@ -92,27 +97,27 @@ describe('Termos de uso', () => {
   it('muda o texto de duração quando a chácara aceita um dia só', async () => {
     await renderTerms({ ...VENUE, minDays: 1, maxDays: 1 });
 
-    expect(screen.getByText('Reserva de 1 dia.')).toBeInTheDocument();
+    expect(screen.getByText('1 dia.')).toBeInTheDocument();
   });
 
   // §16.6: sem regras cadastradas, a seção não existe — não se inventa política.
-  it('esconde as regras da casa quando o painel não tem nenhuma', async () => {
+  it('esconde as regras da chácara quando o painel não tem nenhuma', async () => {
     await renderTerms({ ...VENUE, houseRules: null });
 
-    expect(screen.queryByRole('heading', { name: 'Regras da casa' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Regras da chácara' })).not.toBeInTheDocument();
   });
 
-  it('mostra as regras da casa quando existem', async () => {
+  it('mostra as regras da chácara quando existem', async () => {
     await renderTerms();
 
-    expect(screen.getByRole('heading', { name: 'Regras da casa' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Regras da chácara' })).toBeInTheDocument();
     expect(screen.getByText(/Som até as 22h/)).toBeInTheDocument();
   });
 
   it('diz que o site não cobra nada', async () => {
     await renderTerms();
 
-    expect(screen.getByText(/não cobra nada e não processa pagamento/)).toBeInTheDocument();
+    expect(screen.getByText(/não realiza cobranças nem processa pagamentos/)).toBeInTheDocument();
   });
 });
 
@@ -121,7 +126,7 @@ describe('Política de privacidade', () => {
     await renderPrivacy();
 
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByText(/é responsável pelos dados coletados/)).toHaveTextContent(
+    expect(screen.getByText(/é responsável pelo tratamento das informações/)).toHaveTextContent(
       'Chácara Seu Evento',
     );
     expect(screen.getByText(/Estrada do Sol, 100/)).toBeInTheDocument();
@@ -130,7 +135,9 @@ describe('Política de privacidade', () => {
   it('explica a remoção da conta e o bloqueio por reserva em andamento', async () => {
     await renderPrivacy();
 
-    expect(screen.getByText(/reserva em andamento a remoção fica bloqueada/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/reserva em andamento, a exclusão ficará indisponível/),
+    ).toBeInTheDocument();
   });
 
   /*
@@ -141,17 +148,24 @@ describe('Política de privacidade', () => {
   it('descreve o único cookie e a ausência de rastreador', async () => {
     await renderPrivacy();
 
-    expect(screen.getByText(/não pode ser lido por JavaScript/)).toBeInTheDocument();
+    expect(screen.getByText(/Utilizamos um cookie necessário/)).toBeInTheDocument();
     expect(
-      screen.getByText(/Não há cookie de publicidade nem de medição de audiência/),
+      screen.getByText(/Não utilizamos ferramentas próprias de rastreamento publicitário/),
     ).toBeInTheDocument();
+  });
+
+  /* `lib/cep.ts` manda ao ViaCEP só os oito números do CEP (§9.12). */
+  it('conta que a busca do CEP envia só o CEP ao ViaCEP', async () => {
+    await renderPrivacy();
+
+    expect(screen.getByText(/somente o CEP é enviado/)).toBeInTheDocument();
   });
 
   it('cai no contato genérico quando o WhatsApp não está cadastrado', async () => {
     await renderPrivacy({ ...VENUE, whatsapp: null });
 
     expect(screen.queryByText(/WhatsApp \(11\)/)).not.toBeInTheDocument();
-    expect(screen.getByText(/canal de contato informado no site/)).toBeInTheDocument();
+    expect(screen.getByText(/canais de atendimento informados no site/)).toBeInTheDocument();
   });
 
   // Página legal com lacuna é pior que página que não carregou.
@@ -160,6 +174,8 @@ describe('Política de privacidade', () => {
     renderWithProviders(<PrivacyPage />, { route: '/privacidade', withAuth: false });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Algo deu errado do nosso lado.');
-    expect(screen.queryByRole('heading', { name: 'Seus direitos' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Quais são seus direitos?' }),
+    ).not.toBeInTheDocument();
   });
 });

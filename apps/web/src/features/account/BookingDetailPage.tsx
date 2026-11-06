@@ -120,7 +120,7 @@ export function BookingDetailPage() {
         ) : (
           <p className={styles.hold}>
             Suas datas estão seguras <strong>{formatTimeUntil(data.holdExpiresAt)}</strong>, até{' '}
-            {formatDeadline(data.holdExpiresAt)}. A chácara responde por e-mail.
+            {formatDeadline(data.holdExpiresAt)}
           </p>
         )
       ) : null}

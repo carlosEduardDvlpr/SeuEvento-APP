@@ -98,7 +98,8 @@ const BOOKING: Booking = {
   cancelUntil: null,
   days: QUOTE.days,
   dailyTotalCents: QUOTE.dailyTotalCents,
-  items: QUOTE.lines,
+  // A reserva gravada traz a foto do catálogo em cada linha (§11.3).
+  items: QUOTE.lines.map((line) => ({ ...line, imageUrl: null })),
   itemsTotalCents: QUOTE.itemsTotalCents,
   combos: [],
   discountTotalCents: 0,

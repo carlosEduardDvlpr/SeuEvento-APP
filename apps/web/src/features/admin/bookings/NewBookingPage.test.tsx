@@ -122,6 +122,38 @@ afterEach(() => {
 });
 
 describe('NewBookingPage', () => {
+  /* O dono escolhe a decoração pelo que vê: a foto fica ao lado do nome. */
+  it('mostra a foto de cada decoração na lista', async () => {
+    renderPage({
+      'GET /api/items': () => jsonResponse([{ ...PAINEL, imageUrl: '/catalogo/paineis/1.jpg' }]),
+    });
+
+    const row = (await screen.findByText('Painel de balões arco-íris')).closest('div')!;
+
+    expect(row.querySelector('img')).toHaveAttribute('src', '/catalogo/paineis/1.jpg');
+  });
+
+  /*
+   * Com a chácara, a decoração sai pelo preço com a chácara (§9.12): a lista
+   * mostra o preço que o orçamento vai usar, e o avulso só na decoração sozinha.
+   */
+  it('mostra o preço que vale para o que a reserva contrata', async () => {
+    const user = userEvent.setup();
+    renderPage({
+      'GET /api/items': () => jsonResponse([{ ...PAINEL, venuePriceCents: 10_000 }]),
+    });
+
+    // O valor mora num elemento próprio (`Money`): a conferência é no texto da linha inteira.
+    expect(await screen.findByText(/com a chácara/)).toHaveTextContent(
+      'R$ 100,00 com a chácara · 3 em estoque',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Só a decoração' }));
+
+    expect(screen.queryByText(/com a chácara/)).not.toBeInTheDocument();
+    expect(screen.getByText(/em estoque/)).toHaveTextContent('R$ 120,00 · 3 em estoque');
+  });
+
   it('começa escolhendo cliente já cadastrado', async () => {
     renderPage();
 

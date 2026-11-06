@@ -162,10 +162,19 @@
   border-bottom: 0;
 }
 
+/* A foto ao lado do nome: o dono escolhe a decoração pelo que vê. */
+.itemInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
 .itemName {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .itemPrice {

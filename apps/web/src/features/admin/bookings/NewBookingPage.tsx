@@ -15,6 +15,7 @@ import { Field } from '@/components/Field';
 import { Money } from '@/components/Money';
 import { QuantityStepper } from '@/components/QuantityStepper';
 import { Textarea } from '@/components/Textarea';
+import { Thumbnail } from '@/components/Thumbnail';
 import { useToast } from '@/components/Toast';
 import { ArrowLeftIcon } from '@/components/icons';
 import { useDebouncedValue } from '@/features/booking/useDebouncedValue';
@@ -361,23 +362,37 @@ export function NewBookingPage() {
               : 'Opcional. Deixe tudo em zero para alugar só a chácara.'}
           </p>
 
-          {catalog.data?.map((item) => (
-            <div key={item.id} className={styles.itemRow}>
-              <span className={styles.itemName}>
-                <strong>{item.name}</strong>
-                <span className={styles.itemPrice}>
-                  <Money cents={item.priceCents} /> · {item.stock} em estoque
-                </span>
-              </span>
+          {catalog.data?.map((item) => {
+            /*
+             * O preço que vale para o que a reserva contrata (§9.12): com a
+             * chácara, o da chácara; só a decoração, o avulso. O total que conta
+             * continua sendo o do orçamento, logo abaixo.
+             */
+            const promo = !decoration && item.venuePriceCents < item.priceCents;
 
-              <QuantityStepper
-                value={quantities[item.id] ?? 0}
-                max={item.stock}
-                label={item.name}
-                onChange={(quantity) => setQuantities({ ...quantities, [item.id]: quantity })}
-              />
-            </div>
-          ))}
+            return (
+              <div key={item.id} className={styles.itemRow}>
+                <span className={styles.itemInfo}>
+                  <Thumbnail src={item.imageUrl} />
+
+                  <span className={styles.itemName}>
+                    <strong>{item.name}</strong>
+                    <span className={styles.itemPrice}>
+                      <Money cents={decoration ? item.priceCents : item.venuePriceCents} />
+                      {promo ? ' com a chácara' : ''} · {item.stock} em estoque
+                    </span>
+                  </span>
+                </span>
+
+                <QuantityStepper
+                  value={quantities[item.id] ?? 0}
+                  max={item.stock}
+                  label={item.name}
+                  onChange={(quantity) => setQuantities({ ...quantities, [item.id]: quantity })}
+                />
+              </div>
+            );
+          })}
 
           {fieldErrors.items ? (
             <p className={styles.problem} role="alert">

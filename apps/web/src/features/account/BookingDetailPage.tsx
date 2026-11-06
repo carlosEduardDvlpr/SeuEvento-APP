@@ -10,6 +10,7 @@ import { Money } from '@/components/Money';
 import { Skeleton } from '@/components/Skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Textarea } from '@/components/Textarea';
+import { Thumbnail } from '@/components/Thumbnail';
 import { ArrowLeftIcon } from '@/components/icons';
 import { formErrorMessage } from '@/lib/form';
 import {
@@ -216,10 +217,17 @@ export function BookingDetailPage() {
 
         {data.items.length > 0 ? (
           <ul className={styles.lines}>
+            {/*
+              A foto é a de hoje no catálogo, e não um snapshot (§11.3): o que
+              foi contratado são o nome e o preço, que continuam os gravados.
+            */}
             {data.items.map((item) => (
-              <li key={item.itemId} className={styles.line}>
-                <span className={styles.lineName}>
-                  {item.quantity}× {item.name}
+              <li key={item.itemId} className={[styles.line, styles.itemLine].join(' ')}>
+                <span className={styles.itemName}>
+                  <Thumbnail src={item.imageUrl} />
+                  <span>
+                    {item.quantity}× {item.name}
+                  </span>
                 </span>
                 <span className={styles.lineValue}>
                   <Money cents={item.totalCents} />

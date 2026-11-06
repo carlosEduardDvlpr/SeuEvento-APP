@@ -64,6 +64,7 @@ const DETALHE: AdminBooking = {
       quantity: 2,
       unitPriceCents: 12_000,
       totalCents: 24_000,
+      imageUrl: '/catalogo/paineis/arco-iris.jpg',
     },
   ],
   itemsTotalCents: 24_000,
@@ -393,6 +394,16 @@ describe('BookingDetailPage, painel', () => {
     expect(screen.getByText('R$ 1.800,00')).toBeVisible();
     expect(screen.getByText('2× Painel de balões arco-íris')).toBeVisible();
     expect(screen.getByText('Combo Nuvens')).toBeVisible();
+  });
+
+  /* A foto vem do catálogo, junto com a reserva (§11.3): o dono separa a peça pelo que vê. */
+  it('mostra a foto de cada decoração da reserva', async () => {
+    renderDetail(DETALHE);
+
+    const line = (await screen.findByText('2× Painel de balões arco-íris')).closest('li')!;
+
+    expect(line.querySelector('img')).toHaveAttribute('src', '/catalogo/paineis/arco-iris.jpg');
+    expect(line.querySelector('img')).toHaveAttribute('alt', '');
   });
 
   it('mostra o contato do cliente e o WhatsApp', async () => {

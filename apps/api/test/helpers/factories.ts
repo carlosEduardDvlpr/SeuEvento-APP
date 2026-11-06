@@ -112,6 +112,7 @@ export function createItem(overrides: {
   priceCents?: number;
   /** Preço com a chácara. Sem ele, igual ao avulso: o item "sem promoção". */
   venuePriceCents?: number;
+  imageUrl?: string | null;
   stock?: number;
   active?: boolean;
   sortOrder?: number;
@@ -124,6 +125,7 @@ export function createItem(overrides: {
     data: {
       categoryId: overrides.categoryId,
       name: overrides.name ?? `Item ${sequence}`,
+      imageUrl: overrides.imageUrl ?? null,
       priceCents,
       venuePriceCents: overrides.venuePriceCents ?? priceCents,
       stock: overrides.stock ?? 5,

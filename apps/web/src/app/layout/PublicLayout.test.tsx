@@ -214,15 +214,22 @@ describe('rodapé', () => {
     expect(footer().getByRole('link', { name: /Instagram/ })).toBeVisible();
   });
 
-  /* Pedido do dono (novembro de 2026): o rodapé fica só com a marca e o contato. */
-  it('não tem os links legais nem diz quem entrou', async () => {
+  /*
+   * Os links legais voltaram em novembro de 2026, com a revisão dos textos pelo
+   * dono. O "Você entrou como" continua fora, também a pedido dele.
+   */
+  it('leva aos termos e à política de privacidade, sem dizer quem entrou', async () => {
     renderLayout({ user: ANA });
 
     await footer().findByText('Espaço Donna Belle');
-    expect(footer().queryByRole('link', { name: 'Termos de uso' })).not.toBeInTheDocument();
-    expect(
-      footer().queryByRole('link', { name: 'Política de privacidade' }),
-    ).not.toBeInTheDocument();
+    expect(footer().getByRole('link', { name: 'Termos de uso' })).toHaveAttribute(
+      'href',
+      '/termos',
+    );
+    expect(footer().getByRole('link', { name: 'Política de privacidade' })).toHaveAttribute(
+      'href',
+      '/privacidade',
+    );
     expect(footer().queryByText(/Você entrou como/)).not.toBeInTheDocument();
   });
 });

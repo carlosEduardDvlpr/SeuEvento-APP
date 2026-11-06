@@ -40,10 +40,10 @@ const INSTAGRAM = {
  * controles espremidos numa linha, e o rótulo precisava encolher para caber.
  * Pedido do dono, outubro de 2026.
  *
- * O rodapé fecha a página no tom de ameixa da marca, com o contato e as redes.
- * Os links dos termos e da privacidade e o "Você entrou como" saíram dele a
- * pedido do dono, em novembro de 2026; as duas páginas continuam no ar, ligadas
- * pelo aceite do cadastro (§10.8).
+ * O rodapé fecha a página no tom de ameixa da marca, com o contato, as redes e
+ * os links dos termos e da privacidade. Os links saíram em novembro de 2026,
+ * enquanto o dono revisava os textos das duas páginas, e voltaram com a
+ * revisão pronta. O "Você entrou como" continua fora, também a pedido dele.
  */
 export function PublicLayout() {
   const { data: venue } = useVenue();
@@ -198,6 +198,11 @@ export function PublicLayout() {
               </a>
             </li>
           </ul>
+
+          <nav aria-label="Rodapé" className={styles.footerNav}>
+            <Link to="/termos">Termos de uso</Link>
+            <Link to="/privacidade">Política de privacidade</Link>
+          </nav>
         </div>
       </footer>
     </>

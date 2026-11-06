@@ -68,7 +68,7 @@ export function LandingPage() {
       <HeroSection hero={hero} />
       <VenueSection venue={venue.data} areas={areas} />
       <HowItWorksSection />
-      <ItemsSection items={items.data ?? []} />
+      <ItemsSection items={items.data ?? []} whatsapp={venue.data.whatsapp} />
       <FaqSection venue={venue.data} />
       <DirectionsSection venue={venue.data} />
     </>

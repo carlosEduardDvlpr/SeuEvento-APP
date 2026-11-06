@@ -675,6 +675,28 @@ describe('vitrine de itens', () => {
     expect(within(link).getByText('R$ 350,00')).toBeVisible();
   });
 
+  /* Pedido do dono (novembro de 2026): quem não achou a decoração pede pelo WhatsApp. */
+  it('fecha a vitrine com o "Não achou o que queria?" levando ao WhatsApp', async () => {
+    renderLanding();
+
+    const section = await itemsSection();
+    const link = within(section).getByRole('link', { name: 'Pedir pelo WhatsApp' });
+
+    expect(within(section).getByRole('heading', { name: 'Não achou o que queria?' })).toBeVisible();
+    expect(link).toHaveAttribute('href', expect.stringContaining('https://wa.me/5511988887777'));
+    expect(decodeURIComponent(link.getAttribute('href') ?? '')).toContain(
+      'Vi as decorações no site e não encontrei a que eu queria',
+    );
+  });
+
+  it('não mostra o "Não achou o que queria?" sem WhatsApp cadastrado', async () => {
+    renderLanding({ '/api/public/venue': () => jsonResponse({ ...VENUE, whatsapp: null }) });
+
+    const section = await itemsSection();
+
+    expect(within(section).queryByText('Não achou o que queria?')).not.toBeInTheDocument();
+  });
+
   it('mostra o preço com a chácara quando ele é menor que o avulso', async () => {
     renderLanding();
 

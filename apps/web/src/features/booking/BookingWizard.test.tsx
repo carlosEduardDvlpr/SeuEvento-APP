@@ -95,6 +95,8 @@ type Stub = {
   closed?: string[];
   /** Estoque livre de cada decoração nas datas; sem a entrada, o estoque dela. */
   freeStock?: Record<string, number>;
+  /** A chácara que o `GET /public/venue` devolve. */
+  venue?: PublicVenue;
 };
 
 /**
@@ -108,6 +110,7 @@ function stubFetch({
   itemBooked = [],
   closed = [],
   freeStock = {},
+  venue = VENUE,
 }: Stub = {}) {
   const urls: string[] = [];
 
@@ -139,7 +142,7 @@ function stubFetch({
 
       const body =
         url.pathname === '/api/public/venue'
-          ? VENUE
+          ? venue
           : url.pathname === '/api/categories'
             ? [PAINEIS, MESAS]
             : url.pathname === '/api/items'
@@ -632,6 +635,33 @@ describe('passo da decoração', () => {
 
     await screen.findByRole('radio', { name: MESA.name });
     await waitFor(() => expect(storedDraft()?.itemId).toBeNull());
+  });
+
+  /*
+   * Pedido do dono (novembro de 2026): no fim da lista, quem não achou a
+   * decoração pede direto pelo WhatsApp, com a data já na mensagem.
+   */
+  it('fecha a lista com o "Não achou o que queria?" levando ao WhatsApp', async () => {
+    stubFetch({ venue: { ...VENUE, whatsapp: '(11) 99999-0000' } });
+    seedDraft({ endDate: '2026-12-05' });
+    renderWizard('/reservar?step=decoracao');
+
+    expect(await screen.findByRole('heading', { name: 'Não achou o que queria?' })).toBeVisible();
+
+    const link = screen.getByRole('link', { name: 'Pedir pelo WhatsApp' });
+    expect(link).toHaveAttribute('href', expect.stringContaining('https://wa.me/5511999990000'));
+    expect(decodeURIComponent(link.getAttribute('href') ?? '')).toContain(
+      'Estou montando um pedido para 5 de dezembro de 2026',
+    );
+  });
+
+  it('não mostra o "Não achou o que queria?" sem WhatsApp cadastrado', async () => {
+    stubFetch();
+    seedDraft();
+    renderWizard('/reservar?step=decoracao');
+
+    await screen.findByRole('radio', { name: PAINEL.name });
+    expect(screen.queryByText('Não achou o que queria?')).not.toBeInTheDocument();
   });
 
   it('explica quando a decoração está fechada nas datas da chácara', async () => {

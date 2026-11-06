@@ -496,6 +496,7 @@ export function BookingWizard() {
           }}
           notice={notice}
           error={decorationError}
+          whatsapp={limits.whatsapp}
         />
       ) : null}
 
